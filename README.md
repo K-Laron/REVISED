@@ -27,6 +27,8 @@ For local development only, it is fine to keep:
 - `mail_delivery_mode=log_only`
 - blank `TRUSTED_PROXIES`
 
+Browser automation tooling such as Selenium Python packages, geckodriver, and Playwright browser caches are intentionally local-only and are not committed to this repository. Install or generate them in your own workspace when you need smoke tests.
+
 ## Quick Start Scripts
 
 - Run [C:\Users\TESS LARON\Desktop\REVISED\start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/start-app.vbs) to start the PHP server in the background and automatically open the adopter landing page at `/adopt` in your default browser.

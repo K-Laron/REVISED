@@ -22,3 +22,5 @@ storage/runtime/
 /.playwright-cli/
 /output/
 /chromedriver/
+/tools/selenium-py/
+/geckodriver/

@@ -41,8 +41,8 @@ PHP template files organized by feature domains:
 - `public/assets/` & `public/uploads/`: Publicly accessible static files (CSS, JS, images, uploaded animal photos).
 
 #### **Testing & Tooling**
-- `tools/selenium-py/`: Python-based automated UI testing scripts using Selenium and Playwright.
-- `output/`: Caching and output directories for the testing tools.
+- `tools/`: Optional local browser automation helpers and vendored test runtimes. These are local-only and are not committed by default.
+- `output/`: Local caching and output directories for the testing tools. This is also local-only and not committed.
 
 ### **3. Application Domains (Modules)**
 The application is partitioned into several key operational modules:
