@@ -1,0 +1,337 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Core\Request;
+use App\Core\Response;
+use App\Core\View;
+use App\Helpers\Validator;
+use App\Middleware\CsrfMiddleware;
+use App\Services\BillingService;
+use RuntimeException;
+
+class BillingController
+{
+    private BillingService $billing;
+
+    public function __construct()
+    {
+        $this->billing = new BillingService();
+    }
+
+    public function index(Request $request): Response
+    {
+        return Response::html(View::render('billing.index', [
+            'title' => 'Billing & Invoicing',
+            'extraCss' => ['/assets/css/billing.css'],
+            'extraJs' => ['/assets/js/billing.js'],
+            'csrfToken' => CsrfMiddleware::token(),
+            'fees' => $this->billing->feeSchedule(),
+        ], 'layouts.app'));
+    }
+
+    public function createInvoice(Request $request): Response
+    {
+        return Response::html(View::render('billing.create-invoice', [
+            'title' => 'Create Invoice',
+            'extraCss' => ['/assets/css/billing.css'],
+            'extraJs' => ['/assets/js/billing.js'],
+            'csrfToken' => CsrfMiddleware::token(),
+            'fees' => $this->billing->feeSchedule(true),
+        ], 'layouts.app'));
+    }
+
+    public function showInvoice(Request $request, string $id): Response
+    {
+        try {
+            $invoice = $this->billing->getInvoice((int) $id);
+        } catch (RuntimeException) {
+            return Response::redirect('/billing');
+        }
+
+        return Response::html(View::render('billing.show-invoice', [
+            'title' => $invoice['invoice_number'],
+            'extraCss' => ['/assets/css/billing.css'],
+            'extraJs' => ['/assets/js/billing.js'],
+            'csrfToken' => CsrfMiddleware::token(),
+            'invoice' => $invoice,
+        ], 'layouts.app'));
+    }
+
+    public function listInvoices(Request $request): Response
+    {
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $result = $this->billing->listInvoices($request->query(), $page, $perPage);
+
+        return Response::success(
+            $result['items'],
+            'Invoices retrieved successfully.',
+            [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $result['total'],
+                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
+            ]
+        );
+    }
+
+    public function storeInvoice(Request $request): Response
+    {
+        $validator = (new Validator($request->body()))->rules([
+            'payor_type' => 'required|in:adopter,owner,external',
+            'payor_user_id' => 'nullable|integer|exists:users,id',
+            'payor_name' => 'required|string|max:200',
+            'payor_contact' => 'nullable|phone_ph',
+            'payor_address' => 'nullable|string|max:500',
+            'animal_id' => 'nullable|integer|exists:animals,id',
+            'application_id' => 'nullable|integer',
+            'due_date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+            'terms' => 'nullable|string|max:1000',
+            'line_items' => 'required|array|min:1',
+        ]);
+
+        $lineItemErrors = $this->lineItemErrors($request->body('line_items', []));
+        if ($validator->fails() || $lineItemErrors !== []) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors() + $lineItemErrors);
+        }
+
+        $authUser = $request->attribute('auth_user');
+
+        try {
+            $invoice = $this->billing->createInvoice($request->body(), (int) $authUser['id'], $request);
+        } catch (\Throwable $exception) {
+            return Response::error(500, 'SERVER_ERROR', $exception->getMessage());
+        }
+
+        return Response::success([
+            'invoice' => $invoice,
+            'redirect' => '/billing/invoices/' . $invoice['id'],
+        ], 'Invoice created successfully.');
+    }
+
+    public function updateInvoice(Request $request, string $id): Response
+    {
+        $validator = (new Validator($request->body()))->rules([
+            'payor_type' => 'required|in:adopter,owner,external',
+            'payor_user_id' => 'nullable|integer|exists:users,id',
+            'payor_name' => 'required|string|max:200',
+            'payor_contact' => 'nullable|phone_ph',
+            'payor_address' => 'nullable|string|max:500',
+            'animal_id' => 'nullable|integer|exists:animals,id',
+            'application_id' => 'nullable|integer',
+            'due_date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+            'terms' => 'nullable|string|max:1000',
+            'line_items' => 'required|array|min:1',
+        ]);
+
+        $lineItemErrors = $this->lineItemErrors($request->body('line_items', []));
+        if ($validator->fails() || $lineItemErrors !== []) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors() + $lineItemErrors);
+        }
+
+        $authUser = $request->attribute('auth_user');
+
+        try {
+            $invoice = $this->billing->updateInvoice((int) $id, $request->body(), (int) $authUser['id'], $request);
+        } catch (RuntimeException $exception) {
+            return Response::error(409, 'INVOICE_UPDATE_BLOCKED', $exception->getMessage());
+        }
+
+        return Response::success([
+            'invoice' => $invoice,
+            'redirect' => '/billing/invoices/' . $invoice['id'],
+        ], 'Invoice updated successfully.');
+    }
+
+    public function voidInvoice(Request $request, string $id): Response
+    {
+        $validator = (new Validator($request->body()))->rules([
+            'voided_reason' => 'required|string|min:5|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+        }
+
+        $authUser = $request->attribute('auth_user');
+
+        try {
+            $invoice = $this->billing->voidInvoice((int) $id, (string) $request->body('voided_reason'), (int) $authUser['id'], $request);
+        } catch (RuntimeException $exception) {
+            return Response::error(409, 'INVOICE_VOID_BLOCKED', $exception->getMessage());
+        }
+
+        return Response::success($invoice, 'Invoice voided successfully.');
+    }
+
+    public function invoicePdf(Request $request, string $id): Response
+    {
+        try {
+            $invoice = $this->billing->getInvoice((int) $id);
+        } catch (RuntimeException) {
+            return Response::error(404, 'NOT_FOUND', 'Invoice not found.');
+        }
+
+        $path = dirname(__DIR__, 2) . '/' . $invoice['pdf_path'];
+        if (!is_file($path)) {
+            return Response::error(404, 'NOT_FOUND', 'Invoice PDF not found.');
+        }
+
+        return new Response(200, (string) file_get_contents($path), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $invoice['invoice_number'] . '.pdf"',
+        ]);
+    }
+
+    public function recordPayment(Request $request, string $id): Response
+    {
+        $validator = (new Validator($request->body()))->rules([
+            'amount' => 'required|numeric|between:0.01,999999',
+            'payment_method' => 'required|in:Cash,Bank Transfer,GCash,Maya,Check',
+            'reference_number' => 'nullable|string|max:100',
+            'payment_date' => 'required|string',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+        }
+
+        $authUser = $request->attribute('auth_user');
+
+        try {
+            $result = $this->billing->recordPayment((int) $id, $request->body(), (int) $authUser['id'], $request);
+        } catch (RuntimeException $exception) {
+            return Response::error(409, 'PAYMENT_RECORD_BLOCKED', $exception->getMessage());
+        }
+
+        return Response::success($result, 'Payment recorded successfully.');
+    }
+
+    public function listPayments(Request $request): Response
+    {
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $result = $this->billing->listPayments($request->query(), $page, $perPage);
+
+        return Response::success(
+            $result['items'],
+            'Payments retrieved successfully.',
+            [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $result['total'],
+                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
+            ]
+        );
+    }
+
+    public function receiptPdf(Request $request, string $id): Response
+    {
+        try {
+            $payment = $this->billing->getPayment((int) $id);
+        } catch (RuntimeException) {
+            return Response::error(404, 'NOT_FOUND', 'Payment not found.');
+        }
+
+        $path = dirname(__DIR__, 2) . '/' . $payment['receipt_path'];
+        if (!is_file($path)) {
+            return Response::error(404, 'NOT_FOUND', 'Receipt PDF not found.');
+        }
+
+        return new Response(200, (string) file_get_contents($path), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . ($payment['receipt_number'] ?: $payment['payment_number']) . '.pdf"',
+        ]);
+    }
+
+    public function feeSchedule(Request $request): Response
+    {
+        return Response::success($this->billing->feeSchedule(), 'Fee schedule retrieved successfully.');
+    }
+
+    public function storeFee(Request $request): Response
+    {
+        $validator = (new Validator($request->body()))->rules([
+            'category' => 'required|string|max:50',
+            'name' => 'required|string|max:150',
+            'description' => 'nullable|string|max:2000',
+            'amount' => 'required|numeric|between:0.01,999999',
+            'effective_from' => 'required|date',
+            'effective_to' => 'nullable|date',
+            'species_filter' => 'nullable|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+        }
+
+        $authUser = $request->attribute('auth_user');
+        $fee = $this->billing->storeFee($request->body(), (int) $authUser['id'], $request);
+
+        return Response::success($fee, 'Fee item created successfully.');
+    }
+
+    public function updateFee(Request $request, string $id): Response
+    {
+        $validator = (new Validator($request->body()))->rules([
+            'category' => 'required|string|max:50',
+            'name' => 'required|string|max:150',
+            'description' => 'nullable|string|max:2000',
+            'amount' => 'required|numeric|between:0.01,999999',
+            'effective_from' => 'required|date',
+            'effective_to' => 'nullable|date',
+            'species_filter' => 'nullable|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+        }
+
+        $authUser = $request->attribute('auth_user');
+
+        try {
+            $fee = $this->billing->updateFee((int) $id, $request->body(), (int) $authUser['id'], $request);
+        } catch (RuntimeException $exception) {
+            return Response::error(404, 'NOT_FOUND', $exception->getMessage());
+        }
+
+        return Response::success($fee, 'Fee item updated successfully.');
+    }
+
+    public function stats(Request $request): Response
+    {
+        return Response::success($this->billing->stats(), 'Billing stats retrieved successfully.');
+    }
+
+    private function lineItemErrors(array $lineItems): array
+    {
+        $errors = [];
+
+        if (!is_array($lineItems) || $lineItems === []) {
+            $errors['line_items'][] = 'At least one line item is required.';
+            return $errors;
+        }
+
+        foreach ($lineItems as $index => $item) {
+            if (trim((string) ($item['description'] ?? '')) === '') {
+                $errors["line_items.{$index}.description"][] = 'Description is required.';
+            }
+
+            if ((int) ($item['quantity'] ?? 0) < 1) {
+                $errors["line_items.{$index}.quantity"][] = 'Quantity must be at least 1.';
+            }
+
+            if ((float) ($item['unit_price'] ?? 0) <= 0) {
+                $errors["line_items.{$index}.unit_price"][] = 'Unit price must be greater than 0.';
+            }
+        }
+
+        return $errors;
+    }
+}

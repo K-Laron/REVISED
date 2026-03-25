@@ -1,0 +1,9 @@
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+}

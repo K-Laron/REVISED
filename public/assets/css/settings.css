@@ -1,0 +1,120 @@
+#settings-page + .settings-grid,
+.settings-grid {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+}
+
+.settings-grid-secondary {
+  margin-top: var(--space-5);
+}
+
+.settings-health-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.settings-health-card {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+}
+
+.settings-health-card strong {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 1.15rem;
+}
+
+.settings-profile-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.settings-span-2 {
+  grid-column: span 2;
+}
+
+.settings-profile-list div {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.settings-profile-list dt {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-mono);
+}
+
+.settings-profile-list dd {
+  margin: 0;
+  text-align: right;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.45;
+  justify-self: end;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.settings-inline-note {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.settings-toggle-row {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.switch {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  color: var(--color-text-secondary);
+}
+
+.switch input {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-notes {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.settings-readiness-summary {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+@media (max-width: 980px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-profile-list div {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-span-2 {
+    grid-column: auto;
+  }
+
+  .settings-profile-list dd {
+    text-align: left;
+  }
+}

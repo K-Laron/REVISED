@@ -1,0 +1,123 @@
+.user-stats-grid,
+.reports-grid,
+.user-detail-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.user-stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.user-stat-card strong {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.user-stat-card {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.users-toolbar,
+.role-access-groups,
+.reports-template-list,
+.report-summary-grid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.users-filter-grid,
+.user-form-grid,
+.reports-filter-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.users-filter-span-2,
+.reports-span-2 {
+  grid-column: 1 / -1;
+}
+
+.users-table-wrap {
+  overflow: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-default);
+  text-align: left;
+  vertical-align: top;
+}
+
+.users-table td,
+.users-row-main,
+.role-access-group {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.users-table th {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-mono);
+}
+
+.users-table tbody tr:hover td {
+  background: var(--color-bg-hover);
+}
+
+.users-row-main {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.role-access-groups {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.role-access-group {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+  display: grid;
+  gap: var(--space-3);
+}
+
+.role-access-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.user-role-selector {
+  min-width: 220px;
+}
+
+.user-detail-grid,
+.reports-grid {
+  grid-template-columns: 2fr 1fr;
+}
+
+.user-form-actions {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .user-detail-grid,
+  .reports-grid,
+  .users-filter-grid,
+  .user-form-grid,
+  .reports-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}

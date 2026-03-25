@@ -1,0 +1,226 @@
+.adoption-stat-grid,
+.adoption-index-layout,
+.adoption-detail-grid,
+.adoption-form-grid,
+.adoption-summary-grid,
+.adoption-mini-grid,
+.adoption-inline-grid {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.adoption-stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-bottom: 1.5rem;
+}
+
+.adoption-index-layout,
+.adoption-detail-grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+    align-items: start;
+}
+
+.adoption-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adoption-summary-grid,
+.adoption-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adoption-inline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adoption-form-span-2,
+.adoption-filter-span-2 {
+    grid-column: span 2;
+}
+
+.adoption-helper-note,
+.adoption-status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+.adoption-helper-note {
+    background: var(--color-accent-info-bg);
+    color: var(--color-accent-info);
+    border-color: color-mix(in srgb, var(--color-accent-info) 18%, transparent);
+}
+
+.adoption-status-badge {
+    background: color-mix(in srgb, var(--color-bg-secondary) 90%, var(--color-bg-elevated));
+    color: var(--color-text-secondary);
+    border-color: var(--color-border-default);
+}
+
+.adoption-status-pending_review,
+.adoption-status-interview_scheduled,
+.adoption-status-interview_completed,
+.adoption-status-seminar_scheduled,
+.adoption-status-seminar_completed,
+.adoption-status-pending_payment {
+    background: var(--color-accent-warning-bg);
+    color: var(--color-accent-warning);
+}
+
+.adoption-status-completed {
+    background: var(--color-accent-success-bg);
+    color: var(--color-accent-success);
+}
+
+.adoption-status-rejected,
+.adoption-status-withdrawn {
+    background: var(--color-accent-danger-bg);
+    color: var(--color-accent-danger);
+}
+
+.adoption-stat-card strong {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 1.9rem;
+}
+
+.adoption-filter-grid {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) auto;
+}
+
+.adoption-filter-actions {
+    align-items: flex-end;
+}
+
+.adoption-board {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.adoption-board-column {
+    display: grid;
+    gap: 0.85rem;
+    align-content: start;
+    min-height: 220px;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+    border: 1px solid var(--color-border-default);
+}
+
+.adoption-board-column header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.adoption-application-card,
+.adoption-seminar-card,
+.adoption-related-item {
+    display: grid;
+    gap: 0.3rem;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-default);
+    text-decoration: none;
+    color: inherit;
+}
+
+.adoption-application-card,
+.adoption-seminar-card,
+.adoption-related-item,
+.adoption-text-block,
+.adoption-mini-card,
+.adoption-summary-grid dd {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.adoption-application-card:hover,
+.adoption-related-item:hover {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 30%, var(--color-border-default));
+    box-shadow: var(--shadow-sm);
+}
+
+.adoption-seminar-list,
+.adoption-related-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.adoption-summary-grid dt {
+    color: var(--color-text-tertiary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: var(--font-family-mono);
+}
+
+.adoption-summary-grid dd {
+    margin-top: 0.28rem;
+}
+
+.adoption-text-block,
+.adoption-success-card,
+.adoption-empty-state,
+.adoption-mini-card {
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+.adoption-text-block,
+.adoption-mini-card {
+    background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+    border: 1px solid var(--color-border-default);
+}
+
+.adoption-success-card {
+    background: var(--color-accent-success-bg);
+    border: 1px solid color-mix(in srgb, var(--color-accent-success) 18%, var(--color-border-default));
+    color: var(--color-accent-success);
+}
+
+.adoption-empty-state {
+    text-align: center;
+    color: var(--color-text-secondary);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, var(--color-bg-elevated));
+    border: 1px solid var(--color-border-default);
+}
+
+.adoption-check {
+    display: flex;
+    gap: 0.7rem;
+    align-items: center;
+}
+
+@media (max-width: 1120px) {
+    .adoption-index-layout,
+    .adoption-detail-grid,
+    .adoption-board {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 820px) {
+    .adoption-form-grid,
+    .adoption-summary-grid,
+    .adoption-mini-grid,
+    .adoption-inline-grid,
+    .adoption-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .adoption-form-span-2,
+    .adoption-filter-span-2 {
+        grid-column: span 1;
+    }
+}

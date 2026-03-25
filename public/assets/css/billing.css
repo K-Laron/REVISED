@@ -1,0 +1,139 @@
+.billing-stats-grid,
+.billing-show-grid {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.billing-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.billing-show-grid {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+}
+
+.billing-stat-card,
+.billing-total-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.billing-stat-card strong {
+  font-size: clamp(1.6rem, 2vw, 2.2rem);
+}
+
+.billing-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.billing-filter-grid,
+.billing-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.billing-filter-span-2,
+.billing-form-span-2 {
+  grid-column: span 2;
+}
+
+.billing-table-wrap {
+  overflow-x: auto;
+}
+
+.billing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.billing-table th,
+.billing-table td {
+  padding: var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.billing-table td,
+.billing-line-item {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.billing-table th {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.billing-table tbody tr:nth-child(even) td {
+  background: var(--color-bg-secondary);
+}
+
+.billing-table tbody tr:hover td {
+  background: var(--color-bg-hover);
+}
+
+.billing-fee-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.3fr);
+  gap: var(--space-4);
+}
+
+.billing-line-items {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.billing-line-item {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.6fr) 110px 140px auto;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+  border: 1px solid var(--color-border-default);
+}
+
+.billing-total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.billing-total-row.is-grand {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 1100px) {
+  .billing-stats-grid,
+  .billing-show-grid,
+  .billing-fee-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .billing-line-item {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .billing-stats-grid,
+  .billing-show-grid,
+  .billing-filter-grid,
+  .billing-form-grid,
+  .billing-fee-layout,
+  .billing-line-item {
+    grid-template-columns: 1fr;
+  }
+
+  .billing-filter-span-2,
+  .billing-form-span-2 {
+    grid-column: span 1;
+  }
+}
