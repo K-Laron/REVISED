@@ -42,3 +42,13 @@ scripts/
 system_functions_list.txt
 system_summary.html
 system_summary.md
+
+# System/AI Documentation
+.codex/
+API_ROUTES.md
+ARCHITECTURE.md
+IMPLEMENTATION_GUIDE.md
+MANUSCRIPT LAYOUT.md
+PAGE_LAYOUTS.md
+PRD_Catarman_Dog_Pound.md
+VALIDATION_RULES.md
