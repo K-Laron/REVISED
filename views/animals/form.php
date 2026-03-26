@@ -78,9 +78,25 @@ $selectedKennelId = $animal['current_kennel']['id'] ?? ($animal['kennel_id'] ?? 
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label class="field">
+                <span class="field-label">Microchip Number</span>
+                <input class="input" type="text" name="microchip_number" value="<?= htmlspecialchars((string) ($animal['microchip_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="e.g., 900123456789012">
+            </label>
+            <label class="field">
+                <span class="field-label">Spay / Neuter Status</span>
+                <select class="select" name="spay_neuter_status">
+                    <?php foreach (['Unknown', 'Yes', 'No'] as $option): ?>
+                        <option value="<?= $option ?>" <?= (($animal['spay_neuter_status'] ?? 'Unknown') === $option) ? 'selected' : '' ?>><?= $option ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
             <label class="field animal-form-span-2">
                 <span class="field-label">Distinguishing Features</span>
-                <textarea class="textarea" name="distinguishing_features" rows="4"><?= htmlspecialchars((string) ($animal['distinguishing_features'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                <textarea class="textarea" name="distinguishing_features" rows="3"><?= htmlspecialchars((string) ($animal['distinguishing_features'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+            </label>
+            <label class="field animal-form-span-2">
+                <span class="field-label">Special Needs / Medical Notes</span>
+                <textarea class="textarea" name="special_needs_notes" rows="3" placeholder="Any special needs, dietary requirements, or initial medical observations"><?= htmlspecialchars((string) ($animal['special_needs_notes'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
             </label>
         </div>
     </section>
@@ -112,6 +128,14 @@ $selectedKennelId = $animal['current_kennel']['id'] ?? ($animal['kennel_id'] ?? 
                 </select>
             </label>
             <label class="field">
+                <span class="field-label">Vaccination Status at Intake</span>
+                <select class="select" name="vaccination_status_at_intake">
+                    <?php foreach (['Unknown', 'Up to date', 'Partial', 'None'] as $option): ?>
+                        <option value="<?= $option ?>" <?= (($animal['vaccination_status_at_intake'] ?? 'Unknown') === $option) ? 'selected' : '' ?>><?= $option ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="field">
                 <span class="field-label">Kennel Assignment</span>
                 <select class="select" name="kennel_id">
                     <option value="">Unassigned</option>
@@ -122,13 +146,46 @@ $selectedKennelId = $animal['current_kennel']['id'] ?? ($animal['kennel_id'] ?? 
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label class="field">
+                <span class="field-label">Barangay of Origin</span>
+                <input class="input" type="text" name="barangay_of_origin" value="<?= htmlspecialchars((string) ($animal['barangay_of_origin'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="e.g., Brgy. Poblacion">
+            </label>
+            <label class="field">
+                <span class="field-label">Impounding Officer</span>
+                <input class="input" type="text" name="impounding_officer_name" value="<?= htmlspecialchars((string) ($animal['impounding_officer_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Officer who brought the animal">
+            </label>
+            <label class="field">
+                <span class="field-label">Impoundment Order No.</span>
+                <input class="input" type="text" name="impoundment_order_number" value="<?= htmlspecialchars((string) ($animal['impoundment_order_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="e.g., IO-2026-0001">
+            </label>
             <label class="field animal-form-span-2" data-location-found-field>
                 <span class="field-label">Location Found</span>
                 <input class="input" type="text" name="location_found" value="<?= htmlspecialchars((string) ($animal['location_found'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
             </label>
             <label class="field animal-form-span-2" data-surrender-reason-field>
                 <span class="field-label">Surrender Reason</span>
-                <textarea class="textarea" name="surrender_reason" rows="4"><?= htmlspecialchars((string) ($animal['surrender_reason'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                <textarea class="textarea" name="surrender_reason" rows="3"><?= htmlspecialchars((string) ($animal['surrender_reason'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+            </label>
+        </div>
+    </section>
+
+    <section class="stack" data-authority-section>
+        <div>
+            <h3>Impounding Authority</h3>
+            <p class="text-muted">Person or office that authorized the confiscation or impoundment.</p>
+        </div>
+        <div class="animal-form-grid">
+            <label class="field">
+                <span class="field-label">Authority Name</span>
+                <input class="input" type="text" name="authority_name" value="<?= htmlspecialchars((string) ($animal['authority_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="e.g., Juan dela Cruz">
+            </label>
+            <label class="field">
+                <span class="field-label">Position / Title</span>
+                <input class="input" type="text" name="authority_position" value="<?= htmlspecialchars((string) ($animal['authority_position'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="e.g., Barangay Captain">
+            </label>
+            <label class="field">
+                <span class="field-label">Contact Number</span>
+                <input class="input" type="text" name="authority_contact" value="<?= htmlspecialchars((string) ($animal['authority_contact'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="09XX XXX XXXX">
             </label>
         </div>
     </section>

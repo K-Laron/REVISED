@@ -60,7 +60,7 @@ function bindAnimalList() {
           <div class="animal-actions">
             <a class="btn-secondary" href="/animals/${animal.id}">View</a>
             ${canUpdateAnimals ? `<a class="btn-secondary" href="/animals/${animal.id}/edit">Edit</a>` : ''}
-            <a class="btn-secondary" href="/api/animals/${animal.id}/qr/download">QR</a>
+            <button class="btn-secondary" type="button" data-qr-preview data-qr-src="/api/animals/${animal.id}/qr" data-qr-name="${escapeHtml(animal.name || 'Unnamed Animal')}" data-qr-code="${escapeHtml(animal.animal_id)}" data-qr-download="/api/animals/${animal.id}/qr/download">QR</button>
           </div>
         </td>
       `;
@@ -83,7 +83,7 @@ function bindAnimalList() {
         <div class="animal-actions">
           <a class="btn-secondary" href="/animals/${animal.id}">View</a>
           ${canUpdateAnimals ? `<a class="btn-secondary" href="/animals/${animal.id}/edit">Edit</a>` : ''}
-          <a class="btn-secondary" href="/api/animals/${animal.id}/qr/download">QR</a>
+          <button class="btn-secondary" type="button" data-qr-preview data-qr-src="/api/animals/${animal.id}/qr" data-qr-name="${escapeHtml(animal.name || 'Unnamed Animal')}" data-qr-code="${escapeHtml(animal.animal_id)}" data-qr-download="/api/animals/${animal.id}/qr/download">QR</button>
         </div>
       `;
       cardList.appendChild(card);
@@ -137,6 +137,7 @@ function bindAnimalForm() {
   const locationField = form.querySelector('[data-location-found-field]');
   const surrenderField = form.querySelector('[data-surrender-reason-field]');
   const broughtBySection = form.querySelector('[data-brought-by-section]');
+  const authoritySection = form.querySelector('[data-authority-section]');
 
   function updateBreedOptions() {
     const species = speciesSelect.value;
@@ -154,10 +155,12 @@ function bindAnimalForm() {
     const showLocationField = intakeType === 'Stray';
     const showSurrenderField = intakeType === 'Owner Surrender';
     const showBroughtBySection = ['Owner Surrender', 'Confiscated', 'Transfer'].includes(intakeType);
+    const showAuthoritySection = ['Stray', 'Confiscated'].includes(intakeType);
 
     toggleConditionalSection(locationField, showLocationField);
     toggleConditionalSection(surrenderField, showSurrenderField);
     toggleConditionalSection(broughtBySection, showBroughtBySection);
+    toggleConditionalSection(authoritySection, showAuthoritySection);
   }
 
   speciesSelect?.addEventListener('change', updateBreedOptions);

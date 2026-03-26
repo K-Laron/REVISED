@@ -98,6 +98,10 @@ $updatedAt = $record['updated_at'] ? date('M d, Y H:i', strtotime((string) $reco
                 <?php require __DIR__ . '/partials/form-euthanasia.php'; ?>
             </div>
 
+            <?php require __DIR__ . '/partials/form-vital-signs.php'; ?>
+            <?php require __DIR__ . '/partials/form-prescriptions.php'; ?>
+            <?php require __DIR__ . '/partials/form-lab-results.php'; ?>
+
             <div class="cluster" style="justify-content: space-between;">
                 <button class="btn-secondary" type="button" id="medical-delete-button">Delete Record</button>
                 <button class="btn-primary" type="submit" id="medical-submit-button">Save Changes</button>

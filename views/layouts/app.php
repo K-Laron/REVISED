@@ -80,12 +80,19 @@
     <link rel="stylesheet" href="/assets/css/toast.css" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/layout.css" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/responsive.css" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/qr-modal.css" data-core-asset="css">
     <?php foreach (($extraCss ?? []) as $stylesheet): ?>
         <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="css">
     <?php endforeach; ?>
     <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css" data-core-asset="css">
 </head>
-<body>
+<?php
+    $layoutPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $layoutModule = explode('/', trim($layoutPath, '/'))[0] ?? '';
+    $allowedModules = ['animals', 'medical', 'kennels', 'adoptions', 'billing', 'inventory', 'reports', 'users', 'settings', 'dashboard'];
+    $dataModule = in_array($layoutModule, $allowedModules, true) ? $layoutModule : '';
+?>
+<body<?= $dataModule !== '' ? ' data-module="' . $dataModule . '"' : '' ?>>
     <div class="page-transition-shield" aria-hidden="true"></div>
     <div class="app-shell" data-page-shell="app">
         <?php require __DIR__ . '/../partials/sidebar.php'; ?>
@@ -96,12 +103,14 @@
                 <?= $content ?>
             </main>
             <?php require __DIR__ . '/../partials/footer.php'; ?>
+            <?php require __DIR__ . '/../partials/qr-modal.php'; ?>
         </div>
     </div>
     <script src="/assets/js/theme.js" data-core-asset="js"></script>
     <script src="/assets/js/toast.js" data-core-asset="js"></script>
     <script src="/assets/js/app.js" data-core-asset="js"></script>
     <script src="/assets/js/notifications.js" data-core-asset="js"></script>
+    <script src="/assets/js/qr-modal.js" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="js"></script>
     <?php endforeach; ?>

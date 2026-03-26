@@ -24,3 +24,21 @@ storage/runtime/
 /chromedriver/
 /tools/selenium-py/
 /geckodriver/
+
+# Extraneous files / Temp Code Generation
+CDP&ASMS REVISED.docx.md
+CDP_ASMS_Manuscript*.docx
+CHAPTER_*.md
+diagrams/
+generate_*.mjs
+generate_*.js
+list_users.php
+llm_context.md
+node_modules/
+nul
+package-lock.json
+package.json
+scripts/
+system_functions_list.txt
+system_summary.html
+system_summary.md

@@ -11,11 +11,14 @@ use App\Models\DewormingRecord;
 use App\Models\EuthanasiaRecord;
 use App\Models\ExaminationRecord;
 use App\Models\InventoryItem;
+use App\Models\MedicalLabResult;
+use App\Models\MedicalPrescription;
 use App\Models\MedicalRecord;
 use App\Models\StockTransaction;
 use App\Models\SurgeryRecord;
 use App\Models\TreatmentRecord;
 use App\Models\VaccinationRecord;
+use App\Models\VitalSign;
 use RuntimeException;
 
 class MedicalService
@@ -30,6 +33,9 @@ class MedicalService
     private Animal $animals;
     private InventoryItem $inventoryItems;
     private StockTransaction $stockTransactions;
+    private VitalSign $vitalSigns;
+    private MedicalPrescription $prescriptions;
+    private MedicalLabResult $labResults;
     private AuditService $audit;
 
     public function __construct()
@@ -44,6 +50,9 @@ class MedicalService
         $this->animals = new Animal();
         $this->inventoryItems = new InventoryItem();
         $this->stockTransactions = new StockTransaction();
+        $this->vitalSigns = new VitalSign();
+        $this->prescriptions = new MedicalPrescription();
+        $this->labResults = new MedicalLabResult();
         $this->audit = new AuditService();
     }
 
@@ -60,6 +69,9 @@ class MedicalService
         }
 
         $record['details'] = $this->subtypeRecord((int) $record['id'], (string) $record['procedure_type']);
+        $record['vital_signs'] = $this->vitalSigns->findByMedicalRecordId((int) $record['id']) ?: [];
+        $record['prescriptions'] = $this->prescriptions->findByMedicalRecordId((int) $record['id']);
+        $record['lab_results'] = $this->labResults->findByMedicalRecordId((int) $record['id']);
 
         return $record;
     }
@@ -94,6 +106,7 @@ class MedicalService
             $detailPayload = $this->normalizeSubtypePayload($type, $data, $medicalRecordId, true);
 
             $this->persistSubtype($type, $medicalRecordId, $detailPayload, true);
+            $this->saveSharedSections($medicalRecordId, $data);
 
             if ($type === 'treatment') {
                 $this->syncTreatmentInventory(null, $detailPayload, $userId, $medicalRecordId);
@@ -130,6 +143,7 @@ class MedicalService
             }
 
             $this->persistSubtype($type, $id, $detailPayload, false);
+            $this->saveSharedSections($id, $data);
             $this->syncAnimalStatusAfterWrite($type, (int) $current['animal_id'], $detailPayload, $userId);
 
             Database::commit();
@@ -251,6 +265,46 @@ class MedicalService
         }
 
         return $configs[$type];
+    }
+
+    private function saveSharedSections(int $medicalRecordId, array $data): void
+    {
+        // Vital signs
+        $hasVitalData = false;
+        $vitalFields = ['vs_weight_kg', 'vs_temperature_celsius', 'vs_heart_rate_bpm', 'vs_respiratory_rate', 'vs_body_condition_score'];
+        foreach ($vitalFields as $field) {
+            if (($data[$field] ?? '') !== '') {
+                $hasVitalData = true;
+                break;
+            }
+        }
+        if ($hasVitalData) {
+            $this->vitalSigns->upsert($medicalRecordId, [
+                'weight_kg' => $this->nullableDecimal($data['vs_weight_kg'] ?? null),
+                'temperature_celsius' => $this->nullableDecimal($data['vs_temperature_celsius'] ?? null, 1),
+                'heart_rate_bpm' => $this->nullableInt($data['vs_heart_rate_bpm'] ?? null),
+                'respiratory_rate' => $this->nullableInt($data['vs_respiratory_rate'] ?? null),
+                'body_condition_score' => $this->nullableInt($data['vs_body_condition_score'] ?? null),
+            ]);
+        }
+
+        // Prescriptions
+        $prescriptionsRaw = $data['prescriptions'] ?? [];
+        if (is_string($prescriptionsRaw)) {
+            $prescriptionsRaw = json_decode($prescriptionsRaw, true) ?: [];
+        }
+        if (is_array($prescriptionsRaw) && count($prescriptionsRaw) > 0) {
+            $this->prescriptions->bulkReplaceForRecord($medicalRecordId, $prescriptionsRaw);
+        }
+
+        // Lab results
+        $labResultsRaw = $data['lab_results'] ?? [];
+        if (is_string($labResultsRaw)) {
+            $labResultsRaw = json_decode($labResultsRaw, true) ?: [];
+        }
+        if (is_array($labResultsRaw) && count($labResultsRaw) > 0) {
+            $this->labResults->bulkReplaceForRecord($medicalRecordId, $labResultsRaw);
+        }
     }
 
     private function subtypeRecord(int $medicalRecordId, string $type): array

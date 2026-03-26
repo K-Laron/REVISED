@@ -45,13 +45,19 @@ class Animal
         Database::execute(
             'INSERT INTO animals (
                 animal_id, name, species, breed_id, breed_other, gender, age_years, age_months, color_markings, size,
-                weight_kg, distinguishing_features, intake_type, intake_date, location_found,
-                brought_by_name, brought_by_contact, brought_by_address, surrender_reason, condition_at_intake, temperament,
+                weight_kg, distinguishing_features, special_needs_notes, microchip_number, spay_neuter_status,
+                intake_type, intake_date, location_found, barangay_of_origin, impoundment_order_number,
+                authority_name, authority_position, authority_contact,
+                brought_by_name, brought_by_contact, brought_by_address, impounding_officer_name,
+                surrender_reason, condition_at_intake, vaccination_status_at_intake, temperament,
                 status, status_reason, status_changed_at, created_by, updated_by
              ) VALUES (
                 :animal_id, :name, :species, :breed_id, :breed_other, :gender, :age_years, :age_months, :color_markings, :size,
-                :weight_kg, :distinguishing_features, :intake_type, :intake_date, :location_found,
-                :brought_by_name, :brought_by_contact, :brought_by_address, :surrender_reason, :condition_at_intake, :temperament,
+                :weight_kg, :distinguishing_features, :special_needs_notes, :microchip_number, :spay_neuter_status,
+                :intake_type, :intake_date, :location_found, :barangay_of_origin, :impoundment_order_number,
+                :authority_name, :authority_position, :authority_contact,
+                :brought_by_name, :brought_by_contact, :brought_by_address, :impounding_officer_name,
+                :surrender_reason, :condition_at_intake, :vaccination_status_at_intake, :temperament,
                 :status, :status_reason, :status_changed_at, :created_by, :updated_by
              )',
             $bindings
@@ -79,14 +85,24 @@ class Animal
                 size = :size,
                 weight_kg = :weight_kg,
                 distinguishing_features = :distinguishing_features,
+                special_needs_notes = :special_needs_notes,
+                microchip_number = :microchip_number,
+                spay_neuter_status = :spay_neuter_status,
                 intake_type = :intake_type,
                 intake_date = :intake_date,
                 location_found = :location_found,
+                barangay_of_origin = :barangay_of_origin,
+                impoundment_order_number = :impoundment_order_number,
+                authority_name = :authority_name,
+                authority_position = :authority_position,
+                authority_contact = :authority_contact,
                 brought_by_name = :brought_by_name,
                 brought_by_contact = :brought_by_contact,
                 brought_by_address = :brought_by_address,
+                impounding_officer_name = :impounding_officer_name,
                 surrender_reason = :surrender_reason,
                 condition_at_intake = :condition_at_intake,
+                vaccination_status_at_intake = :vaccination_status_at_intake,
                 temperament = :temperament,
                 updated_by = :updated_by
              WHERE id = :id',

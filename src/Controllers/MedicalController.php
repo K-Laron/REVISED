@@ -243,6 +243,12 @@ class MedicalController
             'record_date' => 'required|date',
             'general_notes' => 'nullable|string|max:2000',
             'veterinarian_id' => 'required|integer|exists:users,id',
+            // Vital signs (shared across all procedure types)
+            'vs_weight_kg' => 'nullable|numeric|between:0.1,150',
+            'vs_temperature_celsius' => 'nullable|numeric|between:35,43',
+            'vs_heart_rate_bpm' => 'nullable|integer|between:30,300',
+            'vs_respiratory_rate' => 'nullable|integer|between:5,100',
+            'vs_body_condition_score' => 'nullable|integer|between:1,9',
         ];
 
         $typeRules = match ($type) {

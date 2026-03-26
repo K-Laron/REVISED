@@ -96,6 +96,10 @@
                 <?php require __DIR__ . '/partials/form-euthanasia.php'; ?>
             </div>
 
+            <?php require __DIR__ . '/partials/form-vital-signs.php'; ?>
+            <?php require __DIR__ . '/partials/form-prescriptions.php'; ?>
+            <?php require __DIR__ . '/partials/form-lab-results.php'; ?>
+
             <div class="cluster" style="justify-content: flex-end;">
                 <a class="btn-secondary" href="/medical">Cancel</a>
                 <button class="btn-primary" type="submit" id="medical-submit-button">Save Record</button>

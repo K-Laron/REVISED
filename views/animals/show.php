@@ -20,7 +20,7 @@ $statusClass = $statusClassMap[$animal['status']] ?? 'badge-info';
         <?php if (($can ?? static fn (): bool => false)('animals.update')): ?>
             <a class="btn-secondary" href="/animals/<?= (int) $animal['id'] ?>/edit">Edit</a>
         <?php endif; ?>
-        <a class="btn-primary" href="/api/animals/<?= (int) $animal['id'] ?>/qr/download">Download QR</a>
+        <button class="btn-primary" type="button" data-qr-preview data-qr-src="/api/animals/<?= (int) $animal['id'] ?>/qr" data-qr-name="<?= htmlspecialchars($animal['name'] ?: 'Unnamed Animal', ENT_QUOTES, 'UTF-8') ?>" data-qr-code="<?= htmlspecialchars($animal['animal_id'], ENT_QUOTES, 'UTF-8') ?>" data-qr-download="/api/animals/<?= (int) $animal['id'] ?>/qr/download">View QR Code</button>
     </div>
 </section>
 
@@ -39,11 +39,12 @@ $statusClass = $statusClassMap[$animal['status']] ?? 'badge-info';
                 <img src="/<?= htmlspecialchars($photo['file_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Animal thumbnail">
             <?php endforeach; ?>
         </div>
-        <div class="qr-panel">
+        <div class="qr-panel" style="cursor:pointer" data-qr-preview data-qr-src="/api/animals/<?= (int) $animal['id'] ?>/qr" data-qr-name="<?= htmlspecialchars($animal['name'] ?: 'Unnamed Animal', ENT_QUOTES, 'UTF-8') ?>" data-qr-code="<?= htmlspecialchars($animal['animal_id'], ENT_QUOTES, 'UTF-8') ?>" data-qr-download="/api/animals/<?= (int) $animal['id'] ?>/qr/download">
             <img src="/api/animals/<?= (int) $animal['id'] ?>/qr/download" alt="Animal QR code">
             <div>
                 <div class="field-label">QR Linked ID</div>
                 <div class="mono"><?= htmlspecialchars($animal['animal_id'], ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="text-muted" style="font-size:0.75rem;margin-top:0.25rem">Click to enlarge</div>
             </div>
         </div>
     </article>
@@ -64,7 +65,23 @@ $statusClass = $statusClassMap[$animal['status']] ?? 'badge-info';
             <div><dt>Kennel</dt><dd><?= htmlspecialchars((string) ($animal['current_kennel']['kennel_code'] ?? 'Unassigned'), ENT_QUOTES, 'UTF-8') ?></dd></div>
             <div><dt>Intake</dt><dd><?= htmlspecialchars(date('M d, Y H:i', strtotime((string) $animal['intake_date'])), ENT_QUOTES, 'UTF-8') ?></dd></div>
             <div><dt>Temperament</dt><dd><?= htmlspecialchars($animal['temperament'], ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <div><dt>Microchip</dt><dd class="mono"><?= htmlspecialchars((string) ($animal['microchip_number'] ?? 'N/A'), ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <div><dt>Spay / Neuter</dt><dd><?= htmlspecialchars((string) ($animal['spay_neuter_status'] ?? 'Unknown'), ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <div><dt>Vaccination at Intake</dt><dd><?= htmlspecialchars((string) ($animal['vaccination_status_at_intake'] ?? 'Unknown'), ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <div><dt>Barangay</dt><dd><?= htmlspecialchars((string) ($animal['barangay_of_origin'] ?? 'N/A'), ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <?php if (!empty($animal['impoundment_order_number'])): ?>
+                <div><dt>Impoundment Order</dt><dd class="mono"><?= htmlspecialchars($animal['impoundment_order_number'], ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <?php endif; ?>
+            <?php if (!empty($animal['impounding_officer_name'])): ?>
+                <div><dt>Impounding Officer</dt><dd><?= htmlspecialchars($animal['impounding_officer_name'], ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <?php endif; ?>
+            <?php if (!empty($animal['authority_name'])): ?>
+                <div><dt>Authority</dt><dd><?= htmlspecialchars($animal['authority_name'] . (!empty($animal['authority_position']) ? ' (' . $animal['authority_position'] . ')' : ''), ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <?php endif; ?>
             <div class="animal-detail-span-2"><dt>Features</dt><dd><?= htmlspecialchars((string) ($animal['distinguishing_features'] ?? 'None recorded'), ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <?php if (!empty($animal['special_needs_notes'])): ?>
+                <div class="animal-detail-span-2"><dt>Special Needs</dt><dd><?= htmlspecialchars($animal['special_needs_notes'], ENT_QUOTES, 'UTF-8') ?></dd></div>
+            <?php endif; ?>
         </dl>
         <form class="cluster animal-status-form" data-animal-id="<?= (int) $animal['id'] ?>">
             <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">

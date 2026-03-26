@@ -99,6 +99,14 @@
   --theme-transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
 }
 
+/* Module accent overrides — light mode */
+[data-module="medical"]  { --color-accent-primary: #0D9488; --color-accent-primary-hover: #0F766E; --color-accent-info: #0D9488; --color-accent-info-bg: rgba(13,148,136,0.11); }
+[data-module="kennels"]  { --color-accent-primary: #D97706; --color-accent-primary-hover: #B45309; --color-accent-info: #D97706; --color-accent-info-bg: rgba(217,119,6,0.11); }
+[data-module="adoptions"]{ --color-accent-primary: #E11D48; --color-accent-primary-hover: #BE123C; --color-accent-info: #E11D48; --color-accent-info-bg: rgba(225,29,72,0.11); }
+[data-module="billing"]  { --color-accent-primary: #7C3AED; --color-accent-primary-hover: #6D28D9; --color-accent-info: #7C3AED; --color-accent-info-bg: rgba(124,58,237,0.11); }
+[data-module="inventory"]{ --color-accent-primary: #4F46E5; --color-accent-primary-hover: #4338CA; --color-accent-info: #4F46E5; --color-accent-info-bg: rgba(79,70,229,0.11); }
+[data-module="reports"]  { --color-accent-primary: #059669; --color-accent-primary-hover: #047857; --color-accent-info: #059669; --color-accent-info-bg: rgba(5,150,105,0.11); }
+
 [data-theme="dark"] {
   color-scheme: dark;
   --color-bg-primary: #020617;
@@ -143,3 +151,18 @@
   --focus-glow-danger: 0 0 0 4px rgba(248, 113, 113, 0.18);
   --focus-glow-success: 0 0 0 4px rgba(74, 222, 128, 0.18);
 }
+
+/* Module accent overrides — dark mode */
+[data-theme="dark"] [data-module="medical"],
+[data-theme="dark"][data-module="medical"]  { --color-accent-primary: #2DD4BF; --color-accent-primary-hover: #14B8A6; --color-accent-info: #2DD4BF; --color-accent-info-bg: rgba(45,212,191,0.14); }
+[data-theme="dark"] [data-module="kennels"],
+[data-theme="dark"][data-module="kennels"]  { --color-accent-primary: #FBBF24; --color-accent-primary-hover: #F59E0B; --color-accent-info: #FBBF24; --color-accent-info-bg: rgba(251,191,36,0.14); }
+[data-theme="dark"] [data-module="adoptions"],
+[data-theme="dark"][data-module="adoptions"]{ --color-accent-primary: #FB7185; --color-accent-primary-hover: #F43F5E; --color-accent-info: #FB7185; --color-accent-info-bg: rgba(251,113,133,0.14); }
+[data-theme="dark"] [data-module="billing"],
+[data-theme="dark"][data-module="billing"]  { --color-accent-primary: #A78BFA; --color-accent-primary-hover: #8B5CF6; --color-accent-info: #A78BFA; --color-accent-info-bg: rgba(167,139,250,0.14); }
+[data-theme="dark"] [data-module="inventory"],
+[data-theme="dark"][data-module="inventory"]{ --color-accent-primary: #818CF8; --color-accent-primary-hover: #6366F1; --color-accent-info: #818CF8; --color-accent-info-bg: rgba(129,140,248,0.14); }
+[data-theme="dark"] [data-module="reports"],
+[data-theme="dark"][data-module="reports"]  { --color-accent-primary: #34D399; --color-accent-primary-hover: #10B981; --color-accent-info: #34D399; --color-accent-info-bg: rgba(52,211,153,0.14); }
+

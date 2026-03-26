@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   bindMedicalIndex();
   bindMedicalForm();
+  bindSharedSections();
 });
 
 function bindMedicalIndex() {
@@ -179,6 +180,11 @@ function bindMedicalForm() {
       : `/api/medical/${recordId}`;
     const method = currentMode === 'create' ? 'POST' : 'PUT';
 
+    // Collect shared section data
+    const formData = new URLSearchParams(new FormData(form));
+    formData.set('prescriptions', JSON.stringify(collectRepeatableRows('[data-prescription-row]', '[data-rx-field]')));
+    formData.set('lab_results', JSON.stringify(collectRepeatableRows('[data-lab-result-row]', '[data-lab-field]')));
+
     const response = await fetch(endpoint, {
       method,
       headers: {
@@ -186,7 +192,7 @@ function bindMedicalForm() {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'X-CSRF-TOKEN': form.elements._token.value
       },
-      body: new URLSearchParams(new FormData(form)).toString()
+      body: formData.toString()
     });
     const result = await response.json();
 
@@ -298,4 +304,101 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function collectRepeatableRows(rowSelector, fieldSelector) {
+  const rows = [];
+  document.querySelectorAll(rowSelector).forEach((row) => {
+    const obj = {};
+    row.querySelectorAll(fieldSelector).forEach((field) => {
+      const key = Object.keys(field.dataset).find(k => k.endsWith('Field'));
+      if (key) {
+        const name = field.getAttribute(`data-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
+        obj[name] = field.value;
+      }
+    });
+    if (Object.values(obj).some(v => v && v.trim() !== '')) {
+      rows.push(obj);
+    }
+  });
+  return rows;
+}
+
+function bindSharedSections() {
+  // Collapsible sections
+  document.querySelectorAll('[data-collapsible-toggle]').forEach((header) => {
+    header.style.cursor = 'pointer';
+    header.addEventListener('click', () => {
+      const section = header.closest('[data-collapsible]');
+      if (!section) return;
+      section.classList.toggle('is-collapsed');
+      const body = section.querySelector('.collapsible-body');
+      if (body) body.hidden = section.classList.contains('is-collapsed');
+    });
+  });
+
+  // Prescription rows
+  document.querySelector('[data-add-prescription]')?.addEventListener('click', () => {
+    const container = document.querySelector('[data-prescriptions-container]');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'repeatable-row';
+    row.setAttribute('data-prescription-row', '');
+    row.innerHTML = `
+      <div class="animal-form-grid">
+        <label class="field"><span class="field-label">Medicine Name</span>
+          <input class="input" type="text" data-rx-field="medicine_name"></label>
+        <label class="field"><span class="field-label">Dosage</span>
+          <input class="input" type="text" data-rx-field="dosage"></label>
+        <label class="field"><span class="field-label">Frequency</span>
+          <input class="input" type="text" data-rx-field="frequency" placeholder="e.g., Every 8 hours"></label>
+        <label class="field"><span class="field-label">Duration</span>
+          <input class="input" type="text" data-rx-field="duration" placeholder="e.g., 7 days"></label>
+        <label class="field"><span class="field-label">Qty</span>
+          <input class="input" type="number" min="0" data-rx-field="quantity"></label>
+        <label class="field"><span class="field-label">Instructions</span>
+          <input class="input" type="text" data-rx-field="instructions"></label>
+      </div>
+      <button type="button" class="btn-danger-sm" data-remove-row title="Remove">✕</button>
+    `;
+    container.appendChild(row);
+  });
+
+  // Lab result rows
+  document.querySelector('[data-add-lab-result]')?.addEventListener('click', () => {
+    const container = document.querySelector('[data-lab-results-container]');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'repeatable-row';
+    row.setAttribute('data-lab-result-row', '');
+    row.innerHTML = `
+      <div class="animal-form-grid">
+        <label class="field"><span class="field-label">Test Name</span>
+          <input class="input" type="text" data-lab-field="test_name"></label>
+        <label class="field"><span class="field-label">Result</span>
+          <input class="input" type="text" data-lab-field="result_value"></label>
+        <label class="field"><span class="field-label">Normal Range</span>
+          <input class="input" type="text" data-lab-field="normal_range" placeholder="e.g., 5.5 – 8.5"></label>
+        <label class="field"><span class="field-label">Status</span>
+          <select class="select" data-lab-field="status">
+            <option value="Pending">Pending</option>
+            <option value="Normal">Normal</option>
+            <option value="Abnormal">Abnormal</option>
+          </select></label>
+        <label class="field"><span class="field-label">Date</span>
+          <input class="input" type="date" data-lab-field="date_conducted"></label>
+        <label class="field"><span class="field-label">Remarks</span>
+          <input class="input" type="text" data-lab-field="remarks"></label>
+      </div>
+      <button type="button" class="btn-danger-sm" data-remove-row title="Remove">✕</button>
+    `;
+    container.appendChild(row);
+  });
+
+  // Remove row delegation
+  document.addEventListener('click', (event) => {
+    const removeBtn = event.target.closest('[data-remove-row]');
+    if (!removeBtn) return;
+    removeBtn.closest('.repeatable-row')?.remove();
+  });
 }
