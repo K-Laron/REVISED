@@ -7,52 +7,52 @@
  *   data-qr-code     — Animal ID code
  *   data-qr-download — Download URL (defaults to data-qr-src)
  */
-document.addEventListener('DOMContentLoaded', () => {
-  const modal = document.getElementById('qr-preview-modal');
-  if (!modal) return;
 
-  const image = document.getElementById('qr-preview-image');
-  const name = document.getElementById('qr-preview-name');
-  const code = document.getElementById('qr-preview-id');
-  const download = document.getElementById('qr-preview-download');
-
-  function open(src, animalName, animalCode, downloadUrl) {
-    image.src = src;
-    name.textContent = animalName || 'Animal';
-    code.textContent = animalCode || '';
-    download.href = downloadUrl || src;
+document.addEventListener('click', (event) => {
+  // Handle open trigger
+  const trigger = event.target.closest('[data-qr-preview]');
+  if (trigger) {
+    event.preventDefault();
+    const modal = document.getElementById('qr-preview-modal');
+    if (!modal) return;
+    
+    const image = document.getElementById('qr-preview-image');
+    const name = document.getElementById('qr-preview-name');
+    const code = document.getElementById('qr-preview-id');
+    const download = document.getElementById('qr-preview-download');
+    
+    if (image) image.src = trigger.dataset.qrSrc || '';
+    if (name) name.textContent = trigger.dataset.qrName || 'Animal';
+    if (code) code.textContent = trigger.dataset.qrCode || '';
+    if (download) download.href = trigger.dataset.qrDownload || trigger.dataset.qrSrc || '';
+    
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
+    return;
   }
 
-  function close() {
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-    image.src = '';
-  }
-
-  // Close buttons
-  modal.querySelectorAll('[data-qr-close]').forEach((el) => {
-    el.addEventListener('click', close);
-  });
-
-  // Escape key
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !modal.hidden) {
-      close();
-    }
-  });
-
-  // Delegation: any [data-qr-preview] click
-  document.addEventListener('click', (event) => {
-    const trigger = event.target.closest('[data-qr-preview]');
-    if (!trigger) return;
+  // Handle close trigger
+  const closeBtn = event.target.closest('[data-qr-close]');
+  if (closeBtn) {
     event.preventDefault();
-    open(
-      trigger.dataset.qrSrc || '',
-      trigger.dataset.qrName || '',
-      trigger.dataset.qrCode || '',
-      trigger.dataset.qrDownload || trigger.dataset.qrSrc || ''
-    );
-  });
+    const modal = document.getElementById('qr-preview-modal');
+    if (modal) {
+      modal.hidden = true;
+      modal.setAttribute('aria-hidden', 'true');
+      const image = document.getElementById('qr-preview-image');
+      if (image) image.src = '';
+    }
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('qr-preview-modal');
+    if (modal && !modal.hidden) {
+      modal.hidden = true;
+      modal.setAttribute('aria-hidden', 'true');
+      const image = document.getElementById('qr-preview-image');
+      if (image) image.src = '';
+    }
+  }
 });
