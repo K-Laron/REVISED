@@ -31,7 +31,8 @@ document.addEventListener('click', (event) => {
       fetch(apiUrl, { credentials: 'same-origin' })
         .then(r => r.json())
         .then(result => {
-          if (result.status === 'success' && result.data && result.data.qr) {
+          const isSuccess = result?.success === true || result?.status === 'success';
+          if (isSuccess && result.data && result.data.qr) {
             // Prepend leading slash if missing
             let fileUrl = result.data.qr.file_path;
             if (!fileUrl.startsWith('/')) fileUrl = '/' + fileUrl;
