@@ -157,6 +157,16 @@ class InventoryService
         $updated = $this->get($itemId);
         $this->audit->record($userId, 'update', 'inventory', 'stock_transactions', $transactionId, ['quantity_on_hand' => $quantityBefore], ['quantity_on_hand' => $quantityAfter], $request);
 
+        $reorderLevel = (int) $item['reorder_level'];
+        if ($quantityBefore > $reorderLevel && $quantityAfter <= $reorderLevel) {
+            (new \App\Services\NotificationService())->notifyRole('shelter_staff', [
+                'type' => 'warning',
+                'title' => 'Low Stock Alert',
+                'message' => 'Item ' . $item['name'] . ' has dropped to or below its reorder level.',
+                'link' => '/inventory/' . $itemId
+            ]);
+        }
+
         return $updated;
     }
 
@@ -249,6 +259,16 @@ class InventoryService
 
         $updated = $this->get($itemId);
         $this->audit->record($userId, 'update', 'inventory', 'stock_transactions', $transactionId, ['quantity_on_hand' => $quantityBefore], ['quantity_on_hand' => $quantityAfter], $request);
+
+        $reorderLevel = (int) $item['reorder_level'];
+        if ($quantityBefore > $reorderLevel && $quantityAfter <= $reorderLevel) {
+            (new \App\Services\NotificationService())->notifyRole('shelter_staff', [
+                'type' => 'warning',
+                'title' => 'Low Stock Alert',
+                'message' => 'Item ' . $item['name'] . ' has dropped to or below its reorder level.',
+                'link' => '/inventory/' . $itemId
+            ]);
+        }
 
         return $updated;
     }

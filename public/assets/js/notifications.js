@@ -54,6 +54,10 @@ function bindNotifications() {
 
   loadUnreadCount();
 
+  // Poll for unread count every 30 seconds
+  const pollInterval = setInterval(loadUnreadCount, 30000);
+  signal.addEventListener('abort', () => clearInterval(pollInterval));
+
   async function loadUnreadCount() {
     const response = await fetch('/api/notifications/unread-count', {
       headers: { Accept: 'application/json' }

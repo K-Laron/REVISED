@@ -58,4 +58,14 @@ class NotificationService
             'read_at' => null,
         ]);
     }
+
+    public function notifyRole(string $roleName, array $data): void
+    {
+        $userModel = new \App\Models\User();
+        $users = $userModel->getUsersByRole($roleName);
+
+        foreach ($users as $user) {
+            $this->create(array_merge($data, ['user_id' => (int) $user['id']]));
+        }
+    }
 }

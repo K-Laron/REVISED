@@ -28,7 +28,7 @@ document.addEventListener('click', (event) => {
     if (download) download.href = trigger.dataset.qrDownload || apiUrl;
     
     if (apiUrl) {
-      fetch(apiUrl)
+      fetch(apiUrl, { credentials: 'same-origin' })
         .then(r => r.json())
         .then(result => {
           if (result.status === 'success' && result.data && result.data.qr) {

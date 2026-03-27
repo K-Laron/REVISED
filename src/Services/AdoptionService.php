@@ -289,6 +289,13 @@ class AdoptionService
             throw new RuntimeException('Adopter account was not created.');
         }
 
+        (new \App\Services\NotificationService())->notifyRole('super_admin', [
+            'type' => 'info',
+            'title' => 'New Adopter Registration',
+            'message' => 'A new public user (' . ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '') . ') has registered as an adopter.',
+            'link' => '/users/' . $userId,
+        ]);
+
         return $user;
     }
 
@@ -350,6 +357,13 @@ class AdoptionService
             '/adopt/apply'
         );
         $this->audit->record($userId, 'create', 'adoptions', 'adoption_applications', $applicationId, [], $application, $request);
+
+        (new \App\Services\NotificationService())->notifyRole('super_admin', [
+            'type' => 'info',
+            'title' => 'New Adoption Application',
+            'message' => 'A new adoption application (' . ($application['application_number'] ?? '') . ') has been submitted and is pending review.',
+            'link' => '/adoptions/' . $applicationId,
+        ]);
 
         return $application;
     }

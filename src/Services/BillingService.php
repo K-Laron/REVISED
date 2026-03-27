@@ -123,6 +123,13 @@ class BillingService
 
         $this->audit->record($userId, 'create', 'billing', 'invoices', $invoiceId, [], $invoice, $request);
 
+        (new \App\Services\NotificationService())->notifyRole('billing_clerk', [
+            'type' => 'info',
+            'title' => 'New Invoice Created',
+            'message' => 'Invoice ' . $invoice['invoice_number'] . ' is pending payment.',
+            'link' => '/billing/invoices/' . $invoiceId
+        ]);
+
         return $invoice;
     }
 

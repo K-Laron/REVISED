@@ -178,6 +178,13 @@ class UserService
             'message' => 'A shelter account has been created for you. Your username is ' . ($user['username'] ?? '') . '. Sign in using your assigned password.',
             'link' => '/login',
         ]);
+        
+        $this->notifications->notifyRole('super_admin', [
+            'type' => 'info',
+            'title' => 'New User Account Created',
+            'message' => 'A new internal user account for ' . ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '') . ' was successfully created.',
+            'link' => '/users/' . $userId,
+        ]);
 
         return $user;
     }

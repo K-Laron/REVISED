@@ -21,9 +21,6 @@ storage/pdfs/
 storage/runtime/
 /.playwright-cli/
 /output/
-/chromedriver/
-/tools/selenium-py/
-/geckodriver/
 
 # Extraneous files / Temp Code Generation
 CDP&ASMS REVISED.docx.md

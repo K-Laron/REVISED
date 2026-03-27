@@ -27,7 +27,7 @@ For local development only, it is fine to keep:
 - `mail_delivery_mode=log_only`
 - blank `TRUSTED_PROXIES`
 
-Browser automation tooling such as Selenium Python packages, geckodriver, and Playwright browser caches are intentionally local-only and are not committed to this repository. Install or generate them in your own workspace when you need smoke tests.
+Browser automation tooling such as Playwright browser caches is intentionally local-only and is not committed to this repository. Install or generate it in your own workspace when you need smoke tests.
 
 ## Quick Start Scripts
 

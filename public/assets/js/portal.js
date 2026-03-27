@@ -480,13 +480,16 @@
     const updateUi = (index) => {
       activeIndex = index;
       const previewIndex = slides.length > 1 ? (activeIndex + 1) % slides.length : -1;
+      const prevIndex = slides.length > 2 ? (activeIndex - 1 + slides.length) % slides.length : -1;
 
       slides.forEach((slide, slideIndex) => {
         const isActive = slideIndex === activeIndex;
         const isPreview = slideIndex === previewIndex && !isActive;
+        const isPrevious = slideIndex === prevIndex && !isActive && !isPreview;
 
         slide.classList.toggle('is-active', isActive);
         slide.classList.toggle('is-preview', isPreview);
+        slide.classList.toggle('is-previous', isPrevious);
         slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
         slide.tabIndex = isActive ? 0 : -1;
       });

@@ -262,4 +262,17 @@ class User
                 OR u.username = ''"
         );
     }
+
+    public function getUsersByRole(string $roleName): array
+    {
+        return Database::fetchAll(
+            'SELECT u.*
+             FROM users u
+             INNER JOIN roles r ON r.id = u.role_id
+             WHERE r.name = :role_name
+               AND u.is_deleted = 0
+               AND u.is_active = 1',
+            ['role_name' => $roleName]
+        );
+    }
 }
