@@ -21,10 +21,25 @@ document.addEventListener('click', (event) => {
     const code = document.getElementById('qr-preview-id');
     const download = document.getElementById('qr-preview-download');
     
-    if (image) image.src = trigger.dataset.qrSrc || '';
+    const apiUrl = trigger.dataset.qrSrc || '';
+    if (image) image.src = ''; // Clear old image
     if (name) name.textContent = trigger.dataset.qrName || 'Animal';
     if (code) code.textContent = trigger.dataset.qrCode || '';
-    if (download) download.href = trigger.dataset.qrDownload || trigger.dataset.qrSrc || '';
+    if (download) download.href = trigger.dataset.qrDownload || apiUrl;
+    
+    if (apiUrl) {
+      fetch(apiUrl)
+        .then(r => r.json())
+        .then(result => {
+          if (result.status === 'success' && result.data && result.data.qr) {
+            // Prepend leading slash if missing
+            let fileUrl = result.data.qr.file_path;
+            if (!fileUrl.startsWith('/')) fileUrl = '/' + fileUrl;
+            if (image) image.src = fileUrl;
+          }
+        })
+        .catch(err => console.error('Error fetching QR data:', err));
+    }
     
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
