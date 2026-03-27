@@ -34,6 +34,8 @@ class QrCodeController
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $contentType = $extension === 'svg' ? 'image/svg+xml' : 'image/png';
 
+        if (ob_get_level()) ob_clean();
+
         return new Response(200, (string) file_get_contents($path), [
             'Content-Type' => $contentType,
             'Content-Disposition' => 'attachment; filename="animal-' . $id . '-qr.' . $extension . '"',

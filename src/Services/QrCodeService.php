@@ -41,13 +41,20 @@ class QrCodeService
         $options = new QROptions([
             'outputType' => $usesRaster ? QRCode::OUTPUT_IMAGE_PNG : QRCode::OUTPUT_MARKUP_SVG,
             'eccLevel' => QRCode::ECC_M,
-            'scale' => 8,
+            'scale' => 10,
             'imageBase64' => false,
+            'addQuietzone' => true,
+            'quietzoneSize' => 4,
+            'svgAddXmlHeader' => true,
+            'svgWidth' => 300,
+            'svgHeight' => 300,
+            'connectPaths' => true, // Optimize SVG size
         ]);
 
-        (new QRCode($options))->render($qrData, $absolutePath);
-        if (!is_file($absolutePath)) {
-            throw new RuntimeException('QR code file was not generated.');
+        $output = (new QRCode($options))->render($qrData);
+        
+        if (file_put_contents($absolutePath, $output) === false) {
+            throw new RuntimeException('Failed to write QR code file to: ' . $absolutePath);
         }
 
         $this->qrCodes->replace($animalId, $qrData, $relativePath, $generatedBy);
@@ -64,7 +71,10 @@ class QrCodeService
     {
         $record = $this->qrCodes->findByAnimal($animalId);
         if ($record !== false) {
-            return $record;
+            $absolutePath = dirname(__DIR__, 2) . '/public/' . $record['file_path'];
+            if (is_file($absolutePath)) {
+                return $record;
+            }
         }
 
         $animal = $this->animals->find($animalId);
