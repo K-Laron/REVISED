@@ -77,14 +77,14 @@
     <link rel="stylesheet" href="/assets/css/reset.css" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/base.css" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/components.css" data-core-asset="css">
-    <link rel="stylesheet" href="/assets/css/toast.css" data-core-asset="css">
-    <link rel="stylesheet" href="/assets/css/layout.css" data-core-asset="css">
-    <link rel="stylesheet" href="/assets/css/responsive.css" data-core-asset="css">
-    <link rel="stylesheet" href="/assets/css/qr-modal.css" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/toast.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/layout.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/qr-modal.css?v=<?= time() ?>" data-core-asset="css">
     <?php foreach (($extraCss ?? []) as $stylesheet): ?>
-        <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="css">
+        <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>" data-page-asset="css">
     <?php endforeach; ?>
-    <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css?v=<?= time() ?>" data-core-asset="css">
 </head>
 <?php
     $layoutPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -106,13 +106,13 @@
             <?php require __DIR__ . '/../partials/qr-modal.php'; ?>
         </div>
     </div>
-    <script src="/assets/js/theme.js" data-core-asset="js"></script>
-    <script src="/assets/js/toast.js" data-core-asset="js"></script>
-    <script src="/assets/js/app.js" data-core-asset="js"></script>
-    <script src="/assets/js/notifications.js" data-core-asset="js"></script>
-    <script src="/assets/js/qr-modal.js" data-core-asset="js"></script>
+    <script src="/assets/js/theme.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/toast.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/app.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/notifications.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/qr-modal.js?v=<?= time() ?>" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
-        <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="js"></script>
+        <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>" data-page-asset="js"></script>
     <?php endforeach; ?>
 </body>
 </html>
