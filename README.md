@@ -1,64 +1,163 @@
 # Catarman Dog Pound & Animal Shelter Management System
 
-Vanilla PHP 8.2 application scaffolded from the local PRD and implementation guide.
+This repository contains the current implemented CDP&ASMS runtime as of March 27, 2026. The application is a custom PHP 8.2 MVC system for shelter intake, medical records, adoptions, billing, inventory, reporting, search, user administration, system settings, backups, and the public adopter portal.
 
-## Current Runtime Notes
+## Current Runtime Snapshot
 
-- As of March 24, 2026, the application uses server-side PHP sessions for both browser and authenticated API access.
-- JWT bearer-token authentication is not part of the current runtime and `firebase/php-jwt` is not installed.
-- Treat this README and `IMPLEMENTATION_GUIDE.md` as the source of truth for current behavior. `PRD_Catarman_Dog_Pound.md` remains useful product history, but some original auth references are superseded by the implemented system.
+- Authentication uses server-side PHP sessions plus persisted `user_sessions` validation.
+- The app currently exposes 34 web routes and 126 API routes.
+- The runtime schema is 42 tables: 39 base tables from `database_schema.sql` plus 3 additional tables introduced by the current 5 SQL migrations.
+- PDF exports are generated on the server with `TCPDF`.
+- Dashboard charts use Chart.js loaded at runtime from `https://cdn.jsdelivr.net/npm/chart.js`.
+- System settings persist in MySQL when the `system_settings` table is available and fall back to `storage/config/system_settings.json` only as a legacy safety path.
+
+## Stack
+
+### Application Runtime
+
+- PHP 8.2+
+- MySQL 8.0+
+- Composer PSR-4 autoloading under `App\\`
+- Vanilla HTML, CSS, and JavaScript views served from PHP templates
+
+### Composer Packages
+
+- `vlucas/phpdotenv` for environment loading
+- `chillerlan/php-qrcode` for QR code generation
+- `tecnickcom/tcpdf` for report, receipt, invoice, and dossier PDFs
+- `phpmailer/phpmailer` for optional SMTP delivery
+- `intervention/image` for image handling
+- `monolog/monolog` for structured logging support
+
+### Optional Node Tooling
+
+The Node dependencies in `package.json` are not required to run the PHP app itself. They are used for local documentation and manuscript tooling:
+
+- `beautiful-mermaid`
+- `@resvg/resvg-js`
+- `docx`
+
+## Functional Areas
+
+The implemented system currently covers:
+
+- Authentication, profile management, password reset, forced password change, and session invalidation
+- Executive dashboard with KPI cards, charts, and recent activity
+- Animal intake, profile editing, photo uploads, status updates, soft delete and restore, QR generation, and timeline views
+- Medical records with procedure-specific forms for vaccination, surgery, examination, treatment, deworming, and euthanasia
+- Shared medical subsections for vital signs, prescriptions, and lab results
+- Kennel assignment, release, history, maintenance logging, and occupancy statistics
+- Adoption applications, interviews, seminars, completion, certificates, and adopter self-service workflows
+- Billing with invoices, payments, receipts, fee schedule management, and financial stats
+- Inventory categories, item management, stock movements, alerts, and transaction history
+- User management, role and permission updates, and per-user session management
+- Reports with CSV and PDF exports, saved templates, census summaries, and animal dossiers
+- Notifications, global search, deployment readiness checks, maintenance mode, system backups, and backup restore confirmation
+- Public adopter portal with landing page, animal browsing, registration, application submission, and application tracking
 
 ## Local Setup
 
-1. Copy `.env.example` to `.env` and update database and mail credentials.
-2. Install dependencies with Composer.
-3. Import `database_schema.sql` and `seeders.sql` into a MySQL 8 database named `catarman_shelter`.
-4. Start the PHP development server:
+1. Copy `.env.example` to `.env`.
+2. Set your database credentials and local `APP_URL`.
+3. Install PHP dependencies:
+
+```powershell
+composer install
+```
+
+4. Import the base schema and seeders:
+
+```powershell
+mysql -u root -p -e "CREATE DATABASE catarman_shelter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p catarman_shelter < database_schema.sql
+mysql -u root -p catarman_shelter < seeders.sql
+```
+
+5. Apply the current SQL migrations in order:
+
+```powershell
+mysql -u root -p catarman_shelter < database\migrations\2026_03_25_000001_add_usernames_to_users.sql
+mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000001_add_animal_detail_fields.sql
+mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000002_add_medical_vital_signs.sql
+mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000003_add_medical_prescriptions.sql
+mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000004_add_medical_lab_results.sql
+```
+
+6. Start the PHP server:
 
 ```powershell
 php -S localhost:8000 -t public
 ```
 
-If you are upgrading an existing database instead of importing a fresh one, apply [C:\Users\TESS LARON\Desktop\REVISED\database\migrations\2026_03_25_000001_add_usernames_to_users.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database/migrations/2026_03_25_000001_add_usernames_to_users.sql) before restarting the app.
-
-For local development only, it is fine to keep:
+### Recommended Local `.env` Defaults
 
 - `APP_URL=http://localhost:8000`
-- `mail_delivery_mode=log_only`
-- blank `TRUSTED_PROXIES`
+- `APP_TIMEZONE=Asia/Manila`
+- `APP_DEBUG=true`
+- `TRUSTED_PROXIES=`
+- `SESSION_LIFETIME=60`
 
-Browser automation tooling such as Playwright browser caches is intentionally local-only and is not committed to this repository. Install or generate it in your own workspace when you need smoke tests.
+For local-only password recovery testing, `mail_delivery_mode=log_only` is acceptable. Reset URLs will be logged instead of sent.
 
 ## Quick Start Scripts
 
-- Run [C:\Users\TESS LARON\Desktop\REVISED\start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/start-app.vbs) to start the PHP server in the background and automatically open the adopter landing page at `/adopt` in your default browser.
-- Run [C:\Users\TESS LARON\Desktop\REVISED\stop-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/stop-app.vbs) to stop that background PHP server.
-- The scripts track the server PID in `storage/runtime/app-server.json` and write logs to `storage/runtime/`.
+- `start-app.vbs` starts the PHP server in the background and opens `/adopt`.
+- `stop-app.vbs` stops the background server tracked in `storage/runtime/app-server.json`.
+- Runtime logs for the VBScript helpers are written under `storage/runtime/`.
 
-## Current Scope
+## Storage and Generated Files
 
-The current codebase now includes the full shelter workflow stack:
+The runtime expects these writable directories:
 
-- Authentication, RBAC, sessions, CSRF, and audit logging
-- Dashboard, animals, kennels, medical, adoptions, billing, inventory, users, reports, and settings
-- Public adopter portal, backups, restore controls, global search, and browser-validated smoke-tested flows
+- `storage/`
+- `storage/logs/`
+- `storage/sessions/`
+- `storage/backups/`
+- `storage/exports/`
+- `public/uploads/`
 
-## Production Release Checklist
+Generated files currently include:
 
-- Set a real `APP_URL` with `https://`.
-- Generate and set a unique `APP_KEY`.
-- Set `TRUSTED_PROXIES` if TLS terminates at Nginx, Apache, a load balancer, or another reverse proxy.
-- Reduce `SESSION_LIFETIME` to `60` minutes or less for admin use.
-- Replace the seeded admin password `ChangeMe@2025`.
-- Configure SMTP if password-reset and notification email delivery must work outside local QA.
-- Confirm `storage/`, `storage/logs/`, `storage/sessions/`, and `storage/backups/` are writable by the PHP runtime user.
-- Rehearse backup creation and restore against a cloned database, not the live one.
-- Run the browser smoke suite after deployment and after every environment change.
+- animal photo uploads in `public/uploads/animals/`
+- adoption documents in `public/uploads/adoptions/documents/`
+- QR SVG files in `public/uploads/qrcodes/`
+- report exports in `storage/exports/reports/`
+- compressed SQL backups in `storage/backups/`
 
-## Deployment Notes
+## Security Model
 
-- Prefer HTTPS at the edge and keep PHP behind the web server or reverse proxy.
-- If the app runs behind a proxy, set `TRUSTED_PROXIES` to the proxy IP or CIDR so secure-cookie and client-IP detection stay correct.
+- Passwords are hashed with bcrypt using cost 12.
+- Authenticated browser and API requests share the same session-backed auth state.
+- Session cookies are configured as `HttpOnly` and `SameSite=Strict`.
+- Secure cookies are enabled automatically when the request is HTTPS or a trusted proxy reports HTTPS.
+- CSRF validation is applied to state-changing routes that use browser sessions.
+- Sensitive endpoints are rate limited via `rate_limit_attempts`.
+- Authorization is enforced by role and permission middleware aliases defined in `config/app.php`.
+
+## Release Checklist
+
+- Set a real HTTPS `APP_URL`.
+- Set a unique `APP_KEY`.
+- Configure `TRUSTED_PROXIES` if TLS terminates upstream.
 - Keep `APP_DEBUG=false` in production.
-- `mail_delivery_mode=log_only` is acceptable for local and staging use, but not for user-facing production recovery unless you have a documented manual reset process.
-- Backups are available from `/settings`, but restore is destructive and should only be tested on a cloned database first.
+- Rotate the seeded admin password `ChangeMe@2025`.
+- Ensure mail settings are complete if password-reset email must deliver outside QA.
+- Confirm readiness checks in `/settings` return no `fail` entries.
+- Rehearse backup creation and restore against a cloned database, not the live database.
+- Verify that `storage/` and `public/uploads/` are writable by the PHP runtime user.
+
+## Docs Map
+
+- `README.md`: current runtime overview and setup
+- `ARCHITECTURE.md`: request flow, directory map, and module boundaries
+- `API_ROUTES.md`: current web and API route inventory
+- `IMPLEMENTATION_GUIDE.md`: implemented runtime behavior and deployment notes
+- `VALIDATION_RULES.md`: validator capabilities and endpoint-specific rule highlights
+- `PAGE_LAYOUTS.md`: implemented page structure and screen responsibilities
+- `PRD_Catarman_Dog_Pound.md`: product and scope document aligned to the current build
+- `system_summary.md`: concise system inventory and counts
+- `llm_context.md`: AI-facing implementation constraints and safe assumptions
+
+## Notes on Historical Files
+
+The chapter and manuscript Markdown files remain part of the capstone documentation set. They have been aligned to the current application where the content describes implemented system behavior, but their academic references and manuscript structure remain separate from the runtime documentation above.

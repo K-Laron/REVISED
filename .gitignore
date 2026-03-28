@@ -23,6 +23,16 @@ storage/runtime/
 /output/
 
 # Extraneous files / Temp Code Generation
+/.tmp/
+/tmp/
+/assets/
+/generated_chapters/
+/ABSTRACT.docx
+/CDP&ASMS REVISED.docx
+/CHAPTER-*.docx
+/tmp-beautiful-mermaid-test.mmd
+/tmp-beautiful-mermaid-test.svg
+/tmp_ch*.md
 CDP&ASMS REVISED.docx.md
 CDP_ASMS_Manuscript*.docx
 CHAPTER_*.md
