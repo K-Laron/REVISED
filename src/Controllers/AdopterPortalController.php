@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Core\ExceptionHandler;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
@@ -17,6 +18,9 @@ use RuntimeException;
 
 class AdopterPortalController
 {
+    use InteractsWithApi;
+    use RendersViews;
+
     private AdoptionService $adoptions;
     private AuthService $auth;
 
@@ -32,14 +36,13 @@ class AdopterPortalController
             return $response;
         }
 
-        return Response::html(View::render('portal.landing', [
+        return $this->renderPortalPage('portal.landing', $request, [
             'title' => 'Adopt',
             'extraCss' => ['/assets/css/portal.css'],
             'extraJs' => ['/assets/js/portal.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'featuredAnimals' => $this->adoptions->featuredAnimals(4),
-            'currentUser' => $this->auth->userFromRequest($request),
-        ], 'layouts.public'));
+        ]);
     }
 
     public function animals(Request $request): Response
@@ -57,7 +60,7 @@ class AdopterPortalController
         ];
         $result = $this->adoptions->availableAnimals($filters, $page, 12);
 
-        return Response::html(View::render('portal.animals', [
+        return $this->renderPortalPage('portal.animals', $request, [
             'title' => 'Available Animals',
             'extraCss' => ['/assets/css/portal.css'],
             'extraJs' => ['/assets/js/portal.js'],
@@ -67,8 +70,7 @@ class AdopterPortalController
             'perPage' => 12,
             'total' => $result['total'],
             'totalPages' => max(1, (int) ceil(max(1, $result['total']) / 12)),
-            'currentUser' => $this->auth->userFromRequest($request),
-        ], 'layouts.public'));
+        ]);
     }
 
     public function animalDetail(Request $request, string $id): Response
@@ -83,13 +85,12 @@ class AdopterPortalController
             return Response::redirect('/adopt/animals');
         }
 
-        return Response::html(View::render('portal.animal-detail', [
+        return $this->renderPortalPage('portal.animal-detail', $request, [
             'title' => $animal['name'] ?: $animal['animal_id'],
             'extraCss' => ['/assets/css/portal.css'],
             'extraJs' => ['/assets/js/portal.js'],
             'animal' => $animal,
-            'currentUser' => $this->auth->userFromRequest($request),
-        ], 'layouts.public'));
+        ]);
     }
 
     public function showRegister(Request $request): Response
@@ -127,7 +128,7 @@ class AdopterPortalController
                 return $this->renderRegisterPage($request, $validator->errors(), $request->body(), 422);
             }
 
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         try {
@@ -164,7 +165,7 @@ class AdopterPortalController
         $authUser = $request->attribute('auth_user');
         $preferredAnimalId = (int) $request->query('animal_id', 0);
 
-        return Response::html(View::render('portal.apply', [
+        return $this->renderPortalPage('portal.apply', $request, [
             'title' => 'Apply For Adoption',
             'extraCss' => ['/assets/css/portal.css'],
             'extraJs' => ['/assets/js/portal.js'],
@@ -173,7 +174,7 @@ class AdopterPortalController
             'myApplications' => $this->adoptions->myApplications((int) $authUser['id']),
             'availableAnimals' => $this->adoptions->availableAnimals([], 1, 100)['items'],
             'preferredAnimalId' => $preferredAnimalId,
-        ], 'layouts.public'));
+        ]);
     }
 
     public function apply(Request $request): Response
@@ -213,7 +214,7 @@ class AdopterPortalController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         try {
@@ -266,14 +267,20 @@ class AdopterPortalController
         array $old = [],
         int $status = 200
     ): Response {
-        return Response::html(View::render('portal.register', [
+        return $this->renderPortalPage('portal.register', $request, [
             'title' => 'Create Adopter Account',
             'extraCss' => ['/assets/css/portal.css'],
             'extraJs' => ['/assets/js/portal.js'],
             'csrfToken' => CsrfMiddleware::token(),
-            'currentUser' => $this->auth->userFromRequest($request),
             'errors' => $errors,
             'old' => $old,
-        ], 'layouts.public'), $status);
+        ], $status);
+    }
+
+    private function renderPortalPage(string $view, Request $request, array $data = [], int $status = 200): Response
+    {
+        return $this->renderPublicView($view, $data + [
+            'currentUser' => $this->auth->userFromRequest($request),
+        ], $status);
     }
 }

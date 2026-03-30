@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\AdoptionService;
+use App\Support\InputNormalizer;
+use App\Support\Pagination;
 use RuntimeException;
 
 class AdoptionController
 {
+    use InteractsWithApi;
+
     private AdoptionService $adoptions;
 
     public function __construct()
@@ -55,20 +60,11 @@ class AdoptionController
 
     public function list(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 40)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 40);
         $result = $this->adoptions->list($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Adoption applications retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Adoption applications retrieved successfully.');
     }
 
     public function get(Request $request, string $id): Response
@@ -89,13 +85,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->updateStatus((int) $id, (string) $request->body('status'), (int) $authUser['id'], $request);
+            $application = $this->adoptions->updateStatus((int) $id, (string) $request->body('status'), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'ADOPTION_STATUS_BLOCKED', $exception->getMessage());
         }
@@ -110,13 +106,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->reject((int) $id, (string) $request->body('rejection_reason'), (int) $authUser['id'], $request);
+            $application = $this->adoptions->reject((int) $id, (string) $request->body('rejection_reason'), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'ADOPTION_REJECT_BLOCKED', $exception->getMessage());
         }
@@ -126,7 +122,7 @@ class AdoptionController
 
     public function scheduleInterview(Request $request, string $id): Response
     {
-        $payload = $this->normalizeDateTimeFields($request->body(), ['scheduled_date']);
+        $payload = InputNormalizer::normalizeDateTimeFields($request->body(), ['scheduled_date']);
         $validator = (new Validator($payload))->rules([
             'scheduled_date' => 'required|date',
             'interview_type' => 'required|in:in_person,video_call',
@@ -136,13 +132,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->scheduleInterview((int) $id, $payload, (int) $authUser['id'], $request);
+            $application = $this->adoptions->scheduleInterview((int) $id, $payload, $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INTERVIEW_CREATE_BLOCKED', $exception->getMessage());
         }
@@ -152,7 +148,7 @@ class AdoptionController
 
     public function updateInterview(Request $request, string $id): Response
     {
-        $payload = $this->normalizeDateTimeFields($request->body(), ['scheduled_date']);
+        $payload = InputNormalizer::normalizeDateTimeFields($request->body(), ['scheduled_date']);
         $validator = (new Validator($payload))->rules([
             'scheduled_date' => 'required|date',
             'interview_type' => 'required|in:in_person,video_call',
@@ -168,13 +164,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->updateInterview((int) $id, $payload, (int) $authUser['id'], $request);
+            $application = $this->adoptions->updateInterview((int) $id, $payload, $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INTERVIEW_UPDATE_BLOCKED', $exception->getMessage());
         }
@@ -184,7 +180,7 @@ class AdoptionController
 
     public function createSeminar(Request $request): Response
     {
-        $payload = $this->normalizeDateTimeFields($request->body(), ['scheduled_date', 'end_time']);
+        $payload = InputNormalizer::normalizeDateTimeFields($request->body(), ['scheduled_date', 'end_time']);
         $validator = (new Validator($payload))->rules([
             'title' => 'required|string|max:200',
             'scheduled_date' => 'required|date',
@@ -197,13 +193,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $seminars = $this->adoptions->createSeminar($payload, (int) $authUser['id'], $request);
+            $seminars = $this->adoptions->createSeminar($payload, $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'SEMINAR_CREATE_BLOCKED', $exception->getMessage());
         }
@@ -223,13 +219,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->registerAttendee((int) $id, (int) $request->body('application_id'), (int) $authUser['id'], $request);
+            $application = $this->adoptions->registerAttendee((int) $id, (int) $request->body('application_id'), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'SEMINAR_ATTENDEE_BLOCKED', $exception->getMessage());
         }
@@ -245,13 +241,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->updateAttendance((int) $id, (int) $request->body('application_id'), (string) $request->body('attendance_status'), (int) $authUser['id'], $request);
+            $application = $this->adoptions->updateAttendance((int) $id, (int) $request->body('application_id'), (string) $request->body('attendance_status'), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'SEMINAR_ATTENDANCE_BLOCKED', $exception->getMessage());
         }
@@ -261,7 +257,7 @@ class AdoptionController
 
     public function complete(Request $request, string $id): Response
     {
-        $payload = $this->normalizeDateTimeFields($request->body(), ['completion_date']);
+        $payload = InputNormalizer::normalizeDateTimeFields($request->body(), ['completion_date']);
         $validator = (new Validator($payload))->rules([
             'completion_date' => 'required|date',
             'payment_confirmed' => 'nullable|boolean',
@@ -272,13 +268,13 @@ class AdoptionController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $application = $this->adoptions->complete((int) $id, $payload, (int) $authUser['id'], $request);
+            $application = $this->adoptions->complete((int) $id, $payload, $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'ADOPTION_COMPLETE_BLOCKED', $exception->getMessage());
         }
@@ -299,10 +295,7 @@ class AdoptionController
             return Response::error(404, 'NOT_FOUND', 'Adoption certificate file not found.');
         }
 
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="adoption-certificate-' . (int) $id . '.pdf"',
-        ]);
+        return $this->fileDownloadResponse($path, 'application/pdf', 'adoption-certificate-' . (int) $id . '.pdf');
     }
 
     public function pipelineStats(Request $request): Response
@@ -310,21 +303,4 @@ class AdoptionController
         return Response::success($this->adoptions->pipelineStats(), 'Adoption pipeline stats retrieved successfully.');
     }
 
-    private function normalizeDateTimeFields(array $payload, array $fields): array
-    {
-        foreach ($fields as $field) {
-            if (($payload[$field] ?? '') === '') {
-                continue;
-            }
-
-            $value = str_replace('T', ' ', trim((string) $payload[$field]));
-            if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value) === 1) {
-                $value .= ':00';
-            }
-
-            $payload[$field] = $value;
-        }
-
-        return $payload;
-    }
 }

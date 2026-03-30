@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\KennelService;
-use ReflectionClass;
 use RuntimeException;
 
 class KennelController
 {
+    use InteractsWithApi;
+    use RendersViews;
+
     private KennelService $kennels;
 
     public function __construct()
@@ -24,16 +27,20 @@ class KennelController
 
     public function index(Request $request): Response
     {
-        return Response::html(View::render('kennels.index', [
+        return $this->renderAppView('kennels.index', [
             'title' => 'Kennel Management',
             'extraCss' => ['/assets/css/kennels.css'],
-            'extraJs' => ['/assets/js/kennels.js'],
+            'extraJs' => [
+                '/assets/js/kennels/kennel-utils.js',
+                '/assets/js/kennels/kennel-render.js',
+                '/assets/js/kennels.js',
+            ],
             'csrfToken' => CsrfMiddleware::token(),
             'filters' => $request->query(),
             'assignableAnimals' => $this->kennels->assignableAnimals(),
             'existingKennelCodes' => $this->kennels->existingKennelCodes(),
             'zones' => $this->kennels->zones(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function list(Request $request): Response
@@ -222,36 +229,26 @@ class KennelController
 
     private function validateUniqueCode(Validator $validator, array $data, ?int $ignoreId = null): void
     {
-        $service = new KennelService();
-
-        try {
-            $items = $service->list();
-        } catch (\Throwable) {
-            return;
-        }
-
         $code = trim((string) ($data['kennel_code'] ?? ''));
         if ($code === '') {
             return;
         }
 
-        foreach ($items as $item) {
-            if ($item['kennel_code'] !== $code) {
-                continue;
-            }
-
-            if ($ignoreId !== null && (int) $item['id'] === $ignoreId) {
-                return;
-            }
-
-            $errors = $validator->errors();
-            $errors['kennel_code'][] = 'Kennel code has already been taken.';
-
-            $reflection = new ReflectionClass($validator);
-            $property = $reflection->getProperty('errors');
-            $property->setAccessible(true);
-            $property->setValue($validator, $errors);
+        if (!in_array($code, $this->kennels->existingKennelCodes(), true)) {
             return;
         }
+
+        if ($ignoreId !== null) {
+            try {
+                $current = $this->kennels->get($ignoreId);
+                if ((string) ($current['kennel_code'] ?? '') === $code) {
+                    return;
+                }
+            } catch (RuntimeException) {
+                return;
+            }
+        }
+
+        $validator->addManualError('kennel_code', 'Kennel code has already been taken.');
     }
 }

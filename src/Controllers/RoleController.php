@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Helpers\Validator;
@@ -12,6 +13,8 @@ use RuntimeException;
 
 class RoleController
 {
+    use InteractsWithApi;
+
     private UserService $users;
 
     public function __construct()
@@ -40,13 +43,13 @@ class RoleController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $result = $this->users->updateRolePermissions((int) $id, $request->body('permission_ids', []), (int) $authUser['id'], $request);
+            $result = $this->users->updateRolePermissions((int) $id, $request->body('permission_ids', []), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'ROLE_PERMISSION_UPDATE_BLOCKED', $exception->getMessage());
         }

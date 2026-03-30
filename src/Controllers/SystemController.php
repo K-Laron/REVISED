@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Helpers\Validator;
 use App\Services\BackupService;
 use App\Services\SystemSettingsService;
+use App\Support\Pagination;
 use RuntimeException;
 
 class SystemController
 {
+    use InteractsWithApi;
+
     private BackupService $backups;
     private SystemSettingsService $settings;
 
@@ -34,15 +38,13 @@ class SystemController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
-
-        $authUser = $request->attribute('auth_user');
 
         try {
             $backup = $this->backups->createBackup(
                 (string) $request->body('backup_type', 'full'),
-                (int) $authUser['id'],
+                $this->currentUserId($request),
                 $request
             );
         } catch (RuntimeException $exception) {
@@ -54,20 +56,11 @@ class SystemController
 
     public function listBackups(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(50, (int) $request->query('per_page', 10)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 10, 50);
         $result = $this->backups->listBackups($page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Backups retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Backups retrieved successfully.');
     }
 
     public function settings(Request $request): Response
@@ -89,11 +82,10 @@ class SystemController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
-        $settings = $this->settings->update($request->body(), (int) $authUser['id'], $request);
+        $settings = $this->settings->update($request->body(), $this->currentUserId($request), $request);
 
         return Response::success($settings, 'System settings updated successfully.');
     }
@@ -106,14 +98,13 @@ class SystemController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
         $settings = $this->settings->setMaintenance(
             filter_var($request->body('enabled'), FILTER_VALIDATE_BOOL),
             $request->body('message'),
-            (int) $authUser['id'],
+            $this->currentUserId($request),
             $request
         );
 
@@ -129,18 +120,14 @@ class SystemController
     {
         $expectedConfirmation = 'RESTORE ' . $id;
         if ((string) $request->body('restore_confirmation', '') !== $expectedConfirmation) {
-            return Response::error(
-                422,
-                'VALIDATION_ERROR',
-                'Backup restore requires an exact typed confirmation.',
-                ['restore_confirmation' => ['Type ' . $expectedConfirmation . ' to continue.']]
+            return $this->validationError(
+                ['restore_confirmation' => ['Type ' . $expectedConfirmation . ' to continue.']],
+                'Backup restore requires an exact typed confirmation.'
             );
         }
 
-        $authUser = $request->attribute('auth_user');
-
         try {
-            $backup = $this->backups->restoreBackup((int) $id, (int) $authUser['id'], $request);
+            $backup = $this->backups->restoreBackup((int) $id, $this->currentUserId($request), $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'BACKUP_RESTORE_BLOCKED', $exception->getMessage());
         }

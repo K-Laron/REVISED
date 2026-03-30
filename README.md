@@ -89,6 +89,34 @@ mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000004_add_me
 php -S localhost:8000 -t public
 ```
 
+7. Run the PHPUnit suite:
+
+```powershell
+php vendor/bin/phpunit
+```
+
+The suite includes unit coverage plus database-backed adoption integration tests. Use a populated local database and valid `.env` connection settings before running it.
+
+### Generate Additional Local Animal Data
+
+Use the dev-only CLI seeder to add randomized animal records to your current local database:
+
+```powershell
+php scripts/seed_animals.php 80
+```
+
+Optional: pass a reproducible random seed with `--seed=<number>`.
+
+### Generate Additional Local Activity Data
+
+Use the dev-only CLI activity seeder to add randomized adoption workflow and medical records to your current local database:
+
+```powershell
+php scripts/seed_activity.php --medical=45 --adoptions=18 --seminars=3
+```
+
+Optional: pass a reproducible random seed with `--seed=<number>`.
+
 ### Recommended Local `.env` Defaults
 
 - `APP_URL=http://localhost:8000`

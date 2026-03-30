@@ -176,11 +176,14 @@
             <span>v1.0.0</span>
         </footer>
     </div>
-    <script src="/assets/js/theme.js"></script>
-    <script src="/assets/js/toast.js"></script>
-    <script src="/assets/js/app.js"></script>
+    <script src="/assets/js/theme.js" data-core-asset="js"></script>
+    <script src="/assets/js/toast.js" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-runtime.js" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-shell.js" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-navigation.js" data-core-asset="js"></script>
+    <script src="/assets/js/app.js" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
-        <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>"></script>
+        <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="js"></script>
     <?php endforeach; ?>
 </body>
 </html>

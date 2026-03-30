@@ -38,6 +38,11 @@ class Validator
         return $this->errors;
     }
 
+    public function addManualError(string $field, string $message): void
+    {
+        $this->addError($field, $message);
+    }
+
     private function validateField(string $field, array $rules): void
     {
         $value = $this->value($field);

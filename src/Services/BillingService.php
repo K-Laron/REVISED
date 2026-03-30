@@ -12,6 +12,8 @@ use App\Models\FeeSchedule;
 use App\Models\Invoice;
 use App\Models\InvoiceLineItem;
 use App\Models\Payment;
+use App\Services\Billing\InvoiceComputation;
+use App\Support\InputNormalizer;
 use RuntimeException;
 
 class BillingService
@@ -22,6 +24,7 @@ class BillingService
     private FeeSchedule $fees;
     private PdfService $pdfs;
     private AuditService $audit;
+    private InvoiceComputation $computation;
 
     public function __construct()
     {
@@ -31,6 +34,7 @@ class BillingService
         $this->fees = new FeeSchedule();
         $this->pdfs = new PdfService();
         $this->audit = new AuditService();
+        $this->computation = new InvoiceComputation();
     }
 
     public function listInvoices(array $filters, int $page, int $perPage): array
@@ -75,12 +79,12 @@ class BillingService
 
     public function createInvoice(array $data, int $userId, Request $request): array
     {
-        $lineItems = $this->normalizeLineItems($data['line_items'] ?? []);
+        $lineItems = $this->computation->normalizeLineItems($data['line_items'] ?? []);
         if ($lineItems === []) {
             throw new RuntimeException('At least one line item is required.');
         }
 
-        $totals = $this->computeTotals($lineItems);
+        $totals = $this->computation->computeTotals($lineItems);
         $invoiceNumber = IdGenerator::next('invoice_number');
 
         Database::beginTransaction();
@@ -140,14 +144,14 @@ class BillingService
             throw new RuntimeException('Voided invoices cannot be edited.');
         }
 
-        $lineItems = $this->normalizeLineItems($data['line_items'] ?? []);
+        $lineItems = $this->computation->normalizeLineItems($data['line_items'] ?? []);
         if ($lineItems === []) {
             throw new RuntimeException('At least one line item is required.');
         }
 
-        $totals = $this->computeTotals($lineItems);
+        $totals = $this->computation->computeTotals($lineItems);
         $amountPaid = (float) $current['amount_paid'];
-        $paymentStatus = $this->resolvePaymentStatus($amountPaid, $totals['total_amount']);
+        $paymentStatus = $this->computation->resolvePaymentStatus($amountPaid, $totals['total_amount']);
 
         Database::beginTransaction();
 
@@ -254,7 +258,7 @@ class BillingService
             ]);
 
             $newAmountPaid = round((float) $invoice['amount_paid'] + $amount, 2);
-            $status = $this->resolvePaymentStatus($newAmountPaid, (float) $invoice['total_amount']);
+            $status = $this->computation->resolvePaymentStatus($newAmountPaid, (float) $invoice['total_amount']);
             $this->invoices->updateAmounts($invoiceId, $newAmountPaid, $status, $userId);
             Database::commit();
         } catch (\Throwable $exception) {
@@ -297,11 +301,11 @@ class BillingService
             'name' => $data['name'],
             'description' => $data['description'] !== '' ? $data['description'] : null,
             'amount' => round((float) $data['amount'], 2),
-            'is_per_day' => $this->toBool($data['is_per_day'] ?? false) ? 1 : 0,
+            'is_per_day' => InputNormalizer::bool($data['is_per_day'] ?? false) ? 1 : 0,
             'species_filter' => ($data['species_filter'] ?? '') !== '' ? $data['species_filter'] : null,
             'effective_from' => $data['effective_from'],
             'effective_to' => ($data['effective_to'] ?? '') !== '' ? $data['effective_to'] : null,
-            'is_active' => $this->toBool($data['is_active'] ?? true) ? 1 : 0,
+            'is_active' => InputNormalizer::bool($data['is_active'] ?? true) ? 1 : 0,
             'created_by' => $userId,
         ]);
 
@@ -327,11 +331,11 @@ class BillingService
             'name' => $data['name'],
             'description' => $data['description'] !== '' ? $data['description'] : null,
             'amount' => round((float) $data['amount'], 2),
-            'is_per_day' => $this->toBool($data['is_per_day'] ?? false) ? 1 : 0,
+            'is_per_day' => InputNormalizer::bool($data['is_per_day'] ?? false) ? 1 : 0,
             'species_filter' => ($data['species_filter'] ?? '') !== '' ? $data['species_filter'] : null,
             'effective_from' => $data['effective_from'],
             'effective_to' => ($data['effective_to'] ?? '') !== '' ? $data['effective_to'] : null,
-            'is_active' => $this->toBool($data['is_active'] ?? true) ? 1 : 0,
+            'is_active' => InputNormalizer::bool($data['is_active'] ?? true) ? 1 : 0,
         ]);
 
         $fee = $this->fees->find($feeId);
@@ -344,60 +348,4 @@ class BillingService
         return $fee;
     }
 
-    private function normalizeLineItems(array $items): array
-    {
-        $normalized = [];
-
-        foreach ($items as $item) {
-            $description = trim((string) ($item['description'] ?? ''));
-            $quantity = (int) ($item['quantity'] ?? 0);
-            $unitPrice = round((float) ($item['unit_price'] ?? 0), 2);
-
-            if ($description === '' || $quantity < 1 || $unitPrice <= 0) {
-                continue;
-            }
-
-            $normalized[] = [
-                'fee_schedule_id' => ($item['fee_schedule_id'] ?? '') !== '' ? (int) $item['fee_schedule_id'] : null,
-                'description' => $description,
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    private function computeTotals(array $lineItems): array
-    {
-        $subtotal = 0.0;
-
-        foreach ($lineItems as $item) {
-            $subtotal += round($item['quantity'] * $item['unit_price'], 2);
-        }
-
-        return [
-            'subtotal' => round($subtotal, 2),
-            'tax_amount' => 0.0,
-            'total_amount' => round($subtotal, 2),
-        ];
-    }
-
-    private function resolvePaymentStatus(float $amountPaid, float $totalAmount): string
-    {
-        if ($amountPaid <= 0) {
-            return 'unpaid';
-        }
-
-        if ($amountPaid >= $totalAmount) {
-            return 'paid';
-        }
-
-        return 'partial';
-    }
-
-    private function toBool(mixed $value): bool
-    {
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-    }
 }

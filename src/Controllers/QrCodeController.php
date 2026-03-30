@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Services\QrCodeService;
 
 class QrCodeController
 {
+    use InteractsWithApi;
+
     private QrCodeService $qrCodes;
 
     public function __construct()
@@ -34,12 +37,12 @@ class QrCodeController
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $contentType = $extension === 'svg' ? 'image/svg+xml' : 'image/png';
 
-        if (ob_get_level()) ob_clean();
-
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => $contentType,
-            'Content-Disposition' => 'attachment; filename="animal-' . $id . '-qr.' . $extension . '"',
-        ]);
+        return $this->fileDownloadResponse(
+            $path,
+            $contentType,
+            'animal-' . $id . '-qr.' . $extension,
+            clearOutputBuffer: true
+        );
     }
 
     public function scan(Request $request, string $qrData): Response

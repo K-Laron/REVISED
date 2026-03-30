@@ -108,6 +108,9 @@
     </div>
     <script src="/assets/js/theme.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/toast.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-runtime.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-shell.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-navigation.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/app.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/notifications.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/qr-modal.js?v=<?= time() ?>" data-core-asset="js"></script>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
+use App\Support\InputNormalizer;
 
 class SearchService
 {
@@ -487,8 +488,8 @@ class SearchService
         $normalized = [
             'modules' => $filters['modules'] ?? [],
             'per_section' => max(1, min(10, (int) ($filters['per_section'] ?? 5))),
-            'date_from' => $this->normalizeDate($filters['date_from'] ?? null),
-            'date_to' => $this->normalizeDate($filters['date_to'] ?? null),
+            'date_from' => InputNormalizer::date($filters['date_from'] ?? null, true),
+            'date_to' => InputNormalizer::date($filters['date_to'] ?? null, true),
         ];
 
         foreach (array_keys(self::SECONDARY_FILTERS) as $key) {
@@ -617,17 +618,6 @@ class SearchService
             'sql' => $clauses === [] ? '' : ' AND ' . implode(' AND ', $clauses),
             'bindings' => $bindings,
         ];
-    }
-
-    private function normalizeDate(mixed $value): ?string
-    {
-        $date = trim((string) $value);
-
-        if ($date === '') {
-            return null;
-        }
-
-        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : null;
     }
 
     private function likeBindings(string $term, int $count): array

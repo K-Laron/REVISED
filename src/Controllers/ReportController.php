@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
@@ -11,10 +12,13 @@ use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\ExportService;
 use App\Services\ReportService;
+use App\Support\Pagination;
 use RuntimeException;
 
 class ReportController
 {
+    use InteractsWithApi;
+
     private ReportService $reports;
     private ExportService $exports;
 
@@ -26,7 +30,7 @@ class ReportController
 
     public function index(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
+        $authUser = $this->currentUser($request);
         $canViewAuditTrail = (($authUser['role_name'] ?? null) === 'super_admin');
 
         return Response::html(View::render('reports.index', [
@@ -58,7 +62,7 @@ class ReportController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         $report = $this->reports->generate((string) $request->query('report_type'), $request->query());
@@ -77,10 +81,7 @@ class ReportController
 
         $path = dirname(__DIR__, 2) . '/' . $relativePath;
 
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => 'text/csv; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="' . basename($path) . '"',
-        ]);
+        return $this->fileDownloadResponse($path, 'text/csv; charset=utf-8', basename($path));
     }
 
     public function exportPdf(Request $request): Response
@@ -97,15 +98,12 @@ class ReportController
             ? 'inline'
             : 'attachment';
 
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => $disposition . '; filename="' . basename($path) . '"',
-        ]);
+        return $this->fileDownloadResponse($path, 'application/pdf', basename($path), $disposition);
     }
 
     public function listTemplates(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
+        $authUser = $this->currentUser($request);
 
         return Response::success($this->reports->templates((int) $authUser['id']), 'Report templates retrieved successfully.');
     }
@@ -119,15 +117,15 @@ class ReportController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
         $template = $this->reports->saveTemplate(
             (string) $request->body('name'),
             (string) $request->body('report_type'),
             $request->body('configuration', []),
-            (int) $authUser['id']
+            $authUserId
         );
 
         return Response::success($template, 'Report template saved successfully.');
@@ -144,27 +142,15 @@ class ReportController
 
         $path = dirname(__DIR__, 2) . '/' . $relativePath;
 
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . basename($path) . '"',
-        ]);
+        return $this->fileDownloadResponse($path, 'application/pdf', basename($path));
     }
 
     public function auditTrail(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 20);
         $result = $this->reports->auditTrail($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Audit trail retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Audit trail retrieved successfully.');
     }
 }

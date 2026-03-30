@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Services\NotificationService;
@@ -11,6 +12,8 @@ use RuntimeException;
 
 class NotificationController
 {
+    use InteractsWithApi;
+
     private NotificationService $notifications;
 
     public function __construct()
@@ -20,10 +23,10 @@ class NotificationController
 
     public function list(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
         $page = max(1, (int) $request->query('page', 1));
         $perPage = max(1, min(50, (int) $request->query('per_page', 10)));
-        $result = $this->notifications->list((int) $authUser['id'], $page, $perPage);
+        $userId = $this->currentUserId($request);
+        $result = $this->notifications->list($userId, $page, $perPage);
 
         return Response::success(
             $result['items'],
@@ -32,26 +35,22 @@ class NotificationController
                 'page' => $page,
                 'per_page' => $perPage,
                 'total' => $result['total'],
-                'unread_count' => $this->notifications->unreadCount((int) $authUser['id']),
+                'unread_count' => $this->notifications->unreadCount($userId),
             ]
         );
     }
 
     public function unreadCount(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
-
         return Response::success([
-            'count' => $this->notifications->unreadCount((int) $authUser['id']),
+            'count' => $this->notifications->unreadCount($this->currentUserId($request)),
         ], 'Unread notification count retrieved successfully.');
     }
 
     public function markRead(Request $request, string $id): Response
     {
-        $authUser = $request->attribute('auth_user');
-
         try {
-            $notification = $this->notifications->markRead((int) $id, (int) $authUser['id']);
+            $notification = $this->notifications->markRead((int) $id, $this->currentUserId($request));
         } catch (RuntimeException $exception) {
             return Response::error(404, 'NOT_FOUND', $exception->getMessage());
         }
@@ -61,8 +60,7 @@ class NotificationController
 
     public function markAllRead(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
-        $this->notifications->markAllRead((int) $authUser['id']);
+        $this->notifications->markAllRead($this->currentUserId($request));
 
         return Response::success([], 'All notifications marked as read.');
     }

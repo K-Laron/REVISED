@@ -8,6 +8,30 @@ use App\Core\Database;
 
 class Animal
 {
+    public function reconcileCompletedAdoptions(?int $animalId = null): void
+    {
+        $sql = "UPDATE animals a
+                INNER JOIN adoption_applications aa ON aa.animal_id = a.id
+                LEFT JOIN adoption_completions ac ON ac.application_id = aa.id
+                SET a.status = 'Adopted',
+                    a.status_reason = 'Adoption application completed.',
+                    a.status_changed_at = COALESCE(ac.completion_date, aa.updated_at, aa.created_at, a.status_changed_at, NOW()),
+                    a.outcome_date = COALESCE(ac.completion_date, aa.updated_at, aa.created_at, a.outcome_date, NOW()),
+                    a.updated_by = COALESCE(aa.updated_by, a.updated_by)
+                WHERE a.is_deleted = 0
+                  AND aa.is_deleted = 0
+                  AND aa.status = 'completed'
+                  AND a.status <> 'Adopted'";
+        $bindings = [];
+
+        if ($animalId !== null) {
+            $sql .= ' AND a.id = :animal_id';
+            $bindings['animal_id'] = $animalId;
+        }
+
+        Database::execute($sql, $bindings);
+    }
+
     public function paginate(array $filters, int $page, int $perPage): array
     {
         [$whereSql, $bindings] = $this->buildFilters($filters);

@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\InventoryService;
+use App\Support\Pagination;
 use RuntimeException;
 
 class InventoryController
 {
+    use InteractsWithApi;
+
     private InventoryService $inventory;
 
     public function __construct()
@@ -26,7 +30,11 @@ class InventoryController
         return Response::html(View::render('inventory.index', [
             'title' => 'Inventory Management',
             'extraCss' => ['/assets/css/inventory.css'],
-            'extraJs' => ['/assets/js/inventory.js'],
+            'extraJs' => [
+                '/assets/js/inventory/inventory-formatters.js',
+                '/assets/js/inventory/inventory-render.js',
+                '/assets/js/inventory.js',
+            ],
             'csrfToken' => CsrfMiddleware::token(),
             'categories' => $this->inventory->categories(),
         ], 'layouts.app'));
@@ -52,20 +60,11 @@ class InventoryController
 
     public function list(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 20);
         $result = $this->inventory->list($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Inventory items retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Inventory items retrieved successfully.');
     }
 
     public function get(Request $request, string $id): Response
@@ -96,13 +95,13 @@ class InventoryController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $item = $this->inventory->create($request->body(), (int) $authUser['id'], $request);
+            $item = $this->inventory->create($request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INVENTORY_CREATE_BLOCKED', $exception->getMessage());
         }
@@ -126,13 +125,13 @@ class InventoryController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $item = $this->inventory->update((int) $id, $request->body(), (int) $authUser['id'], $request);
+            $item = $this->inventory->update((int) $id, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INVENTORY_UPDATE_BLOCKED', $exception->getMessage());
         }
@@ -142,10 +141,8 @@ class InventoryController
 
     public function destroy(Request $request, string $id): Response
     {
-        $authUser = $request->attribute('auth_user');
-
         try {
-            $this->inventory->delete((int) $id, (int) $authUser['id'], $request);
+            $this->inventory->delete((int) $id, $this->currentUserId($request), $request);
         } catch (RuntimeException $exception) {
             return Response::error(404, 'NOT_FOUND', $exception->getMessage());
         }
@@ -173,13 +170,13 @@ class InventoryController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $item = $this->inventory->adjust((int) $id, $request->body(), (int) $authUser['id'], $request);
+            $item = $this->inventory->adjust((int) $id, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INVENTORY_ADJUST_BLOCKED', $exception->getMessage());
         }
@@ -211,13 +208,13 @@ class InventoryController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $category = $this->inventory->storeCategory((string) $request->body('name'), $request->body('description'), (int) $authUser['id'], $request);
+            $category = $this->inventory->storeCategory((string) $request->body('name'), $request->body('description'), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'CATEGORY_CREATE_BLOCKED', $exception->getMessage());
         }
@@ -247,13 +244,13 @@ class InventoryController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $item = $this->inventory->{$method}($itemId, $request->body(), (int) $authUser['id'], $request);
+            $item = $this->inventory->{$method}($itemId, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INVENTORY_STOCK_CHANGE_BLOCKED', $exception->getMessage());
         }

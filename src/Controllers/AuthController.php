@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\AuthService;
@@ -14,6 +15,9 @@ use App\Support\LandingPage;
 
 class AuthController
 {
+    use InteractsWithApi;
+    use RendersViews;
+
     private AuthService $auth;
 
     public function __construct()
@@ -23,11 +27,9 @@ class AuthController
 
     public function showLogin(Request $request): Response
     {
-        return Response::html(View::render('auth.login', [
-            'csrfToken' => CsrfMiddleware::token(),
+        return $this->renderAuthPage('auth.login', [
             'title' => 'Login',
-            'extraCss' => ['/assets/css/portal.css'],
-        ], 'layouts.public'));
+        ]);
     }
 
     public function login(Request $request): Response
@@ -38,7 +40,7 @@ class AuthController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         $result = $this->auth->attemptLogin((string) $request->body('login'), (string) $request->body('password'), $request);
@@ -65,11 +67,9 @@ class AuthController
 
     public function showForgotPassword(Request $request): Response
     {
-        return Response::html(View::render('auth.forgot-password', [
-            'csrfToken' => CsrfMiddleware::token(),
+        return $this->renderAuthPage('auth.forgot-password', [
             'title' => 'Forgot Password',
-            'extraCss' => ['/assets/css/portal.css'],
-        ], 'layouts.public'));
+        ]);
     }
 
     public function showForcePasswordChange(Request $request): Response
@@ -79,12 +79,10 @@ class AuthController
             return Response::redirect($this->redirectPathForUser($authUser));
         }
 
-        return Response::html(View::render('auth.force-password-change', [
-            'csrfToken' => CsrfMiddleware::token(),
+        return $this->renderAuthPage('auth.force-password-change', [
             'title' => 'Change Password',
             'currentUser' => $authUser,
-            'extraCss' => ['/assets/css/portal.css'],
-        ], 'layouts.public'));
+        ]);
     }
 
     public function forgotPassword(Request $request): Response
@@ -94,7 +92,7 @@ class AuthController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         $this->auth->createPasswordReset((string) $request->body('email'));
@@ -104,12 +102,10 @@ class AuthController
 
     public function showResetPassword(Request $request, string $token): Response
     {
-        return Response::html(View::render('auth.reset-password', [
-            'csrfToken' => CsrfMiddleware::token(),
+        return $this->renderAuthPage('auth.reset-password', [
             'token' => $token,
             'title' => 'Reset Password',
-            'extraCss' => ['/assets/css/portal.css'],
-        ], 'layouts.public'));
+        ]);
     }
 
     public function resetPassword(Request $request): Response
@@ -121,7 +117,7 @@ class AuthController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         $reset = $this->auth->resetPassword((string) $request->body('token'), (string) $request->body('password'));
@@ -156,7 +152,7 @@ class AuthController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         $authUser = $request->attribute('auth_user');
@@ -176,7 +172,7 @@ class AuthController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
         $authUser = $request->attribute('auth_user');
@@ -198,5 +194,13 @@ class AuthController
     private function redirectPathForUser(array $user): string
     {
         return LandingPage::forUser($user);
+    }
+
+    private function renderAuthPage(string $view, array $data = []): Response
+    {
+        return $this->renderPublicView($view, $data + [
+            'csrfToken' => CsrfMiddleware::token(),
+            'extraCss' => ['/assets/css/portal.css'],
+        ]);
     }
 }

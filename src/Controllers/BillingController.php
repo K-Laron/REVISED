@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\BillingService;
+use App\Support\Pagination;
 use RuntimeException;
 
 class BillingController
 {
+    use InteractsWithApi;
+
     private BillingService $billing;
 
     public function __construct()
@@ -62,20 +66,11 @@ class BillingController
 
     public function listInvoices(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 20);
         $result = $this->billing->listInvoices($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Invoices retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Invoices retrieved successfully.');
     }
 
     public function storeInvoice(Request $request): Response
@@ -96,13 +91,13 @@ class BillingController
 
         $lineItemErrors = $this->lineItemErrors($request->body('line_items', []));
         if ($validator->fails() || $lineItemErrors !== []) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors() + $lineItemErrors);
+            return $this->validationError($validator->errors() + $lineItemErrors);
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $invoice = $this->billing->createInvoice($request->body(), (int) $authUser['id'], $request);
+            $invoice = $this->billing->createInvoice($request->body(), $authUserId, $request);
         } catch (\Throwable $exception) {
             return Response::error(500, 'SERVER_ERROR', $exception->getMessage());
         }
@@ -131,13 +126,13 @@ class BillingController
 
         $lineItemErrors = $this->lineItemErrors($request->body('line_items', []));
         if ($validator->fails() || $lineItemErrors !== []) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors() + $lineItemErrors);
+            return $this->validationError($validator->errors() + $lineItemErrors);
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $invoice = $this->billing->updateInvoice((int) $id, $request->body(), (int) $authUser['id'], $request);
+            $invoice = $this->billing->updateInvoice((int) $id, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INVOICE_UPDATE_BLOCKED', $exception->getMessage());
         }
@@ -155,13 +150,13 @@ class BillingController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $invoice = $this->billing->voidInvoice((int) $id, (string) $request->body('voided_reason'), (int) $authUser['id'], $request);
+            $invoice = $this->billing->voidInvoice((int) $id, (string) $request->body('voided_reason'), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'INVOICE_VOID_BLOCKED', $exception->getMessage());
         }
@@ -182,10 +177,7 @@ class BillingController
             return Response::error(404, 'NOT_FOUND', 'Invoice PDF not found.');
         }
 
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $invoice['invoice_number'] . '.pdf"',
-        ]);
+        return $this->fileDownloadResponse($path, 'application/pdf', $invoice['invoice_number'] . '.pdf');
     }
 
     public function recordPayment(Request $request, string $id): Response
@@ -199,13 +191,13 @@ class BillingController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $result = $this->billing->recordPayment((int) $id, $request->body(), (int) $authUser['id'], $request);
+            $result = $this->billing->recordPayment((int) $id, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'PAYMENT_RECORD_BLOCKED', $exception->getMessage());
         }
@@ -215,20 +207,11 @@ class BillingController
 
     public function listPayments(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 20);
         $result = $this->billing->listPayments($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Payments retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Payments retrieved successfully.');
     }
 
     public function receiptPdf(Request $request, string $id): Response
@@ -244,10 +227,11 @@ class BillingController
             return Response::error(404, 'NOT_FOUND', 'Receipt PDF not found.');
         }
 
-        return new Response(200, (string) file_get_contents($path), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . ($payment['receipt_number'] ?: $payment['payment_number']) . '.pdf"',
-        ]);
+        return $this->fileDownloadResponse(
+            $path,
+            'application/pdf',
+            ($payment['receipt_number'] ?: $payment['payment_number']) . '.pdf'
+        );
     }
 
     public function feeSchedule(Request $request): Response
@@ -268,11 +252,10 @@ class BillingController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
-        $fee = $this->billing->storeFee($request->body(), (int) $authUser['id'], $request);
+        $fee = $this->billing->storeFee($request->body(), $this->currentUserId($request), $request);
 
         return Response::success($fee, 'Fee item created successfully.');
     }
@@ -290,13 +273,13 @@ class BillingController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $fee = $this->billing->updateFee((int) $id, $request->body(), (int) $authUser['id'], $request);
+            $fee = $this->billing->updateFee((int) $id, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(404, 'NOT_FOUND', $exception->getMessage());
         }

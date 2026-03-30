@@ -10,6 +10,7 @@ use App\Helpers\Sanitizer;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\InputNormalizer;
 use RuntimeException;
 
 class UserService
@@ -152,16 +153,16 @@ class UserService
             'password_hash' => password_hash((string) $data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
             'first_name' => trim((string) $data['first_name']),
             'last_name' => trim((string) $data['last_name']),
-            'middle_name' => $this->nullIfBlank($data['middle_name'] ?? null),
+            'middle_name' => InputNormalizer::nullIfBlank($data['middle_name'] ?? null),
             'phone' => Sanitizer::phone($data['phone'] ?? null),
-            'address_line1' => $this->nullIfBlank($data['address_line1'] ?? null),
-            'address_line2' => $this->nullIfBlank($data['address_line2'] ?? null),
-            'city' => $this->nullIfBlank($data['city'] ?? null),
-            'province' => $this->nullIfBlank($data['province'] ?? null),
-            'zip_code' => $this->nullIfBlank($data['zip_code'] ?? null),
-            'is_active' => $this->truthy($data['is_active'] ?? true) ? 1 : 0,
-            'email_verified_at' => $this->truthy($data['email_verified'] ?? false) ? date('Y-m-d H:i:s') : null,
-            'force_password_change' => $this->truthy($data['force_password_change'] ?? true) ? 1 : 0,
+            'address_line1' => InputNormalizer::nullIfBlank($data['address_line1'] ?? null),
+            'address_line2' => InputNormalizer::nullIfBlank($data['address_line2'] ?? null),
+            'city' => InputNormalizer::nullIfBlank($data['city'] ?? null),
+            'province' => InputNormalizer::nullIfBlank($data['province'] ?? null),
+            'zip_code' => InputNormalizer::nullIfBlank($data['zip_code'] ?? null),
+            'is_active' => InputNormalizer::bool($data['is_active'] ?? true) ? 1 : 0,
+            'email_verified_at' => InputNormalizer::bool($data['email_verified'] ?? false) ? date('Y-m-d H:i:s') : null,
+            'force_password_change' => InputNormalizer::bool($data['force_password_change'] ?? true) ? 1 : 0,
             'created_by' => $actorId,
             'updated_by' => $actorId,
         ];
@@ -202,7 +203,7 @@ class UserService
             throw new RuntimeException('Email address is already in use.');
         }
 
-        if ((int) $current['id'] === $actorId && !$this->truthy($data['is_active'] ?? true)) {
+        if ((int) $current['id'] === $actorId && !InputNormalizer::bool($data['is_active'] ?? true)) {
             throw new RuntimeException('You cannot deactivate your own account.');
         }
 
@@ -230,16 +231,16 @@ class UserService
                 'email' => $email,
                 'first_name' => trim((string) $data['first_name']),
                 'last_name' => trim((string) $data['last_name']),
-                'middle_name' => $this->nullIfBlank($data['middle_name'] ?? null),
+                'middle_name' => InputNormalizer::nullIfBlank($data['middle_name'] ?? null),
                 'phone' => Sanitizer::phone($data['phone'] ?? null),
-                'address_line1' => $this->nullIfBlank($data['address_line1'] ?? null),
-                'address_line2' => $this->nullIfBlank($data['address_line2'] ?? null),
-                'city' => $this->nullIfBlank($data['city'] ?? null),
-                'province' => $this->nullIfBlank($data['province'] ?? null),
-                'zip_code' => $this->nullIfBlank($data['zip_code'] ?? null),
-                'is_active' => $this->truthy($data['is_active'] ?? true) ? 1 : 0,
-                'email_verified_at' => $this->truthy($data['email_verified'] ?? false) ? ($current['email_verified_at'] ?: date('Y-m-d H:i:s')) : null,
-                'force_password_change' => $this->truthy($data['force_password_change'] ?? false) ? 1 : 0,
+                'address_line1' => InputNormalizer::nullIfBlank($data['address_line1'] ?? null),
+                'address_line2' => InputNormalizer::nullIfBlank($data['address_line2'] ?? null),
+                'city' => InputNormalizer::nullIfBlank($data['city'] ?? null),
+                'province' => InputNormalizer::nullIfBlank($data['province'] ?? null),
+                'zip_code' => InputNormalizer::nullIfBlank($data['zip_code'] ?? null),
+                'is_active' => InputNormalizer::bool($data['is_active'] ?? true) ? 1 : 0,
+                'email_verified_at' => InputNormalizer::bool($data['email_verified'] ?? false) ? ($current['email_verified_at'] ?: date('Y-m-d H:i:s')) : null,
+                'force_password_change' => InputNormalizer::bool($data['force_password_change'] ?? false) ? 1 : 0,
                 'updated_by' => $actorId,
             ]
         );
@@ -415,19 +416,4 @@ class UserService
         ];
     }
 
-    private function truthy(mixed $value): bool
-    {
-        return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false;
-    }
-
-    private function nullIfBlank(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $trimmed = trim((string) $value);
-
-        return $trimmed === '' ? null : $trimmed;
-    }
 }

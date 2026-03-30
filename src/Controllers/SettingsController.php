@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Middleware\CsrfMiddleware;
 use App\Services\SystemSettingsService;
 use App\Support\SystemSettings;
 
 class SettingsController
 {
+    use InteractsWithApi;
+    use RendersViews;
+
     private SystemSettingsService $settings;
 
     public function __construct()
@@ -22,11 +26,11 @@ class SettingsController
 
     public function index(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
+        $authUser = $this->currentUser($request);
         $isSuperAdmin = (($authUser['role_name'] ?? null) === 'super_admin');
         $settings = $this->settings->settings();
 
-        return Response::html(View::render('settings.index', [
+        return $this->renderAppView('settings.index', [
             'title' => 'Settings',
             'extraCss' => ['/assets/css/settings.css'],
             'extraJs' => ['/assets/js/settings.js'],
@@ -41,6 +45,6 @@ class SettingsController
                 'session_lifetime' => (int) ($_ENV['SESSION_LIFETIME'] ?? 60),
                 'trusted_proxies' => $_ENV['TRUSTED_PROXIES'] ?? '',
             ],
-        ], 'layouts.app'));
+        ]);
     }
 }

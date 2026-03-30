@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\Request;
+use App\Support\InputNormalizer;
 use App\Support\SystemSettings;
 use Throwable;
 
@@ -31,12 +32,12 @@ class SystemSettingsService
         $updated = SystemSettings::save([
             'app_name' => trim((string) ($data['app_name'] ?? $current['app_name'])),
             'organization_name' => trim((string) ($data['organization_name'] ?? $current['organization_name'])),
-            'public_portal_enabled' => $this->truthy($data['public_portal_enabled'] ?? $current['public_portal_enabled']),
+            'public_portal_enabled' => InputNormalizer::bool($data['public_portal_enabled'] ?? $current['public_portal_enabled']),
             'contact_email' => trim((string) ($data['contact_email'] ?? $current['contact_email'])),
             'contact_phone' => trim((string) ($data['contact_phone'] ?? $current['contact_phone'])),
             'office_address' => trim((string) ($data['office_address'] ?? $current['office_address'])),
             'mail_delivery_mode' => $this->mailMode($data['mail_delivery_mode'] ?? $current['mail_delivery_mode'] ?? 'log_only'),
-            'maintenance_mode_enabled' => $this->truthy($data['maintenance_mode_enabled'] ?? $current['maintenance_mode_enabled']),
+            'maintenance_mode_enabled' => InputNormalizer::bool($data['maintenance_mode_enabled'] ?? $current['maintenance_mode_enabled']),
             'maintenance_message' => trim((string) ($data['maintenance_message'] ?? $current['maintenance_message'])),
         ]);
 
@@ -313,11 +314,6 @@ class SystemSettingsService
             'status' => 'pass',
             'message' => 'Directory is writable.',
         ];
-    }
-
-    private function truthy(mixed $value): bool
-    {
-        return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false;
     }
 
     private function mailMode(mixed $value): string

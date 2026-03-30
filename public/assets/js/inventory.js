@@ -6,6 +6,8 @@ function bindInventoryPage() {
   const page = document.getElementById('inventory-page');
   if (!page) return;
 
+  const formatters = window.CatarmanInventoryFormatters;
+  const inventoryRender = window.CatarmanInventoryRender;
   const rawData = document.getElementById('inventory-page-data')?.textContent || '{}';
   const pageData = JSON.parse(rawData);
   const csrfToken = pageData.csrfToken || '';
@@ -145,7 +147,7 @@ function bindInventoryPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      window.toast?.error('Item save failed', extractError(result));
+      window.toast?.error('Item save failed', formatters.extractError(result));
       return;
     }
 
@@ -173,7 +175,7 @@ function bindInventoryPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      window.toast?.error('Delete failed', extractError(result));
+      window.toast?.error('Delete failed', formatters.extractError(result));
       return;
     }
 
@@ -204,7 +206,7 @@ function bindInventoryPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      window.toast?.error('Stock update failed', extractError(result));
+      window.toast?.error('Stock update failed', formatters.extractError(result));
       return;
     }
 
@@ -231,7 +233,7 @@ function bindInventoryPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      window.toast?.error('Category save failed', extractError(result));
+      window.toast?.error('Category save failed', formatters.extractError(result));
       return;
     }
 
@@ -264,10 +266,10 @@ function bindInventoryPage() {
     if (!response.ok) return;
 
     document.getElementById('inventory-stat-total-items').textContent = result.data.total_items ?? 0;
-    document.getElementById('inventory-stat-total-units').textContent = formatNumber(result.data.total_units ?? 0);
+    document.getElementById('inventory-stat-total-units').textContent = formatters.formatNumber(result.data.total_units ?? 0);
     document.getElementById('inventory-stat-low-stock').textContent = result.data.low_stock_count ?? 0;
     document.getElementById('inventory-stat-expiring').textContent = result.data.expiring_count ?? 0;
-    document.getElementById('inventory-stat-value').textContent = currency(result.data.estimated_value ?? 0);
+    document.getElementById('inventory-stat-value').textContent = formatters.currency(result.data.estimated_value ?? 0);
   }
 
   async function loadAlerts() {
@@ -298,7 +300,7 @@ function bindInventoryPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      window.toast?.error('Inventory load failed', extractError(result));
+      window.toast?.error('Inventory load failed', formatters.extractError(result));
       return;
     }
 
@@ -319,39 +321,14 @@ function bindInventoryPage() {
     tableBody.innerHTML = '';
 
     if (state.items.length === 0) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="7">
-            <div class="inventory-empty-state">No inventory items matched the current filters.</div>
-          </td>
-        </tr>
-      `;
+      tableBody.innerHTML = inventoryRender.renderEmptyStateRow();
       return;
     }
 
     state.items.forEach((item) => {
       const row = document.createElement('tr');
-      row.dataset.state = itemState(item);
-      row.innerHTML = `
-        <td><strong>${escapeHtml(item.sku)}</strong></td>
-        <td>
-          <div class="inventory-row-main">
-            <strong>${escapeHtml(item.name)}</strong>
-            <span class="text-muted">${escapeHtml(item.category_name || 'Uncategorized')}</span>
-          </div>
-        </td>
-        <td><strong>${formatNumber(item.quantity_on_hand)}</strong><br><span class="text-muted">Reorder ${formatNumber(item.reorder_level)}</span></td>
-        <td>${escapeHtml(item.unit_of_measure || '-')}</td>
-        <td>${formatDate(item.expiry_date, 'No expiry')}</td>
-        <td>${renderBadges(item)}</td>
-        <td>
-          <div class="inventory-action-group">
-            <button class="btn-secondary" type="button" data-action="stock-in" aria-label="Stock in ${escapeHtml(item.name)}">+</button>
-            <button class="btn-secondary" type="button" data-action="stock-out" aria-label="Stock out ${escapeHtml(item.name)}">-</button>
-            <button class="btn-secondary" type="button" data-action="view">View</button>
-          </div>
-        </td>
-      `;
+      row.dataset.state = formatters.itemState(item);
+      row.innerHTML = inventoryRender.renderTableRow(item);
 
       row.addEventListener('click', (event) => {
         if (event.target.closest('button')) return;
@@ -382,7 +359,7 @@ function bindInventoryPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      window.toast?.error('Item load failed', extractError(result));
+      window.toast?.error('Item load failed', formatters.extractError(result));
       return;
     }
 
@@ -395,7 +372,7 @@ function bindInventoryPage() {
     drawer.setAttribute('aria-hidden', 'false');
     drawerTitle.textContent = item.name || 'Inventory Item';
     drawerSubtitle.textContent = `${item.sku} - ${item.category_name || 'Uncategorized'} - ${item.unit_of_measure || ''}`;
-    drawerBody.innerHTML = renderDrawer(item);
+    drawerBody.innerHTML = inventoryRender.renderDrawer(item, csrfToken);
     bindDrawerActions(item);
   }
 
@@ -420,7 +397,7 @@ function bindInventoryPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        window.toast?.error('Adjustment failed', extractError(result));
+        window.toast?.error('Adjustment failed', formatters.extractError(result));
         return;
       }
 
@@ -466,7 +443,7 @@ function bindInventoryPage() {
     stockForm.elements.action.value = action;
     stockForm.elements.reason.value = action === 'stock-in' ? 'purchase' : 'usage';
     stockModalTitle.textContent = action === 'stock-in' ? `Stock In: ${item.name}` : `Stock Out: ${item.name}`;
-    stockModalSubtitle.textContent = `${item.sku} - On hand: ${formatNumber(item.quantity_on_hand)} ${item.unit_of_measure}`;
+    stockModalSubtitle.textContent = `${item.sku} - On hand: ${formatters.formatNumber(item.quantity_on_hand)} ${item.unit_of_measure}`;
     stockModal.hidden = false;
     stockModal.setAttribute('aria-hidden', 'false');
   }
@@ -512,176 +489,4 @@ function bindInventoryPage() {
       url
     );
   }
-
-  function renderDrawer(item) {
-    const transactions = Array.isArray(item.transactions) ? item.transactions : [];
-
-    return `
-      <div class="inventory-detail-summary">
-        <div class="inventory-detail-stat">
-          <span class="field-label">Quantity On Hand</span>
-          <strong>${formatNumber(item.quantity_on_hand)} ${escapeHtml(item.unit_of_measure || '')}</strong>
-        </div>
-        <div class="inventory-detail-stat">
-          <span class="field-label">Reorder Level</span>
-          <strong>${formatNumber(item.reorder_level)}</strong>
-        </div>
-        <div class="inventory-detail-stat">
-          <span class="field-label">Storage Location</span>
-          <strong>${escapeHtml(item.storage_location || 'Not set')}</strong>
-        </div>
-        <div class="inventory-detail-stat">
-          <span class="field-label">Supplier</span>
-          <strong>${escapeHtml(item.supplier_name || 'Not set')}</strong>
-        </div>
-        <div class="inventory-detail-stat">
-          <span class="field-label">Expiry Date</span>
-          <strong>${formatDate(item.expiry_date, 'No expiry')}</strong>
-        </div>
-        <div class="inventory-detail-stat">
-          <span class="field-label">Unit Cost</span>
-          <strong>${currency(item.cost_per_unit || 0)}</strong>
-        </div>
-      </div>
-
-      <div class="inventory-detail-block">
-        <div class="cluster" style="justify-content: space-between;">
-          <h4>Stock Actions</h4>
-          <button class="btn-secondary" type="button" data-open-edit-item>Edit Item</button>
-        </div>
-        <div class="cluster">
-          <button class="btn-primary" type="button" data-open-stock-in>Quick Stock In</button>
-          <button class="btn-secondary" type="button" data-open-stock-out>Quick Stock Out</button>
-        </div>
-      </div>
-
-      <div class="inventory-detail-block">
-        <h4>Adjust Count</h4>
-        <form class="inventory-inline-form" data-adjust-form>
-          <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
-          <label class="field">
-            <span class="field-label">Actual Quantity</span>
-            <input class="input" type="number" min="0" max="100000" name="quantity" value="${escapeHtml(String(item.quantity_on_hand || 0))}" required>
-          </label>
-          <label class="field">
-            <span class="field-label">Reason</span>
-            <select class="select" name="reason" required>
-              <option value="count_correction">count_correction</option>
-              <option value="transfer">transfer</option>
-              <option value="wastage">wastage</option>
-              <option value="usage">usage</option>
-            </select>
-          </label>
-          <label class="field inventory-form-span-2">
-            <span class="field-label">Notes</span>
-            <textarea class="textarea" name="notes" rows="3" placeholder="Explain the adjustment"></textarea>
-          </label>
-          <button class="btn-primary inventory-form-span-2" type="submit">Apply Adjustment</button>
-        </form>
-      </div>
-
-      <div class="inventory-detail-block">
-        <h4>Recent Transactions</h4>
-        <div class="inventory-history-list">
-          ${transactions.length
-            ? transactions.map((transaction) => `
-                <div class="inventory-history-entry">
-                  <strong>${escapeHtml(formatTransactionType(transaction.transaction_type))} - ${signedQuantity(transaction.quantity)}</strong>
-                  <span class="text-muted">${escapeHtml(transaction.transacted_at || transaction.created_at || '')}</span>
-                  <span>${escapeHtml(transaction.reason || 'No reason provided')}</span>
-                  <span class="text-muted">Before ${formatNumber(transaction.quantity_before)} / After ${formatNumber(transaction.quantity_after)}</span>
-                  ${transaction.notes ? `<span>${escapeHtml(transaction.notes)}</span>` : ''}
-                </div>
-              `).join('')
-            : '<div class="inventory-empty-state">No stock transactions recorded yet.</div>'}
-        </div>
-      </div>
-    `;
-  }
-
-  function renderBadges(item) {
-    const badges = [];
-    badges.push(`<span class="inventory-badge" data-tone="neutral">${escapeHtml(item.is_active ? 'Active' : 'Inactive')}</span>`);
-
-    if (item.is_low_stock) {
-      badges.push('<span class="inventory-badge" data-tone="warning">Low Stock</span>');
-    }
-
-    if (item.is_expiring) {
-      const tone = item.expiry_date && new Date(item.expiry_date) <= addDays(new Date(), 7) ? 'danger' : 'warning';
-      badges.push(`<span class="inventory-badge" data-tone="${tone}">Expiring</span>`);
-    }
-
-    return `<div class="inventory-status-badges">${badges.join('')}</div>`;
-  }
-
-  function itemState(item) {
-    if (item.is_low_stock && item.is_expiring) return 'critical';
-    if (item.is_low_stock || item.is_expiring) return 'low';
-    return 'normal';
-  }
-}
-
-function addDays(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function currency(value) {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP'
-  }).format(Number(value || 0));
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat('en-PH').format(Number(value || 0));
-}
-
-function formatDate(value, fallback = '-') {
-  if (!value) return fallback;
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
-
-  return new Intl.DateTimeFormat('en-PH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }).format(date);
-}
-
-function formatTransactionType(value) {
-  return String(value || '')
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function signedQuantity(value) {
-  const number = Number(value || 0);
-  const prefix = number > 0 ? '+' : '';
-  return prefix + formatNumber(number);
-}
-
-function extractError(result) {
-  if (result?.error?.details && typeof result.error.details === 'object') {
-    const firstKey = Object.keys(result.error.details)[0];
-    if (firstKey && Array.isArray(result.error.details[firstKey])) {
-      return result.error.details[firstKey][0];
-    }
-  }
-
-  return result?.error?.message || 'Request failed.';
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }

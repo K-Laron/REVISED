@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
@@ -11,10 +12,13 @@ use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\UserService;
+use App\Support\Pagination;
 use RuntimeException;
 
 class UserController
 {
+    use InteractsWithApi;
+
     private UserService $users;
 
     public function __construct()
@@ -24,7 +28,7 @@ class UserController
 
     public function index(Request $request): Response
     {
-        $authUser = $request->attribute('auth_user');
+        $authUser = $this->currentUser($request);
 
         return Response::html(View::render('users.index', [
             'title' => 'User Management',
@@ -67,20 +71,11 @@ class UserController
 
     public function list(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 20);
         $result = $this->users->list($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Users retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Users retrieved successfully.');
     }
 
     public function get(Request $request, string $id): Response
@@ -98,13 +93,13 @@ class UserController
     {
         $validator = (new Validator($request->body()))->rules($this->rules(true));
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $user = $this->users->create($request->body(), (int) $authUser['id'], $request);
+            $user = $this->users->create($request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'USER_CREATE_BLOCKED', $exception->getMessage());
         }
@@ -116,13 +111,14 @@ class UserController
     {
         $validator = (new Validator($request->body()))->rules($this->rules(false));
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUser = $this->currentUser($request);
+        $authUserId = (int) ($authUser['id'] ?? 0);
 
         try {
-            $user = $this->users->update((int) $id, $request->body(), (int) $authUser['id'], $request);
+            $user = $this->users->update((int) $id, $request->body(), $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'USER_UPDATE_BLOCKED', $exception->getMessage());
         }
@@ -136,10 +132,8 @@ class UserController
 
     public function destroy(Request $request, string $id): Response
     {
-        $authUser = $request->attribute('auth_user');
-
         try {
-            $this->users->delete((int) $id, (int) $authUser['id'], $request);
+            $this->users->delete((int) $id, $this->currentUserId($request), $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'USER_DELETE_BLOCKED', $exception->getMessage());
         }
@@ -149,8 +143,7 @@ class UserController
 
     public function restore(Request $request, string $id): Response
     {
-        $authUser = $request->attribute('auth_user');
-        $user = $this->users->restore((int) $id, (int) $authUser['id'], $request);
+        $user = $this->users->restore((int) $id, $this->currentUserId($request), $request);
 
         return Response::success($user, 'User restored successfully.');
     }
@@ -162,11 +155,10 @@ class UserController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
-        $user = $this->users->changeRole((int) $id, (int) $request->body('role_id'), (int) $authUser['id'], $request);
+        $user = $this->users->changeRole((int) $id, (int) $request->body('role_id'), $this->currentUserId($request), $request);
 
         return Response::success($user, 'User role updated successfully.');
     }
@@ -178,11 +170,10 @@ class UserController
         ]);
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
-        $this->users->resetPassword((int) $id, (string) $request->body('password'), (int) $authUser['id'], $request);
+        $this->users->resetPassword((int) $id, (string) $request->body('password'), $this->currentUserId($request), $request);
 
         return Response::success([], 'Password reset successfully.');
     }
@@ -200,10 +191,8 @@ class UserController
 
     public function destroySession(Request $request, string $id, string $sessionId): Response
     {
-        $authUser = $request->attribute('auth_user');
-
         try {
-            $this->users->destroySession((int) $id, (int) $sessionId, (int) $authUser['id'], $request);
+            $this->users->destroySession((int) $id, (int) $sessionId, $this->currentUserId($request), $request);
         } catch (RuntimeException $exception) {
             return Response::error(404, 'NOT_FOUND', $exception->getMessage());
         }

@@ -35,6 +35,7 @@ class AnimalService
 
     public function list(array $filters, int $page, int $perPage): array
     {
+        $this->animals->reconcileCompletedAdoptions();
         $result = $this->animals->paginate($filters, $page, $perPage);
 
         foreach ($result['items'] as &$animal) {
@@ -138,6 +139,10 @@ class AnimalService
 
     public function get(string $id, bool $includeDeleted = false): array
     {
+        if (ctype_digit($id)) {
+            $this->animals->reconcileCompletedAdoptions((int) $id);
+        }
+
         $animal = $this->animals->find($id, $includeDeleted);
         if ($animal === false) {
             throw new RuntimeException('Animal not found.');
