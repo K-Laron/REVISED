@@ -178,21 +178,23 @@ function bindMedicalForm() {
     const endpoint = currentMode === 'create'
       ? `/api/medical/${typeInput.value}`
       : `/api/medical/${recordId}`;
-    const method = currentMode === 'create' ? 'POST' : 'PUT';
+    const method = 'POST';
 
-    // Collect shared section data
-    const formData = new URLSearchParams(new FormData(form));
-    formData.set('prescriptions', JSON.stringify(collectRepeatableRows('[data-prescription-row]', '[data-rx-field]')));
-    formData.set('lab_results', JSON.stringify(collectRepeatableRows('[data-lab-result-row]', '[data-lab-field]')));
+    const formData = new FormData(form);
+    if (currentMode === 'update') {
+      formData.set('_method', 'PUT');
+    }
+
+    formData.set('prescriptions', JSON.stringify(collectPrescriptionRows()));
+    formData.set('lab_results', JSON.stringify(collectLabResultRows(formData)));
 
     const response = await fetch(endpoint, {
       method,
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'X-CSRF-TOKEN': form.elements._token.value
       },
-      body: formData.toString()
+      body: formData
     });
     const result = await response.json();
 
@@ -306,22 +308,45 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function collectRepeatableRows(rowSelector, fieldSelector) {
-  const rows = [];
-  document.querySelectorAll(rowSelector).forEach((row) => {
-    const obj = {};
-    row.querySelectorAll(fieldSelector).forEach((field) => {
-      const key = Object.keys(field.dataset).find(k => k.endsWith('Field'));
-      if (key) {
-        const name = field.getAttribute(`data-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
-        obj[name] = field.value;
-      }
+function collectPrescriptionRows() {
+  return Array.from(document.querySelectorAll('[data-prescription-row]')).reduce((rows, row) => {
+    const item = {};
+    row.querySelectorAll('[data-rx-field]').forEach((field) => {
+      item[field.dataset.rxField] = field.value;
     });
-    if (Object.values(obj).some(v => v && v.trim() !== '')) {
-      rows.push(obj);
+
+    if (Object.values(item).some((value) => String(value || '').trim() !== '')) {
+      rows.push(item);
     }
-  });
-  return rows;
+
+    return rows;
+  }, []);
+}
+
+function collectLabResultRows(formData) {
+  return Array.from(document.querySelectorAll('[data-lab-result-row]')).reduce((rows, row, rowIndex) => {
+    const item = {};
+    row.querySelectorAll('[data-lab-field]').forEach((field) => {
+      item[field.dataset.labField] = field.value;
+    });
+
+    const fileInput = row.querySelector('[data-lab-file]');
+    const file = fileInput?.files?.[0];
+    if (file) {
+      formData.append(`lab_attachments[${rowIndex}]`, file);
+      item.attachment_index = rowIndex;
+    }
+
+    const hasContent = Object.entries(item).some(([key, value]) => key === 'attachment_index'
+      ? true
+      : String(value || '').trim() !== '');
+
+    if (hasContent) {
+      rows.push(item);
+    }
+
+    return rows;
+  }, []);
 }
 
 function bindSharedSections() {
@@ -389,6 +414,9 @@ function bindSharedSections() {
           <input class="input" type="date" data-lab-field="date_conducted"></label>
         <label class="field"><span class="field-label">Remarks</span>
           <input class="input" type="text" data-lab-field="remarks"></label>
+        <label class="field medical-form-span-2"><span class="field-label">Attachment (X-ray / Image)</span>
+          <input class="input" type="file" accept="image/*" data-lab-file>
+          <input type="hidden" data-lab-field="attachment_path" value=""></label>
       </div>
       <button type="button" class="btn-danger-sm" data-remove-row title="Remove">✕</button>
     `;

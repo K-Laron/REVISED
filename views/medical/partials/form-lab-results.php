@@ -36,6 +36,14 @@ $labResults = $record['lab_results'] ?? [];
                         <label class="field"><span class="field-label">Remarks</span>
                             <input class="input" type="text" data-lab-field="remarks" value="<?= htmlspecialchars((string) ($lab['remarks'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                         </label>
+                        <label class="field medical-form-span-2"><span class="field-label">Attachment (X-ray / Image)</span>
+                            <input class="input" type="file" accept="image/*" data-lab-file>
+                            <input type="hidden" data-lab-field="attachment_path" value="<?= htmlspecialchars((string) ($lab['attachment_path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                            <?php if (!empty($lab['attachment_path'])): ?>
+                                <a class="text-muted" href="/<?= htmlspecialchars((string) $lab['attachment_path'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Open current attachment</a>
+                                <img src="/<?= htmlspecialchars((string) $lab['attachment_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Lab result attachment preview" style="margin-top:0.75rem;max-width:220px;max-height:220px;border-radius:12px;object-fit:cover;">
+                            <?php endif; ?>
+                        </label>
                     </div>
                     <button type="button" class="btn-danger-sm" data-remove-row title="Remove">✕</button>
                 </div>

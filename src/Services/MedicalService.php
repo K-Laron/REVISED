@@ -10,15 +10,18 @@ use App\Models\Animal;
 use App\Models\DewormingRecord;
 use App\Models\EuthanasiaRecord;
 use App\Models\ExaminationRecord;
-use App\Models\InventoryItem;
 use App\Models\MedicalLabResult;
 use App\Models\MedicalPrescription;
 use App\Models\MedicalRecord;
-use App\Models\StockTransaction;
 use App\Models\SurgeryRecord;
 use App\Models\TreatmentRecord;
 use App\Models\VaccinationRecord;
 use App\Models\VitalSign;
+use App\Services\Medical\MedicalPayloadFactory;
+use App\Services\Medical\MedicalProcedureConfig;
+use App\Services\Medical\TreatmentInventorySynchronizer;
+use App\Support\InputNormalizer;
+use App\Support\MediaPath;
 use RuntimeException;
 
 class MedicalService
@@ -31,12 +34,13 @@ class MedicalService
     private DewormingRecord $dewormings;
     private EuthanasiaRecord $euthanasias;
     private Animal $animals;
-    private InventoryItem $inventoryItems;
-    private StockTransaction $stockTransactions;
     private VitalSign $vitalSigns;
     private MedicalPrescription $prescriptions;
     private MedicalLabResult $labResults;
     private AuditService $audit;
+    private MedicalProcedureConfig $procedureConfig;
+    private MedicalPayloadFactory $payloadFactory;
+    private TreatmentInventorySynchronizer $treatmentInventory;
 
     public function __construct()
     {
@@ -48,12 +52,13 @@ class MedicalService
         $this->dewormings = new DewormingRecord();
         $this->euthanasias = new EuthanasiaRecord();
         $this->animals = new Animal();
-        $this->inventoryItems = new InventoryItem();
-        $this->stockTransactions = new StockTransaction();
         $this->vitalSigns = new VitalSign();
         $this->prescriptions = new MedicalPrescription();
         $this->labResults = new MedicalLabResult();
         $this->audit = new AuditService();
+        $this->procedureConfig = new MedicalProcedureConfig();
+        $this->payloadFactory = new MedicalPayloadFactory($this->treatments);
+        $this->treatmentInventory = new TreatmentInventorySynchronizer(new \App\Models\InventoryItem(), new \App\Models\StockTransaction());
     }
 
     public function list(array $filters, int $page, int $perPage): array
@@ -71,7 +76,7 @@ class MedicalService
         $record['details'] = $this->subtypeRecord((int) $record['id'], (string) $record['procedure_type']);
         $record['vital_signs'] = $this->vitalSigns->findByMedicalRecordId((int) $record['id']) ?: [];
         $record['prescriptions'] = $this->prescriptions->findByMedicalRecordId((int) $record['id']);
-        $record['lab_results'] = $this->labResults->findByMedicalRecordId((int) $record['id']);
+        $record['lab_results'] = $this->normalizeLabResults($this->labResults->findByMedicalRecordId((int) $record['id']));
 
         return $record;
     }
@@ -101,15 +106,15 @@ class MedicalService
         Database::beginTransaction();
 
         try {
-            $basePayload = $this->normalizeBasePayload($type, $data, $userId, true);
+            $basePayload = $this->payloadFactory->basePayload($type, $data, $userId, true);
             $medicalRecordId = $this->records->create($basePayload);
-            $detailPayload = $this->normalizeSubtypePayload($type, $data, $medicalRecordId, true);
+            $detailPayload = $this->payloadFactory->subtypePayload($type, $data, $medicalRecordId, true);
 
             $this->persistSubtype($type, $medicalRecordId, $detailPayload, true);
-            $this->saveSharedSections($medicalRecordId, $data);
+            $this->saveSharedSections($medicalRecordId, $data, $request->file('lab_attachments'));
 
             if ($type === 'treatment') {
-                $this->syncTreatmentInventory(null, $detailPayload, $userId, $medicalRecordId);
+                $this->treatmentInventory->sync(null, $detailPayload, $userId, $medicalRecordId);
             }
 
             $this->syncAnimalStatusAfterWrite($type, (int) $data['animal_id'], $detailPayload, $userId);
@@ -134,16 +139,16 @@ class MedicalService
         Database::beginTransaction();
 
         try {
-            $basePayload = $this->normalizeBasePayload($type, $data + ['animal_id' => $current['animal_id']], $userId, false);
+            $basePayload = $this->payloadFactory->basePayload($type, $data + ['animal_id' => $current['animal_id']], $userId, false);
             $this->records->update($id, $basePayload);
-            $detailPayload = $this->normalizeSubtypePayload($type, $data, $id, false);
+            $detailPayload = $this->payloadFactory->subtypePayload($type, $data, $id, false);
 
             if ($type === 'treatment') {
-                $this->syncTreatmentInventory($current['details'], $detailPayload, $userId, $id);
+                $this->treatmentInventory->sync($current['details'], $detailPayload, $userId, $id);
             }
 
             $this->persistSubtype($type, $id, $detailPayload, false);
-            $this->saveSharedSections($id, $data);
+            $this->saveSharedSections($id, $data, $request->file('lab_attachments'));
             $this->syncAnimalStatusAfterWrite($type, (int) $current['animal_id'], $detailPayload, $userId);
 
             Database::commit();
@@ -166,7 +171,7 @@ class MedicalService
 
         try {
             if ((string) $current['procedure_type'] === 'treatment') {
-                $this->restoreTreatmentInventory($current['details'], $userId, $id);
+                $this->treatmentInventory->restore($current['details'], $userId, $id);
             }
 
             $this->records->setDeleted($id, true);
@@ -225,49 +230,10 @@ class MedicalService
 
     public function formConfig(string $type): array
     {
-        $configs = [
-            'vaccination' => [
-                'label' => 'Vaccination',
-                'endpoint' => '/api/medical/vaccination',
-                'default_due_days' => 365,
-                'fields' => ['vaccine_name', 'vaccine_brand', 'batch_lot_number', 'dosage_ml', 'route', 'injection_site', 'dose_number', 'next_due_date', 'adverse_reactions'],
-            ],
-            'surgery' => [
-                'label' => 'Surgery',
-                'endpoint' => '/api/medical/surgery',
-                'fields' => ['surgery_type', 'pre_op_weight_kg', 'anesthesia_type', 'anesthesia_drug', 'anesthesia_dosage', 'duration_minutes', 'surgical_notes', 'complications', 'post_op_instructions', 'follow_up_date'],
-            ],
-            'examination' => [
-                'label' => 'Examination',
-                'endpoint' => '/api/medical/examination',
-                'fields' => ['weight_kg', 'temperature_celsius', 'heart_rate_bpm', 'respiratory_rate', 'body_condition_score', 'overall_assessment', 'recommendations'],
-            ],
-            'treatment' => [
-                'label' => 'Treatment',
-                'endpoint' => '/api/medical/treatment',
-                'fields' => ['diagnosis', 'medication_name', 'dosage', 'route', 'frequency', 'duration_days', 'start_date', 'end_date', 'quantity_dispensed', 'inventory_item_id', 'special_instructions'],
-            ],
-            'deworming' => [
-                'label' => 'Deworming',
-                'endpoint' => '/api/medical/deworming',
-                'default_due_days' => 90,
-                'fields' => ['dewormer_name', 'brand', 'dosage', 'weight_at_treatment_kg', 'next_due_date'],
-            ],
-            'euthanasia' => [
-                'label' => 'Euthanasia',
-                'endpoint' => '/api/medical/euthanasia',
-                'fields' => ['reason_category', 'reason_details', 'authorized_by', 'method', 'drug_used', 'drug_dosage', 'time_of_death', 'disposal_method'],
-            ],
-        ];
-
-        if (!isset($configs[$type])) {
-            throw new RuntimeException('Unsupported medical procedure type.');
-        }
-
-        return $configs[$type];
+        return $this->procedureConfig->forType($type);
     }
 
-    private function saveSharedSections(int $medicalRecordId, array $data): void
+    private function saveSharedSections(int $medicalRecordId, array $data, mixed $labAttachmentInput = null): void
     {
         // Vital signs
         $hasVitalData = false;
@@ -280,11 +246,11 @@ class MedicalService
         }
         if ($hasVitalData) {
             $this->vitalSigns->upsert($medicalRecordId, [
-                'weight_kg' => $this->nullableDecimal($data['vs_weight_kg'] ?? null),
-                'temperature_celsius' => $this->nullableDecimal($data['vs_temperature_celsius'] ?? null, 1),
-                'heart_rate_bpm' => $this->nullableInt($data['vs_heart_rate_bpm'] ?? null),
-                'respiratory_rate' => $this->nullableInt($data['vs_respiratory_rate'] ?? null),
-                'body_condition_score' => $this->nullableInt($data['vs_body_condition_score'] ?? null),
+                'weight_kg' => InputNormalizer::decimalOrNull($data['vs_weight_kg'] ?? null),
+                'temperature_celsius' => InputNormalizer::decimalOrNull($data['vs_temperature_celsius'] ?? null, 1),
+                'heart_rate_bpm' => InputNormalizer::intOrNull($data['vs_heart_rate_bpm'] ?? null),
+                'respiratory_rate' => InputNormalizer::intOrNull($data['vs_respiratory_rate'] ?? null),
+                'body_condition_score' => InputNormalizer::intOrNull($data['vs_body_condition_score'] ?? null),
             ]);
         }
 
@@ -293,7 +259,7 @@ class MedicalService
         if (is_string($prescriptionsRaw)) {
             $prescriptionsRaw = json_decode($prescriptionsRaw, true) ?: [];
         }
-        if (is_array($prescriptionsRaw) && count($prescriptionsRaw) > 0) {
+        if (is_array($prescriptionsRaw)) {
             $this->prescriptions->bulkReplaceForRecord($medicalRecordId, $prescriptionsRaw);
         }
 
@@ -302,7 +268,8 @@ class MedicalService
         if (is_string($labResultsRaw)) {
             $labResultsRaw = json_decode($labResultsRaw, true) ?: [];
         }
-        if (is_array($labResultsRaw) && count($labResultsRaw) > 0) {
+        if (is_array($labResultsRaw)) {
+            $labResultsRaw = $this->attachUploadedLabImages($medicalRecordId, $labResultsRaw, $labAttachmentInput);
             $this->labResults->bulkReplaceForRecord($medicalRecordId, $labResultsRaw);
         }
     }
@@ -347,190 +314,6 @@ class MedicalService
         };
     }
 
-    private function normalizeBasePayload(string $type, array $data, int $userId, bool $creating): array
-    {
-        return [
-            'animal_id' => (int) $data['animal_id'],
-            'procedure_type' => $type,
-            'record_date' => (string) $this->normalizeDateTime($data['record_date']),
-            'general_notes' => $this->nullIfBlank($data['general_notes'] ?? null),
-            'veterinarian_id' => (int) $data['veterinarian_id'],
-            'created_by' => $creating ? $userId : null,
-            'updated_by' => $userId,
-        ];
-    }
-
-    private function normalizeSubtypePayload(string $type, array $data, int $medicalRecordId, bool $creating): array
-    {
-        $payload = match ($type) {
-            'vaccination' => [
-                'medical_record_id' => $medicalRecordId,
-                'vaccine_name' => trim((string) $data['vaccine_name']),
-                'vaccine_brand' => $this->nullIfBlank($data['vaccine_brand'] ?? null),
-                'batch_lot_number' => $this->nullIfBlank($data['batch_lot_number'] ?? null),
-                'dosage_ml' => round((float) $data['dosage_ml'], 2),
-                'route' => (string) $data['route'],
-                'injection_site' => $this->nullIfBlank($data['injection_site'] ?? null),
-                'dose_number' => (int) $data['dose_number'],
-                'next_due_date' => $this->normalizeDate($data['next_due_date'] ?? null) ?? $this->defaultDueDate($data['record_date'], 365),
-                'adverse_reactions' => $this->nullIfBlank($data['adverse_reactions'] ?? null),
-            ],
-            'surgery' => [
-                'medical_record_id' => $medicalRecordId,
-                'surgery_type' => (string) $data['surgery_type'],
-                'pre_op_weight_kg' => $this->nullableDecimal($data['pre_op_weight_kg'] ?? null),
-                'anesthesia_type' => (string) $data['anesthesia_type'],
-                'anesthesia_drug' => $this->nullIfBlank($data['anesthesia_drug'] ?? null),
-                'anesthesia_dosage' => $this->nullIfBlank($data['anesthesia_dosage'] ?? null),
-                'duration_minutes' => $this->nullableInt($data['duration_minutes'] ?? null),
-                'surgical_notes' => $this->nullIfBlank($data['surgical_notes'] ?? null),
-                'complications' => $this->nullIfBlank($data['complications'] ?? null),
-                'post_op_instructions' => $this->nullIfBlank($data['post_op_instructions'] ?? null),
-                'follow_up_date' => $this->normalizeDate($data['follow_up_date'] ?? null),
-            ],
-            'examination' => [
-                'medical_record_id' => $medicalRecordId,
-                'weight_kg' => $this->nullableDecimal($data['weight_kg'] ?? null),
-                'temperature_celsius' => $this->nullableDecimal($data['temperature_celsius'] ?? null, 1),
-                'heart_rate_bpm' => $this->nullableInt($data['heart_rate_bpm'] ?? null),
-                'respiratory_rate' => $this->nullableInt($data['respiratory_rate'] ?? null),
-                'body_condition_score' => $this->nullableInt($data['body_condition_score'] ?? null),
-                'eyes_status' => $this->nullIfBlank($data['eyes_status'] ?? null),
-                'eyes_notes' => $this->nullIfBlank($data['eyes_notes'] ?? null),
-                'ears_status' => $this->nullIfBlank($data['ears_status'] ?? null),
-                'ears_notes' => $this->nullIfBlank($data['ears_notes'] ?? null),
-                'teeth_gums_status' => $this->nullIfBlank($data['teeth_gums_status'] ?? null),
-                'teeth_gums_notes' => $this->nullIfBlank($data['teeth_gums_notes'] ?? null),
-                'skin_coat_status' => $this->nullIfBlank($data['skin_coat_status'] ?? null),
-                'skin_coat_notes' => $this->nullIfBlank($data['skin_coat_notes'] ?? null),
-                'musculoskeletal_status' => $this->nullIfBlank($data['musculoskeletal_status'] ?? null),
-                'musculoskeletal_notes' => $this->nullIfBlank($data['musculoskeletal_notes'] ?? null),
-                'overall_assessment' => $this->nullIfBlank($data['overall_assessment'] ?? null),
-                'recommendations' => $this->nullIfBlank($data['recommendations'] ?? null),
-            ],
-            'treatment' => [
-                'medical_record_id' => $medicalRecordId,
-                'diagnosis' => trim((string) $data['diagnosis']),
-                'medication_name' => trim((string) $data['medication_name']),
-                'dosage' => trim((string) $data['dosage']),
-                'route' => (string) $data['route'],
-                'frequency' => trim((string) $data['frequency']),
-                'duration_days' => $this->nullableInt($data['duration_days'] ?? null),
-                'start_date' => (string) $this->normalizeDate($data['start_date']),
-                'end_date' => $this->normalizeDate($data['end_date'] ?? null),
-                'quantity_dispensed' => $this->nullableInt($data['quantity_dispensed'] ?? null),
-                'inventory_item_id' => $this->nullableInt($data['inventory_item_id'] ?? null),
-                'special_instructions' => $this->nullIfBlank($data['special_instructions'] ?? null),
-            ],
-            'deworming' => [
-                'medical_record_id' => $medicalRecordId,
-                'dewormer_name' => trim((string) $data['dewormer_name']),
-                'brand' => $this->nullIfBlank($data['brand'] ?? null),
-                'dosage' => trim((string) $data['dosage']),
-                'weight_at_treatment_kg' => $this->nullableDecimal($data['weight_at_treatment_kg'] ?? null),
-                'next_due_date' => $this->normalizeDate($data['next_due_date'] ?? null) ?? $this->defaultDueDate($data['record_date'], 90),
-            ],
-            'euthanasia' => [
-                'medical_record_id' => $medicalRecordId,
-                'reason_category' => (string) $data['reason_category'],
-                'reason_details' => trim((string) $data['reason_details']),
-                'authorized_by' => (int) $data['authorized_by'],
-                'method' => trim((string) $data['method']),
-                'drug_used' => $this->nullIfBlank($data['drug_used'] ?? null),
-                'drug_dosage' => $this->nullIfBlank($data['drug_dosage'] ?? null),
-                'time_of_death' => (string) $this->normalizeDateTime($data['time_of_death']),
-                'death_confirmed' => filter_var($data['death_confirmed'] ?? true, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
-                'disposal_method' => (string) $data['disposal_method'],
-            ],
-            default => throw new RuntimeException('Unsupported medical procedure type.'),
-        };
-
-        if ($type === 'treatment' && ($payload['inventory_item_id'] === null || $payload['quantity_dispensed'] === null) && !$creating) {
-            $current = $this->treatments->findByMedicalRecord($medicalRecordId);
-            if ($current !== false) {
-                $payload['inventory_item_id'] = $payload['inventory_item_id'] ?? (($current['inventory_item_id'] ?? null) !== null ? (int) $current['inventory_item_id'] : null);
-                $payload['quantity_dispensed'] = $payload['quantity_dispensed'] ?? (($current['quantity_dispensed'] ?? null) !== null ? (int) $current['quantity_dispensed'] : null);
-            }
-        }
-
-        return $payload;
-    }
-
-    private function syncTreatmentInventory(?array $existing, array $next, int $userId, int $medicalRecordId): void
-    {
-        $existingItemId = (($existing['inventory_item_id'] ?? null) !== null) ? (int) $existing['inventory_item_id'] : null;
-        $nextItemId = (($next['inventory_item_id'] ?? null) !== null) ? (int) $next['inventory_item_id'] : null;
-        $existingQty = (int) ($existing['quantity_dispensed'] ?? 0);
-        $nextQty = (int) ($next['quantity_dispensed'] ?? 0);
-
-        if ($existingItemId !== null && $existingQty > 0 && $existingItemId !== $nextItemId) {
-            $this->adjustInventory($existingItemId, $existingQty, $userId, $medicalRecordId, 'return', 'Treatment inventory reassigned.');
-            $existingQty = 0;
-        }
-
-        if ($existingItemId !== null && $nextItemId === $existingItemId) {
-            $delta = $nextQty - $existingQty;
-            if ($delta !== 0) {
-                $this->adjustInventory(
-                    $nextItemId,
-                    -$delta,
-                    $userId,
-                    $medicalRecordId,
-                    $delta > 0 ? 'dispensed' : 'return',
-                    $delta > 0 ? 'Additional medication dispensed.' : 'Medication quantity reduced.'
-                );
-            }
-
-            return;
-        }
-
-        if ($nextItemId !== null && $nextQty > 0) {
-            $this->adjustInventory($nextItemId, -$nextQty, $userId, $medicalRecordId, 'dispensed', 'Medication dispensed for treatment record.');
-        }
-    }
-
-    private function restoreTreatmentInventory(array $details, int $userId, int $medicalRecordId): void
-    {
-        $inventoryItemId = (($details['inventory_item_id'] ?? null) !== null) ? (int) $details['inventory_item_id'] : null;
-        $quantity = (int) ($details['quantity_dispensed'] ?? 0);
-
-        if ($inventoryItemId !== null && $quantity > 0) {
-            $this->adjustInventory($inventoryItemId, $quantity, $userId, $medicalRecordId, 'return', 'Treatment record deleted; stock restored.');
-        }
-    }
-
-    private function adjustInventory(int $itemId, int $delta, int $userId, int $medicalRecordId, string $reason, string $notes): void
-    {
-        $item = $this->inventoryItems->find($itemId);
-        if ($item === false) {
-            throw new RuntimeException('Linked inventory item not found.');
-        }
-
-        $before = (int) $item['quantity_on_hand'];
-        $after = $before + $delta;
-
-        if ($after < 0) {
-            throw new RuntimeException('Inventory quantity is insufficient for the requested treatment dispense.');
-        }
-
-        $this->inventoryItems->updateQuantity($itemId, $after, $userId);
-        $this->stockTransactions->create([
-            'inventory_item_id' => $itemId,
-            'transaction_type' => $delta >= 0 ? 'stock_in' : 'stock_out',
-            'quantity' => $delta,
-            'quantity_before' => $before,
-            'quantity_after' => $after,
-            'reason' => $reason,
-            'reference_type' => 'medical_record',
-            'reference_id' => $medicalRecordId,
-            'batch_lot_number' => null,
-            'expiry_date' => null,
-            'source_supplier' => null,
-            'notes' => $notes,
-            'transacted_by' => $userId,
-        ]);
-    }
-
     private function syncAnimalStatusAfterWrite(string $type, int $animalId, array $detailPayload, int $userId): void
     {
         $animal = $this->animals->find($animalId);
@@ -561,61 +344,97 @@ class MedicalService
         }
     }
 
-    private function normalizeDateTime(mixed $value): ?string
+    private function attachUploadedLabImages(int $medicalRecordId, array $labResults, mixed $labAttachmentInput): array
     {
-        $value = trim((string) $value);
-        if ($value === '') {
+        $files = $this->normalizeFiles($labAttachmentInput);
+        if ($files === []) {
+            return $labResults;
+        }
+
+        foreach ($labResults as $index => &$labResult) {
+            $attachmentIndex = isset($labResult['attachment_index']) ? (int) $labResult['attachment_index'] : null;
+            unset($labResult['attachment_index']);
+
+            if ($attachmentIndex === null || !isset($files[$attachmentIndex])) {
+                continue;
+            }
+
+            $storedPath = $this->storeLabAttachment($medicalRecordId, $files[$attachmentIndex]);
+            if ($storedPath !== null) {
+                $labResult['attachment_path'] = $storedPath;
+            }
+        }
+        unset($labResult);
+
+        return $labResults;
+    }
+
+    private function storeLabAttachment(int $medicalRecordId, array $file): ?string
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             return null;
         }
 
-        $value = str_replace('T', ' ', $value);
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
-            return $value . ' 00:00:00';
-        }
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value) === 1) {
-            return $value . ':00';
-        }
-
-        return $value;
-    }
-
-    private function normalizeDate(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-        if ($value === '') {
+        $source = (string) ($file['tmp_name'] ?? '');
+        if (!is_uploaded_file($source) && !is_file($source)) {
             return null;
         }
 
-        return substr(str_replace('T', ' ', $value), 0, 10);
+        $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+        $extension = $extension === 'jpeg' ? 'jpg' : $extension;
+        $directory = dirname(__DIR__, 2) . '/public/uploads/medical/lab-results/' . $medicalRecordId;
+
+        if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+            throw new RuntimeException('Failed to prepare medical attachment storage.');
+        }
+
+        do {
+            $fileName = 'lab-result-' . bin2hex(random_bytes(12)) . '.' . $extension;
+            $absolutePath = $directory . '/' . $fileName;
+        } while (is_file($absolutePath));
+
+        $moved = is_uploaded_file($source)
+            ? move_uploaded_file($source, $absolutePath)
+            : copy($source, $absolutePath);
+
+        if (!$moved) {
+            throw new RuntimeException('Failed to store the uploaded medical attachment.');
+        }
+
+        return 'uploads/medical/lab-results/' . $medicalRecordId . '/' . $fileName;
     }
 
-    private function defaultDueDate(mixed $recordDate, int $days): string
+    private function normalizeFiles(mixed $input): array
     {
-        $recordAt = $this->normalizeDateTime($recordDate) ?? date('Y-m-d H:i:s');
+        if (!is_array($input) || !isset($input['name'])) {
+            return [];
+        }
 
-        return date('Y-m-d', strtotime($recordAt . ' +' . $days . ' days'));
+        if (!is_array($input['name'])) {
+            return [$input];
+        }
+
+        $files = [];
+        foreach ($input['name'] as $index => $name) {
+            $files[(int) $index] = [
+                'name' => $name,
+                'type' => $input['type'][$index] ?? null,
+                'tmp_name' => $input['tmp_name'][$index] ?? null,
+                'error' => $input['error'][$index] ?? UPLOAD_ERR_NO_FILE,
+                'size' => $input['size'][$index] ?? 0,
+            ];
+        }
+
+        return $files;
     }
 
-    private function nullableInt(mixed $value): ?int
+    private function normalizeLabResults(array $rows): array
     {
-        $value = trim((string) $value);
+        foreach ($rows as &$row) {
+            $row['attachment_path'] = MediaPath::normalizePublicImagePath($row['attachment_path'] ?? null);
+        }
+        unset($row);
 
-        return $value === '' ? null : (int) $value;
-    }
-
-    private function nullableDecimal(mixed $value, int $precision = 2): ?float
-    {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : round((float) $value, $precision);
-    }
-
-    private function nullIfBlank(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : $value;
+        return $rows;
     }
 }

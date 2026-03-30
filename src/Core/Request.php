@@ -48,7 +48,16 @@ class Request
 
     public function method(): string
     {
-        return strtoupper($this->server['REQUEST_METHOD'] ?? 'GET');
+        $method = strtoupper($this->server['REQUEST_METHOD'] ?? 'GET');
+
+        if ($method === 'POST') {
+            $override = strtoupper((string) ($this->body['_method'] ?? ''));
+            if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
+                return $override;
+            }
+        }
+
+        return $method;
     }
 
     public function path(): string

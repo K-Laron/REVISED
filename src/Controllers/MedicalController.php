@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\InteractsWithApi;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\MedicalService;
+use App\Support\InputNormalizer;
+use App\Support\Pagination;
 use RuntimeException;
 
 class MedicalController
 {
+    use InteractsWithApi;
+
     private MedicalService $medical;
 
     public function __construct()
@@ -91,20 +96,11 @@ class MedicalController
 
     public function list(Request $request): Response
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $page = Pagination::page($request->query('page'));
+        $perPage = Pagination::perPage($request->query('per_page'), 20);
         $result = $this->medical->list($request->query(), $page, $perPage);
 
-        return Response::success(
-            $result['items'],
-            'Medical records retrieved successfully.',
-            [
-                'page' => $page,
-                'per_page' => $perPage,
-                'total' => $result['total'],
-                'total_pages' => (int) ceil(max(1, $result['total']) / $perPage),
-            ]
-        );
+        return $this->paginatedSuccess($result, $page, $perPage, 'Medical records retrieved successfully.');
     }
 
     public function byAnimal(Request $request, string $animalId): Response
@@ -160,15 +156,16 @@ class MedicalController
             'animal_id' => $current['animal_id'],
         ]);
         $validator = $this->validatorForType($payload, (string) $current['procedure_type'], false);
+        $this->validateLabAttachments($validator, $request->file('lab_attachments'));
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $record = $this->medical->update((int) $id, $payload, (int) $authUser['id'], $request);
+            $record = $this->medical->update((int) $id, $payload, $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'MEDICAL_UPDATE_BLOCKED', $exception->getMessage());
         }
@@ -181,10 +178,8 @@ class MedicalController
 
     public function destroy(Request $request, string $id): Response
     {
-        $authUser = $request->attribute('auth_user');
-
         try {
-            $this->medical->delete((int) $id, (int) $authUser['id'], $request);
+            $this->medical->delete((int) $id, $this->currentUserId($request), $request);
         } catch (RuntimeException $exception) {
             return Response::error(404, 'NOT_FOUND', $exception->getMessage());
         }
@@ -217,15 +212,16 @@ class MedicalController
     {
         $payload = $this->normalizedValidationData($request->body());
         $validator = $this->validatorForType($payload, $type, true);
+        $this->validateLabAttachments($validator, $request->file('lab_attachments'));
 
         if ($validator->fails()) {
-            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+            return $this->validationError($validator->errors());
         }
 
-        $authUser = $request->attribute('auth_user');
+        $authUserId = $this->currentUserId($request);
 
         try {
-            $record = $this->medical->create($type, $payload, (int) $authUser['id'], $request);
+            $record = $this->medical->create($type, $payload, $authUserId, $request);
         } catch (RuntimeException $exception) {
             return Response::error(409, 'MEDICAL_CREATE_BLOCKED', $exception->getMessage());
         }
@@ -332,34 +328,9 @@ class MedicalController
 
     private function normalizedValidationData(array $payload): array
     {
-        foreach (['record_date', 'time_of_death'] as $field) {
-            if (($payload[$field] ?? '') !== '') {
-                $payload[$field] = $this->normalizeDateTime((string) $payload[$field]);
-            }
-        }
+        $payload = InputNormalizer::normalizeDateTimeFields($payload, ['record_date', 'time_of_death']);
 
-        foreach (['next_due_date', 'follow_up_date', 'start_date', 'end_date'] as $field) {
-            if (($payload[$field] ?? '') !== '') {
-                $payload[$field] = substr(str_replace('T', ' ', (string) $payload[$field]), 0, 10);
-            }
-        }
-
-        return $payload;
-    }
-
-    private function normalizeDateTime(string $value): string
-    {
-        $value = str_replace('T', ' ', trim($value));
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
-            return $value . ' 00:00:00';
-        }
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value) === 1) {
-            return $value . ':00';
-        }
-
-        return $value;
+        return InputNormalizer::normalizeDateFields($payload, ['next_due_date', 'follow_up_date', 'start_date', 'end_date']);
     }
 
     private function procedureTypes(): array
@@ -383,5 +354,43 @@ class MedicalController
         }
 
         return $configs;
+    }
+
+    private function validateLabAttachments(Validator $validator, mixed $files): void
+    {
+        if ($files === null || !is_array($files) || !isset($files['name'])) {
+            return;
+        }
+
+        $names = is_array($files['name']) ? $files['name'] : [$files['name']];
+        $sizes = is_array($files['size']) ? $files['size'] : [$files['size']];
+
+        foreach ($names as $index => $name) {
+            if (!$name) {
+                continue;
+            }
+
+            $extension = strtolower(pathinfo((string) $name, PATHINFO_EXTENSION));
+            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+                $this->addManualError($validator, 'lab_attachments', 'Lab result attachments must be JPG, JPEG, PNG, WebP, or GIF images.');
+                break;
+            }
+
+            if ((int) ($sizes[$index] ?? 0) > (10 * 1024 * 1024)) {
+                $this->addManualError($validator, 'lab_attachments', 'Each lab result attachment must not exceed 10MB.');
+                break;
+            }
+        }
+    }
+
+    private function addManualError(Validator $validator, string $field, string $message): void
+    {
+        $errors = $validator->errors();
+        $errors[$field][] = $message;
+
+        $reflection = new \ReflectionClass($validator);
+        $property = $reflection->getProperty('errors');
+        $property->setAccessible(true);
+        $property->setValue($validator, $errors);
     }
 }

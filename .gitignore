@@ -27,6 +27,7 @@ storage/runtime/
 /tmp/
 /assets/
 /generated_chapters/
+/tmp_manuscript*.pdf
 /ABSTRACT.docx
 /CDP&ASMS REVISED.docx
 /CHAPTER-*.docx
