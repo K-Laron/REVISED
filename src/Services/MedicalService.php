@@ -103,6 +103,11 @@ class MedicalService
             throw new RuntimeException('Animal not found.');
         }
 
+        $attachmentSync = [
+            'new_files' => [],
+            'obsolete_files' => [],
+        ];
+
         Database::beginTransaction();
 
         try {
@@ -111,7 +116,7 @@ class MedicalService
             $detailPayload = $this->payloadFactory->subtypePayload($type, $data, $medicalRecordId, true);
 
             $this->persistSubtype($type, $medicalRecordId, $detailPayload, true);
-            $this->saveSharedSections($medicalRecordId, $data, $request->file('lab_attachments'));
+            $attachmentSync = $this->saveSharedSections($medicalRecordId, $data, $request->file('lab_attachments'));
 
             if ($type === 'treatment') {
                 $this->treatmentInventory->sync(null, $detailPayload, $userId, $medicalRecordId);
@@ -122,8 +127,11 @@ class MedicalService
             Database::commit();
         } catch (\Throwable $exception) {
             Database::rollBack();
+            $this->deleteStoredFiles($attachmentSync['new_files']);
             throw $exception;
         }
+
+        $this->deleteStoredFiles($attachmentSync['obsolete_files']);
 
         $record = $this->get($medicalRecordId);
         $this->audit->record($userId, 'create', 'medical', 'medical_records', $medicalRecordId, [], $record, $request);
@@ -135,6 +143,11 @@ class MedicalService
     {
         $current = $this->get($id);
         $type = (string) $current['procedure_type'];
+        $existingLabResults = $this->labResults->findByMedicalRecordId($id);
+        $attachmentSync = [
+            'new_files' => [],
+            'obsolete_files' => [],
+        ];
 
         Database::beginTransaction();
 
@@ -148,14 +161,17 @@ class MedicalService
             }
 
             $this->persistSubtype($type, $id, $detailPayload, false);
-            $this->saveSharedSections($id, $data, $request->file('lab_attachments'));
+            $attachmentSync = $this->saveSharedSections($id, $data, $request->file('lab_attachments'), $existingLabResults);
             $this->syncAnimalStatusAfterWrite($type, (int) $current['animal_id'], $detailPayload, $userId);
 
             Database::commit();
         } catch (\Throwable $exception) {
             Database::rollBack();
+            $this->deleteStoredFiles($attachmentSync['new_files']);
             throw $exception;
         }
+
+        $this->deleteStoredFiles($attachmentSync['obsolete_files']);
 
         $record = $this->get($id);
         $this->audit->record($userId, 'update', 'medical', 'medical_records', $id, $current, $record, $request);
@@ -233,8 +249,13 @@ class MedicalService
         return $this->procedureConfig->forType($type);
     }
 
-    private function saveSharedSections(int $medicalRecordId, array $data, mixed $labAttachmentInput = null): void
+    private function saveSharedSections(int $medicalRecordId, array $data, mixed $labAttachmentInput = null, array $existingLabResults = []): array
     {
+        $attachmentSync = [
+            'new_files' => [],
+            'obsolete_files' => [],
+        ];
+
         // Vital signs
         $hasVitalData = false;
         $vitalFields = ['vs_weight_kg', 'vs_temperature_celsius', 'vs_heart_rate_bpm', 'vs_respiratory_rate', 'vs_body_condition_score'];
@@ -269,9 +290,15 @@ class MedicalService
             $labResultsRaw = json_decode($labResultsRaw, true) ?: [];
         }
         if (is_array($labResultsRaw)) {
-            $labResultsRaw = $this->attachUploadedLabImages($medicalRecordId, $labResultsRaw, $labAttachmentInput);
+            $labResultsRaw = $this->attachUploadedLabImages($medicalRecordId, $labResultsRaw, $labAttachmentInput, $attachmentSync);
             $this->labResults->bulkReplaceForRecord($medicalRecordId, $labResultsRaw);
+            $attachmentSync['obsolete_files'] = $this->diffAttachmentPaths(
+                $this->extractAttachmentPaths($existingLabResults),
+                $this->extractAttachmentPaths($labResultsRaw)
+            );
         }
+
+        return $attachmentSync;
     }
 
     private function subtypeRecord(int $medicalRecordId, string $type): array
@@ -344,7 +371,7 @@ class MedicalService
         }
     }
 
-    private function attachUploadedLabImages(int $medicalRecordId, array $labResults, mixed $labAttachmentInput): array
+    private function attachUploadedLabImages(int $medicalRecordId, array $labResults, mixed $labAttachmentInput, array &$attachmentSync): array
     {
         $files = $this->normalizeFiles($labAttachmentInput);
         if ($files === []) {
@@ -352,6 +379,11 @@ class MedicalService
         }
 
         foreach ($labResults as $index => &$labResult) {
+            if (trim((string) ($labResult['test_name'] ?? '')) === '') {
+                unset($labResult['attachment_index']);
+                continue;
+            }
+
             $attachmentIndex = isset($labResult['attachment_index']) ? (int) $labResult['attachment_index'] : null;
             unset($labResult['attachment_index']);
 
@@ -362,6 +394,7 @@ class MedicalService
             $storedPath = $this->storeLabAttachment($medicalRecordId, $files[$attachmentIndex]);
             if ($storedPath !== null) {
                 $labResult['attachment_path'] = $storedPath;
+                $attachmentSync['new_files'][] = $storedPath;
             }
         }
         unset($labResult);
@@ -436,5 +469,54 @@ class MedicalService
         unset($row);
 
         return $rows;
+    }
+
+    private function extractAttachmentPaths(array $rows): array
+    {
+        $paths = [];
+
+        foreach ($rows as $row) {
+            $path = $this->normalizeRelativeMediaPath($row['attachment_path'] ?? null);
+            if ($path === null) {
+                continue;
+            }
+
+            $paths[] = $path;
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    private function diffAttachmentPaths(array $existingPaths, array $nextPaths): array
+    {
+        $nextLookup = array_fill_keys($nextPaths, true);
+
+        return array_values(array_filter($existingPaths, static fn (string $path): bool => !isset($nextLookup[$path])));
+    }
+
+    private function deleteStoredFiles(array $paths): void
+    {
+        foreach (array_values(array_unique($paths)) as $path) {
+            $normalizedPath = $this->normalizeRelativeMediaPath($path);
+            if ($normalizedPath === null) {
+                continue;
+            }
+
+            $absolutePath = dirname(__DIR__, 2) . '/public/' . str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $normalizedPath);
+            if (is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
+        }
+    }
+
+    private function normalizeRelativeMediaPath(?string $path): ?string
+    {
+        $normalizedPath = ltrim(str_replace('\\', '/', trim((string) $path)), '/');
+
+        if ($normalizedPath === '' || str_contains($normalizedPath, '..')) {
+            return null;
+        }
+
+        return $normalizedPath;
     }
 }

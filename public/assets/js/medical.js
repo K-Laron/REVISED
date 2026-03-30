@@ -185,8 +185,15 @@ function bindMedicalForm() {
       formData.set('_method', 'PUT');
     }
 
+    const labRows = collectLabResultRows(formData);
+    const invalidLabRow = labRows.find((row) => String(row.test_name || '').trim() === '');
+    if (invalidLabRow) {
+      window.toast?.error('Medical save failed', 'Each lab or imaging entry requires a test name.');
+      return;
+    }
+
     formData.set('prescriptions', JSON.stringify(collectPrescriptionRows()));
-    formData.set('lab_results', JSON.stringify(collectLabResultRows(formData)));
+    formData.set('lab_results', JSON.stringify(labRows));
 
     const response = await fetch(endpoint, {
       method,

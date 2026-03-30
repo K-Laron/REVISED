@@ -157,6 +157,7 @@ class MedicalController
         ]);
         $validator = $this->validatorForType($payload, (string) $current['procedure_type'], false);
         $this->validateLabAttachments($validator, $request->file('lab_attachments'));
+        $this->validateLabResults($validator, $payload['lab_results'] ?? []);
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
@@ -213,6 +214,7 @@ class MedicalController
         $payload = $this->normalizedValidationData($request->body());
         $validator = $this->validatorForType($payload, $type, true);
         $this->validateLabAttachments($validator, $request->file('lab_attachments'));
+        $this->validateLabResults($validator, $payload['lab_results'] ?? []);
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
@@ -378,6 +380,41 @@ class MedicalController
 
             if ((int) ($sizes[$index] ?? 0) > (10 * 1024 * 1024)) {
                 $this->addManualError($validator, 'lab_attachments', 'Each lab result attachment must not exceed 10MB.');
+                break;
+            }
+        }
+    }
+
+    private function validateLabResults(Validator $validator, mixed $labResults): void
+    {
+        if (is_string($labResults)) {
+            $labResults = json_decode($labResults, true) ?: [];
+        }
+
+        if (!is_array($labResults)) {
+            return;
+        }
+
+        foreach ($labResults as $index => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $hasContent = false;
+            foreach ($row as $key => $value) {
+                if ($key === 'attachment_index') {
+                    $hasContent = true;
+                    break;
+                }
+
+                if (trim((string) $value) !== '') {
+                    $hasContent = true;
+                    break;
+                }
+            }
+
+            if ($hasContent && trim((string) ($row['test_name'] ?? '')) === '') {
+                $this->addManualError($validator, 'lab_results', 'Each lab or imaging entry requires a test name.');
                 break;
             }
         }
