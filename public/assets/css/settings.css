@@ -1,3 +1,40 @@
+#settings-page.settings-ops-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: end;
+}
+
+.settings-ops-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.settings-ops-summary-card {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 160px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-default);
+  background: color-mix(in srgb, var(--color-bg-secondary) 78%, var(--color-bg-elevated));
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-zone-grid {
+  gap: var(--space-5);
+}
+
+.settings-zone-grid-single {
+  grid-template-columns: 1fr;
+}
+
+.settings-zone-header {
+  display: grid;
+  gap: var(--space-2);
+}
+
 #settings-page + .settings-grid,
 .settings-grid {
   display: grid;
@@ -26,6 +63,12 @@
   display: block;
   margin-top: var(--space-1);
   font-size: 1.15rem;
+}
+
+.settings-profile-console,
+.settings-backup-ledger,
+.settings-readiness-board {
+  align-content: start;
 }
 
 .settings-profile-list {
@@ -101,7 +144,18 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
+.settings-health-card strong,
+.settings-readiness-summary strong,
+.settings-profile-list dt,
+.settings-ops-summary-card strong {
+  font-family: var(--font-family-mono);
+}
+
 @media (max-width: 980px) {
+  #settings-page.settings-ops-hero {
+    grid-template-columns: 1fr;
+  }
+
   .settings-grid {
     grid-template-columns: 1fr;
   }

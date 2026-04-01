@@ -1,14 +1,29 @@
-<section class="page-title" id="settings-page">
+<section class="page-title settings-ops-hero" id="settings-page">
     <div class="page-title-meta">
+        <span class="badge badge-info">Runtime Operations</span>
         <h1>Settings</h1>
         <div class="breadcrumb">Home &gt; Settings</div>
-        <p class="text-muted">Operational settings, runtime health, and backup controls in one place.</p>
+        <p class="text-muted">Monitor runtime health, backup safety, maintenance posture, and deployment readiness from one operational console.</p>
+    </div>
+    <div class="settings-ops-summary">
+        <article class="settings-ops-summary-card">
+            <span class="field-label">Access posture</span>
+            <strong><?= ($canManageSystem ?? false) ? 'Editable' : 'Read Only' ?></strong>
+        </article>
+        <article class="settings-ops-summary-card">
+            <span class="field-label">Settings store</span>
+            <strong class="mono"><?= htmlspecialchars((string) ($settingsMeta['settings_storage_driver'] ?? ''), ENT_QUOTES, 'UTF-8') ?></strong>
+        </article>
+        <article class="settings-ops-summary-card">
+            <span class="field-label">Environment</span>
+            <strong class="mono"><?= htmlspecialchars((string) ($settingsMeta['app_env'] ?? ''), ENT_QUOTES, 'UTF-8') ?></strong>
+        </article>
     </div>
 </section>
 
-<section class="settings-grid">
+<section class="settings-grid settings-zone-grid">
     <article class="card stack">
-        <div>
+        <div class="settings-zone-header">
             <h3>System Health</h3>
             <p class="text-muted">Live application status based on the current runtime and database connection.</p>
         </div>
@@ -21,8 +36,8 @@
         </div>
     </article>
 
-    <article class="card stack">
-        <div>
+    <article class="card stack settings-profile-console">
+        <div class="settings-zone-header">
             <h3>Application Profile</h3>
             <p class="text-muted">Current runtime metadata and session policy from the active environment.</p>
         </div>
@@ -40,9 +55,9 @@
     </article>
 </section>
 
-<section class="settings-grid settings-grid-secondary">
+<section class="settings-grid settings-grid-secondary settings-zone-grid">
     <article class="card stack">
-        <div class="cluster" style="justify-content: space-between;">
+        <div class="cluster settings-zone-header" style="justify-content: space-between;">
             <div>
                 <h3>System Configuration</h3>
                 <p class="text-muted">Persistent deployment settings stored in MySQL, with legacy file fallback only when the table is unavailable.</p>
@@ -97,8 +112,8 @@
         </form>
     </article>
 
-    <article class="card stack">
-        <div class="cluster" style="justify-content: space-between;">
+    <article class="card stack settings-backup-ledger">
+        <div class="cluster settings-zone-header" style="justify-content: space-between;">
             <div>
                 <h3>Database Backups</h3>
                 <p class="text-muted">Create fresh compressed SQL backups and review recent backup history.</p>
@@ -139,9 +154,9 @@
     </article>
 </section>
 
-<section class="settings-grid settings-grid-secondary">
+<section class="settings-grid settings-grid-secondary settings-zone-grid">
     <article class="card stack">
-        <div class="cluster" style="justify-content: space-between;">
+        <div class="cluster settings-zone-header" style="justify-content: space-between;">
             <div>
                 <h3>Maintenance Mode</h3>
                 <p class="text-muted">Toggle system maintenance without manually creating or removing flag files.</p>
@@ -168,8 +183,8 @@
         </form>
     </article>
 
-    <article class="card stack">
-        <div>
+    <article class="card stack settings-readiness-board">
+        <div class="settings-zone-header">
             <h3>Deployment Readiness</h3>
             <p class="text-muted">Production-prep checks for environment, secrets, mail, and writable storage.</p>
         </div>
@@ -193,7 +208,7 @@
     </article>
 </section>
 
-<section class="settings-grid settings-grid-secondary">
+<section class="settings-grid settings-grid-secondary settings-zone-grid settings-zone-grid-single">
     <article class="card stack">
         <div>
             <h3>Operations Notes</h3>

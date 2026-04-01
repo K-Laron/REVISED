@@ -239,7 +239,7 @@ function bindSettingsPage() {
 
   function healthCard(label, value) {
     return `
-      <article class="settings-health-card">
+      <article class="settings-health-card settings-signal-card">
         <span class="field-label">${escapeHtml(label)}</span>
         <strong>${escapeHtml(value)}</strong>
       </article>
@@ -289,6 +289,8 @@ function renderStatus(status) {
       ? 'danger'
       : normalized === 'pass'
         ? 'success'
+        : normalized === 'warning'
+          ? 'warning'
         : normalized === 'warn'
           ? 'warning'
           : 'warning';
