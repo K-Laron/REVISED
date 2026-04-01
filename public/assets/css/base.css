@@ -79,6 +79,10 @@ small,
   font-size: var(--font-size-sm);
 }
 
+small {
+  font-family: var(--font-family-mono);
+}
+
 strong {
   color: var(--color-text-primary);
 }
@@ -138,6 +142,10 @@ a:hover {
 
 .field-label,
 .badge,
+.metric-label,
+.eyebrow,
+.table-meta,
+time,
 .breadcrumb {
   font-family: var(--font-family-mono);
 }
