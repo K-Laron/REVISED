@@ -477,6 +477,12 @@
     let activeIndex = 0;
     let autoRotateTimer = null;
 
+    const setSlideState = (slide, state) => {
+      slide.classList.toggle('is-active', state === 'active');
+      slide.classList.toggle('is-preview', state === 'next');
+      slide.classList.toggle('is-previous', state === 'previous');
+    };
+
     const updateUi = (index) => {
       activeIndex = index;
       const previewIndex = slides.length > 1 ? (activeIndex + 1) % slides.length : -1;
@@ -487,9 +493,7 @@
         const isPreview = slideIndex === previewIndex && !isActive;
         const isPrevious = slideIndex === prevIndex && !isActive && !isPreview;
 
-        slide.classList.toggle('is-active', isActive);
-        slide.classList.toggle('is-preview', isPreview);
-        slide.classList.toggle('is-previous', isPrevious);
+        setSlideState(slide, isActive ? 'active' : isPreview ? 'next' : isPrevious ? 'previous' : 'idle');
         slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
         slide.tabIndex = isActive ? 0 : -1;
       });

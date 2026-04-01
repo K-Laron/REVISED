@@ -7,6 +7,25 @@
   padding: var(--space-8) 0 var(--space-10);
 }
 
+.portal-civic-hero .portal-civic-copy {
+  padding: var(--space-8);
+  border: 1px solid rgba(180, 83, 9, 0.18);
+  border-radius: calc(var(--radius-xl) * 1.05);
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.92));
+  box-shadow: var(--shadow-lg);
+}
+
+.portal-civic-hero .portal-civic-copy h1,
+.portal-civic-hero .portal-civic-copy strong {
+  color: #f8fafc;
+}
+
+.portal-civic-hero .portal-civic-copy .text-muted,
+.portal-civic-hero .portal-civic-copy .portal-landing-kicker,
+.portal-civic-hero .portal-civic-copy .portal-landing-eyebrow {
+  color: rgba(226, 232, 240, 0.84);
+}
+
 .portal-landing-hero::before {
   content: "";
   position: absolute;
@@ -70,6 +89,10 @@
   gap: var(--space-3);
 }
 
+.portal-trust-ribbon .portal-landing-trust-item {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-warm) 72%, white), color-mix(in srgb, var(--color-bg-elevated) 94%, white));
+}
+
 .portal-landing-trust-item,
 .portal-landing-bento-card,
 .portal-landing-journey-card,
@@ -96,6 +119,11 @@
   min-width: 0;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated) 98%, var(--color-bg-secondary)), color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-elevated)));
+}
+
+.portal-proof-card,
+.portal-featured-ledger {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-warm) 70%, white), color-mix(in srgb, var(--color-bg-elevated) 94%, white));
 }
 
 .portal-landing-highlight-head,

@@ -7,8 +7,8 @@ $heroSecondaryHref = $isAdopter ? '/adopt/animals' : '/adopt/register';
 $heroSecondaryLabel = $isAdopter ? 'See all available animals' : 'Create adopter account';
 ?>
 
-<section class="portal-landing-hero">
-    <div class="portal-landing-intro">
+<section class="portal-landing-hero portal-civic-hero">
+    <div class="portal-landing-intro portal-civic-copy">
         <span class="badge badge-info">Adopter Portal</span>
         <div class="portal-landing-kicker">Catarman Animal Shelter</div>
         <h1>Adoption starts with a calm, transparent first step.</h1>
@@ -17,7 +17,7 @@ $heroSecondaryLabel = $isAdopter ? 'See all available animals' : 'Create adopter
             <a class="btn-primary" href="<?= htmlspecialchars($heroPrimaryHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($heroPrimaryLabel, ENT_QUOTES, 'UTF-8') ?></a>
             <a class="btn-secondary" href="<?= htmlspecialchars($heroSecondaryHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($heroSecondaryLabel, ENT_QUOTES, 'UTF-8') ?></a>
         </div>
-        <div class="portal-landing-trust">
+        <div class="portal-landing-trust portal-trust-ribbon">
             <article class="portal-landing-trust-item">
                 <strong><?= $featuredCount ?></strong>
                 <span>Featured animals ready to review now</span>
@@ -34,7 +34,7 @@ $heroSecondaryLabel = $isAdopter ? 'See all available animals' : 'Create adopter
     </div>
 
     <div class="portal-landing-aside">
-        <article class="portal-landing-highlight card">
+        <article class="portal-landing-highlight portal-proof-card card">
             <div class="portal-landing-highlight-head">
                 <span class="portal-landing-eyebrow">What to expect</span>
                 <h2>Clear requirements before you apply</h2>
@@ -78,7 +78,7 @@ $heroSecondaryLabel = $isAdopter ? 'See all available animals' : 'Create adopter
     </div>
 </section>
 
-<section class="portal-section stack portal-landing-featured">
+<section class="portal-section stack portal-landing-featured portal-featured-ledger">
     <div class="portal-section-header portal-landing-featured-header">
         <div>
             <span class="portal-landing-eyebrow">Featured animals</span>
