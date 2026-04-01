@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-ui-theme="civic-ledger">
 <head>
     <?php $layoutCsrfToken = $csrfToken ?? \App\Middleware\CsrfMiddleware::token(); ?>
     <meta charset="UTF-8">
@@ -72,7 +72,7 @@
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/variables.css" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/reset.css" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/base.css" data-core-asset="css">
