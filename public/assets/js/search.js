@@ -100,9 +100,10 @@ function bindSearchPage() {
     }
 
     results.innerHTML = sections.map((section) => `
-      <article class="card stack search-section">
-        <div class="cluster" style="justify-content: space-between;">
+      <article class="card stack search-section search-section-ledger">
+        <div class="search-section-head">
           <div>
+            <span class="field-label">${escapeHtml(section.key || '')}</span>
             <h3>${escapeHtml(section.label || '')}</h3>
             <p class="text-muted">${escapeHtml(String(section.count || 0))} matching record${Number(section.count || 0) === 1 ? '' : 's'}</p>
           </div>

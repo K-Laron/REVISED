@@ -1,32 +1,45 @@
-<section class="page-title" id="search-page">
+<?php
+    $selectedModules = array_values(array_filter((array) ($searchFilters['modules'] ?? [])));
+    $selectedPerSection = (int) ($searchFilters['per_section'] ?? 5);
+    $availableModulesCount = count((array) ($availableSearchModules ?? []));
+?>
+
+<section class="search-command-shell page-title" id="search-page">
     <div class="page-title-meta">
+        <span class="badge badge-info">Cross-module lookup</span>
         <h1>Global Search</h1>
         <div class="breadcrumb">Home &gt; Search</div>
-        <p class="text-muted">Cross-module search for records you already have access to.</p>
+        <p class="text-muted">Search across animals, adopters, adoptions, billing, inventory, medical, and staff records you can access.</p>
+    </div>
+    <div class="search-command-meta">
+        <div class="search-command-stat">
+            <span class="field-label">Indexed modules</span>
+            <strong class="mono"><?= htmlspecialchars((string) $availableModulesCount, ENT_QUOTES, 'UTF-8') ?></strong>
+        </div>
+        <div class="search-command-stat">
+            <span class="field-label">Response mode</span>
+            <strong>Ledger view</strong>
+        </div>
     </div>
 </section>
 
-<section class="search-shell card stack">
-    <div class="cluster" style="justify-content: space-between; align-items: end;">
-        <div>
-            <h3>Search Query</h3>
-            <p class="text-muted">Search across animals, adopters, adoptions, billing, inventory, and medical records.</p>
-        </div>
-        <div class="badge badge-info" id="search-total-badge">Ready</div>
-    </div>
+<section class="card search-filter-dock">
     <form class="search-form" id="search-form">
-        <div class="search-filter-layout">
+        <div class="search-query-band">
             <label class="field search-filter-span-2">
                 <span class="field-label">Find Records</span>
                 <div class="search-input-row">
-                    <input class="input" type="search" name="q" value="<?= htmlspecialchars((string) ($searchQuery ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Try an animal ID, adopter name, invoice number, or SKU" minlength="2" required>
+                    <input class="input search-command-input" type="search" name="q" value="<?= htmlspecialchars((string) ($searchQuery ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Try an animal ID, adopter name, invoice number, or SKU" minlength="2" required>
                     <button class="btn-primary" type="submit">Search</button>
                 </div>
             </label>
+            <div class="badge badge-info" id="search-total-badge">Ready</div>
+        </div>
+
+        <div class="search-filter-layout">
             <label class="field">
                 <span class="field-label">Results Per Module</span>
                 <select class="input" name="per_section">
-                    <?php $selectedPerSection = (int) ($searchFilters['per_section'] ?? 5); ?>
                     <?php foreach ([3, 5, 10] as $size): ?>
                         <option value="<?= $size ?>" <?= $selectedPerSection === $size ? 'selected' : '' ?>><?= $size ?></option>
                     <?php endforeach; ?>
@@ -41,10 +54,10 @@
                 <input class="input" type="date" name="date_to" value="<?= htmlspecialchars((string) ($searchFilters['date_to'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
             </label>
         </div>
+
         <fieldset class="search-module-filters">
             <legend class="field-label">Modules</legend>
             <div class="search-module-list">
-                <?php $selectedModules = array_values(array_filter((array) ($searchFilters['modules'] ?? []))); ?>
                 <?php foreach (($availableSearchModules ?? []) as $module): ?>
                     <?php
                         $moduleKey = (string) ($module['key'] ?? '');
@@ -57,9 +70,13 @@
                 <?php endforeach; ?>
             </div>
         </fieldset>
-        <section class="search-secondary-shell">
-            <div>
-                <h4>Module-Specific Filters</h4>
+
+        <section class="search-secondary-shell search-filter-dock-panel">
+            <div class="search-secondary-header">
+                <div>
+                    <span class="field-label">Module-specific filters</span>
+                    <h4>Precision Controls</h4>
+                </div>
                 <p class="text-muted">Only filters for selected modules are applied.</p>
             </div>
             <div class="search-secondary-grid">
@@ -83,28 +100,33 @@
                 <?php endforeach; ?>
             </div>
         </section>
+
         <div class="cluster search-form-actions">
+            <p class="text-muted">Tip: broader phrases work better than exact punctuation.</p>
             <button class="btn-secondary" type="reset">Clear Filters</button>
         </div>
     </form>
 </section>
 
 <section class="search-empty card stack" id="search-empty-state"<?= ($searchQuery ?? '') !== '' ? ' hidden' : '' ?>>
+    <span class="field-label">Ready</span>
     <h3>Start with a keyword</h3>
-    <p class="text-muted">Use at least 2 characters. The search respects your current access rights.</p>
+    <p class="text-muted">Use at least 2 characters. Try an animal ID, adopter surname, invoice number, or SKU.</p>
 </section>
 
 <section class="search-empty card stack" id="search-loading-state" hidden>
+    <span class="field-label">In progress</span>
     <h3>Searching</h3>
-    <p class="text-muted">Scanning the accessible modules now.</p>
+    <p class="text-muted">Scanning the accessible modules and assembling the result ledger now.</p>
 </section>
 
 <section class="search-empty card stack" id="search-no-results" hidden>
+    <span class="field-label">No match</span>
     <h3>No results found</h3>
-    <p class="text-muted">Try a broader keyword or a different identifier.</p>
+    <p class="text-muted">Try a broader keyword, remove a module filter, or search by a known identifier.</p>
 </section>
 
-<section class="search-results" id="search-results"></section>
+<section class="search-results-ledger" id="search-results"></section>
 
 <script id="search-page-data" type="application/json"><?= json_encode([
     'csrfToken' => $csrfToken,
