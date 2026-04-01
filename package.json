@@ -1,0 +1,27 @@
+{
+  "name": "revised",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vanilla PHP 8.2 application scaffolded from the local PRD and implementation guide.",
+  "main": "index.js",
+  "scripts": {
+    "tooling:check": "node -e \"const fs=require('fs'); const path=require('path'); ['beautiful-mermaid','@resvg/resvg-js','docx'].forEach((name)=>{const packageFile=path.join(process.cwd(),'node_modules',...name.split('/'),'package.json'); if(!fs.existsSync(packageFile)){throw new Error('Missing dependency: ' + name);} }); console.log('Optional Node tooling dependencies are installed.');\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/K-Laron/REVISED.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/K-Laron/REVISED/issues"
+  },
+  "homepage": "https://github.com/K-Laron/REVISED#readme",
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "beautiful-mermaid": "^1.1.3",
+    "docx": "^9.6.1"
+  }
+}

@@ -8,8 +8,17 @@ This repository contains the current implemented CDP&ASMS runtime as of March 27
 - The app currently exposes 34 web routes and 126 API routes.
 - The runtime schema is 42 tables: 39 base tables from `database_schema.sql` plus 3 additional tables introduced by the current 5 SQL migrations.
 - PDF exports are generated on the server with `TCPDF`.
-- Dashboard charts use Chart.js loaded at runtime from `https://cdn.jsdelivr.net/npm/chart.js`.
-- System settings persist in MySQL when the `system_settings` table is available and fall back to `storage/config/system_settings.json` only as a legacy safety path.
+- Dashboard charts use a vendored local Chart.js asset served from `public/assets/vendor/chart.js/chart.umd.js`.
+- System settings bootstrap from environment defaults plus `storage/cache/system_settings.json`, while writes persist to MySQL when the `system_settings` table is available and otherwise fall back to `storage/config/system_settings.json`.
+
+## Civic Ledger UI System
+
+The current flagship UI pass uses the `Civic Ledger` design system across both the internal operations app and the public adoption portal.
+
+- Typography is standardized to `Lexend` for headings and navigation, `Source Sans 3` for body and form copy, and `JetBrains Mono` for operational metadata, IDs, timestamps, and badges.
+- The internal shell, dashboard, search, and settings pages now share the same civic-professional token set, navigation language, and command-surface patterns.
+- The public landing page uses the same design system with a warmer trust-first presentation while keeping the current CTA and featured-animal behavior intact.
+- The rollout is intentionally view-layer only: routes, controllers, API payloads, and existing JavaScript contracts remain unchanged.
 
 ## Stack
 
@@ -36,6 +45,13 @@ The Node dependencies in `package.json` are not required to run the PHP app itse
 - `beautiful-mermaid`
 - `@resvg/resvg-js`
 - `docx`
+
+Install them only if you need the documentation tooling:
+
+```powershell
+npm install
+npm run tooling:check
+```
 
 ## Functional Areas
 
@@ -151,6 +167,7 @@ Generated files currently include:
 - QR SVG files in `public/uploads/qrcodes/`
 - report exports in `storage/exports/reports/`
 - compressed SQL backups in `storage/backups/`
+- cached runtime settings in `storage/cache/system_settings.json`
 
 ## Security Model
 
@@ -181,7 +198,7 @@ Generated files currently include:
 - `API_ROUTES.md`: current web and API route inventory
 - `IMPLEMENTATION_GUIDE.md`: implemented runtime behavior and deployment notes
 - `VALIDATION_RULES.md`: validator capabilities and endpoint-specific rule highlights
-- `PAGE_LAYOUTS.md`: implemented page structure and screen responsibilities
+- `PAGE_LAYOUTS.md`: Civic Ledger page structure, shell zones, and flagship screen responsibilities
 - `PRD_Catarman_Dog_Pound.md`: product and scope document aligned to the current build
 - `system_summary.md`: concise system inventory and counts
 - `llm_context.md`: AI-facing implementation constraints and safe assumptions

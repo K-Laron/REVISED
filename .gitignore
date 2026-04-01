@@ -21,6 +21,7 @@ storage/pdfs/
 storage/runtime/
 /.playwright-cli/
 /output/
+/.superpowers/
 
 # Extraneous files / Temp Code Generation
 /.tmp/
@@ -44,8 +45,6 @@ list_users.php
 llm_context.md
 node_modules/
 nul
-package-lock.json
-package.json
 scripts/
 system_functions_list.txt
 system_summary.html
@@ -57,6 +56,5 @@ API_ROUTES.md
 ARCHITECTURE.md
 IMPLEMENTATION_GUIDE.md
 MANUSCRIPT LAYOUT.md
-PAGE_LAYOUTS.md
 PRD_Catarman_Dog_Pound.md
 VALIDATION_RULES.md

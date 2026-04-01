@@ -13,19 +13,46 @@ class SystemSettings
     private static ?array $cache = null;
     private static ?bool $databaseStoreAvailable = null;
 
-    public static function all(): array
+    public static function bootstrap(): array
     {
         if (self::$cache !== null) {
             return self::$cache;
         }
 
         $settings = self::defaults();
+        $runtimeSettings = self::readFromCache();
+        if ($runtimeSettings !== []) {
+            self::$cache = array_replace($settings, $runtimeSettings);
+
+            return self::$cache;
+        }
+
+        $legacySettings = self::readFromFile();
+        if ($legacySettings !== []) {
+            self::$cache = array_replace($settings, $legacySettings);
+
+            return self::$cache;
+        }
+
+        self::$cache = $settings;
+
+        return self::$cache;
+    }
+
+    public static function all(): array
+    {
+        if (self::$cache !== null) {
+            return self::$cache;
+        }
+
+        $settings = self::bootstrap();
 
         try {
             if (self::databaseStoreAvailable()) {
                 $databaseSettings = self::readFromDatabase();
                 if ($databaseSettings !== []) {
                     self::$cache = array_replace($settings, $databaseSettings);
+                    self::writeToCache(self::$cache);
 
                     return self::$cache;
                 }
@@ -33,13 +60,6 @@ class SystemSettings
         } catch (Throwable) {
             self::$databaseStoreAvailable = false;
         }
-
-        $legacySettings = self::readFromFile();
-        if ($legacySettings !== []) {
-            $settings = array_replace($settings, $legacySettings);
-        }
-
-        self::$cache = $settings;
 
         return self::$cache;
     }
@@ -55,12 +75,11 @@ class SystemSettings
 
         if (self::databaseStoreAvailable()) {
             self::writeToDatabase($merged);
-            self::$cache = $merged;
-
-            return $merged;
+        } else {
+            self::writeToFile($merged);
         }
 
-        self::writeToFile($merged);
+        self::writeToCache($merged);
 
         self::$cache = $merged;
 
@@ -80,6 +99,7 @@ class SystemSettings
 
         $merged = array_replace(self::defaults(), $legacySettings);
         self::writeToDatabase($merged);
+        self::writeToCache($merged);
         self::$cache = $merged;
 
         return true;
@@ -93,6 +113,11 @@ class SystemSettings
     public static function path(): string
     {
         return dirname(__DIR__, 2) . '/storage/config/system_settings.json';
+    }
+
+    public static function cachePath(): string
+    {
+        return dirname(__DIR__, 2) . '/storage/cache/system_settings.json';
     }
 
     public static function defaults(): array
@@ -166,7 +191,26 @@ class SystemSettings
 
     private static function readFromFile(): array
     {
-        $path = self::path();
+        return self::readJsonFile(self::path());
+    }
+
+    private static function readFromCache(): array
+    {
+        return self::readJsonFile(self::cachePath());
+    }
+
+    private static function writeToFile(array $settings): void
+    {
+        self::writeJsonFile(self::path(), $settings);
+    }
+
+    private static function writeToCache(array $settings): void
+    {
+        self::writeJsonFile(self::cachePath(), $settings);
+    }
+
+    private static function readJsonFile(string $path): array
+    {
         if (!is_file($path)) {
             return [];
         }
@@ -176,15 +220,15 @@ class SystemSettings
         return is_array($decoded) ? $decoded : [];
     }
 
-    private static function writeToFile(array $settings): void
+    private static function writeJsonFile(string $path, array $settings): void
     {
-        $directory = dirname(self::path());
+        $directory = dirname($path);
         if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
             throw new RuntimeException('Failed to create the settings directory.');
         }
 
         $encoded = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        if ($encoded === false || file_put_contents(self::path(), $encoded) === false) {
+        if ($encoded === false || file_put_contents($path, $encoded) === false) {
             throw new RuntimeException('Failed to persist system settings.');
         }
     }

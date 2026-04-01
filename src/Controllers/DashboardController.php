@@ -26,7 +26,7 @@ class DashboardController
             'csrfToken' => CsrfMiddleware::token(),
             'title' => 'Dashboard',
             'extraCss' => ['/assets/css/dashboard.css'],
-            'extraJs' => ['https://cdn.jsdelivr.net/npm/chart.js', '/assets/js/dashboard.js'],
+            'extraJs' => ['/assets/vendor/chart.js/chart.umd.js', '/assets/js/dashboard.js'],
         ], 'layouts.app'));
     }
 

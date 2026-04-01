@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\ExceptionHandler;
 use App\Core\Request;
 use App\Models\SystemBackup;
+use App\Services\Backup\MySqlBackupRestorer;
 use App\Support\SystemSettings;
 use PDO;
 use RuntimeException;
@@ -140,27 +141,8 @@ class BackupService
             throw new RuntimeException('Backup file is missing.');
         }
 
-        $compressed = file_get_contents($absolutePath);
-        if ($compressed === false) {
-            throw new RuntimeException('Failed to read the backup file.');
-        }
-
-        $sql = gzdecode($compressed);
-        if ($sql === false) {
-            throw new RuntimeException('Failed to decode the backup file.');
-        }
-
-        $connection = Database::connect();
-        $statements = $this->splitStatements($sql);
-
-        foreach ($statements as $statement) {
-            $trimmed = trim($statement);
-            if ($trimmed === '') {
-                continue;
-            }
-
-            $connection->exec($trimmed);
-        }
+        $config = require dirname(__DIR__, 2) . '/config/database.php';
+        (new MySqlBackupRestorer())->restore($backup, $absolutePath, $config);
 
         try {
             $this->backups->markRestored($backupId, $userId);
@@ -285,62 +267,6 @@ class BackupService
         }, array_values($row));
 
         return '(' . implode(', ', $values) . ')';
-    }
-
-    private function splitStatements(string $sql): array
-    {
-        $sql = preg_replace('/^--.*$/m', '', $sql) ?? $sql;
-        $statements = [];
-        $buffer = '';
-        $length = strlen($sql);
-        $inString = false;
-        $quoteChar = '';
-        $escapeNext = false;
-
-        for ($index = 0; $index < $length; $index++) {
-            $character = $sql[$index];
-            $buffer .= $character;
-
-            if ($escapeNext) {
-                $escapeNext = false;
-                continue;
-            }
-
-            if ($inString) {
-                if ($character === '\\') {
-                    $escapeNext = true;
-                    continue;
-                }
-
-                if ($character === $quoteChar) {
-                    $inString = false;
-                    $quoteChar = '';
-                }
-
-                continue;
-            }
-
-            if ($character === '\'' || $character === '"') {
-                $inString = true;
-                $quoteChar = $character;
-                continue;
-            }
-
-            if ($character === ';') {
-                $trimmed = trim($buffer);
-                if ($trimmed !== '') {
-                    $statements[] = $trimmed;
-                }
-                $buffer = '';
-            }
-        }
-
-        $trimmed = trim($buffer);
-        if ($trimmed !== '') {
-            $statements[] = $trimmed;
-        }
-
-        return $statements;
     }
 
     private function escapeIdentifier(string $identifier): string

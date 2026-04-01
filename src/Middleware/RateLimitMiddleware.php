@@ -7,6 +7,7 @@ namespace App\Middleware;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Middleware\Support\FileRateLimitStore;
 use Closure;
 use Throwable;
 
@@ -52,21 +53,10 @@ class RateLimitMiddleware
                 ['key' => $key]
             );
         } catch (Throwable) {
-            $file = dirname(__DIR__, 2) . '/storage/cache/rate_limits.json';
-            $cache = is_file($file) ? json_decode((string) file_get_contents($file), true) : [];
-            $entry = $cache[$key] ?? ['attempts' => 0, 'expires_at' => $now + $windowSeconds];
-
-            if (($entry['expires_at'] ?? 0) <= $now) {
-                $entry = ['attempts' => 0, 'expires_at' => $now + $windowSeconds];
-            }
-
-            if (($entry['attempts'] ?? 0) >= $maxAttempts) {
+            $store = new FileRateLimitStore();
+            if ($store->hit($key, $maxAttempts, $windowSeconds, $now)) {
                 return Response::error(429, 'RATE_LIMITED', 'Too many requests. Please try again later.');
             }
-
-            $entry['attempts']++;
-            $cache[$key] = $entry;
-            file_put_contents($file, json_encode($cache, JSON_PRETTY_PRINT));
         }
 
         return $next($request);

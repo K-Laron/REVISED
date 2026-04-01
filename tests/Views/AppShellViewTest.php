@@ -38,4 +38,17 @@ final class AppShellViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('topbar-command-shell', $html);
         self::assertStringContainsString('topbar-status-pill', $html);
     }
+
+    public function testLayoutsDoNotLoadLegacyFiraFonts(): void
+    {
+        $appHtml = $this->renderApp('dashboard.index');
+        $portalHtml = $this->renderPublic('portal.landing', [
+            'featuredAnimals' => $this->featuredAnimals(),
+        ]);
+
+        self::assertStringNotContainsString('Fira+Sans', $appHtml);
+        self::assertStringNotContainsString('Fira+Code', $appHtml);
+        self::assertStringNotContainsString('Fira+Sans', $portalHtml);
+        self::assertStringNotContainsString('Fira+Code', $portalHtml);
+    }
 }

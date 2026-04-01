@@ -7,7 +7,7 @@ use App\Core\ExceptionHandler;
 use App\Core\Session;
 use App\Support\SystemSettings;
 
-$systemSettings = SystemSettings::all();
+$systemSettings = SystemSettings::bootstrap();
 $appConfig = [
     'name' => $systemSettings['app_name'] ?? ($_ENV['APP_NAME'] ?? 'Catarman Animal Shelter'),
     'env' => $_ENV['APP_ENV'] ?? 'production',
