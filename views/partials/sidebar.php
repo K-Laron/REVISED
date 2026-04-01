@@ -46,7 +46,7 @@ $logoutIcon = $icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><p
         <span class="sidebar-rail-label">Command rail</span>
         <strong>Navigate every shelter workflow from one place.</strong>
     </div>
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" data-sidebar-scroll-region>
         <?php foreach ($groups as $groupLabel => $links): ?>
             <section class="sidebar-group sidebar-group-card">
                 <span class="sidebar-group-label"><?= htmlspecialchars($groupLabel, ENT_QUOTES, 'UTF-8') ?></span>

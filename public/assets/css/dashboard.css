@@ -3,16 +3,42 @@
   gap: var(--space-5);
 }
 
+.dashboard-briefing,
+.dashboard-kpi-grid,
+.dashboard-command-grid {
+  --dashboard-hero-surface:
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.26), transparent 32%),
+    linear-gradient(155deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.9));
+  --dashboard-hero-border: rgba(191, 219, 254, 0.18);
+  --dashboard-hero-text: #F8FAFC;
+  --dashboard-hero-muted: rgba(226, 232, 240, 0.8);
+  --dashboard-hero-panel-bg: rgba(15, 23, 42, 0.28);
+  --dashboard-hero-panel-border: rgba(191, 219, 254, 0.2);
+  --dashboard-hero-button-bg: rgba(248, 250, 252, 0.12);
+  --dashboard-hero-button-bg-hover: rgba(248, 250, 252, 0.18);
+  --dashboard-hero-button-border: rgba(191, 219, 254, 0.28);
+  --dashboard-hero-button-border-hover: rgba(191, 219, 254, 0.45);
+  --dashboard-stat-surface:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)),
+    var(--color-bg-elevated);
+  --dashboard-featured-surface:
+    linear-gradient(180deg, rgba(255, 247, 237, 0.72), rgba(255, 255, 255, 0.96)),
+    var(--color-bg-elevated);
+  --dashboard-action-surface:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(238, 242, 247, 0.94)),
+    var(--color-bg-elevated);
+  --dashboard-support-surface: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-bg-elevated));
+  --dashboard-activity-surface: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+}
+
 .dashboard-briefing-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.82fr);
   gap: var(--space-6);
   align-items: stretch;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top right, rgba(125, 211, 252, 0.26), transparent 32%),
-    linear-gradient(155deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.9));
-  border-color: rgba(191, 219, 254, 0.18);
+  background: var(--dashboard-hero-surface);
+  border-color: var(--dashboard-hero-border);
 }
 
 .dashboard-briefing-copy,
@@ -27,13 +53,13 @@
 
 .dashboard-briefing-copy h1,
 .dashboard-briefing-side strong {
-  color: #f8fafc;
+  color: var(--dashboard-hero-text);
 }
 
 .dashboard-briefing-copy .text-muted,
 .dashboard-briefing-side .mono,
 .dashboard-briefing-copy .breadcrumb {
-  color: rgba(226, 232, 240, 0.8);
+  color: var(--dashboard-hero-muted);
 }
 
 .dashboard-briefing-side {
@@ -41,8 +67,8 @@
   justify-items: start;
   padding: var(--space-5);
   border-radius: calc(var(--radius-lg) - 4px);
-  border: 1px solid rgba(191, 219, 254, 0.2);
-  background: rgba(15, 23, 42, 0.28);
+  border: 1px solid var(--dashboard-hero-panel-border);
+  background: var(--dashboard-hero-panel-bg);
   backdrop-filter: blur(12px);
 }
 
@@ -52,15 +78,15 @@
 }
 
 .dashboard-logout-button {
-  background: rgba(248, 250, 252, 0.12);
-  border-color: rgba(191, 219, 254, 0.28);
-  color: #f8fafc;
+  background: var(--dashboard-hero-button-bg);
+  border-color: var(--dashboard-hero-button-border);
+  color: var(--dashboard-hero-text);
 }
 
 .dashboard-logout-button:hover {
-  background: rgba(248, 250, 252, 0.18);
-  border-color: rgba(191, 219, 254, 0.45);
-  color: #f8fafc;
+  background: var(--dashboard-hero-button-bg-hover);
+  border-color: var(--dashboard-hero-button-border-hover);
+  color: var(--dashboard-hero-text);
 }
 
 .dashboard-kpi-grid {
@@ -75,9 +101,7 @@
   min-height: 156px;
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)),
-    var(--color-bg-elevated);
+  background: var(--dashboard-stat-surface);
 }
 
 .stat-card::before {
@@ -130,9 +154,7 @@
 }
 
 .dashboard-chart-panel-featured {
-  background:
-    linear-gradient(180deg, rgba(255, 247, 237, 0.72), rgba(255, 255, 255, 0.96)),
-    var(--color-bg-elevated);
+  background: var(--dashboard-featured-surface);
 }
 
 .dashboard-section-heading {
@@ -151,9 +173,7 @@
 }
 
 .dashboard-action-deck {
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(238, 242, 247, 0.94)),
-    var(--color-bg-elevated);
+  background: var(--dashboard-action-surface);
 }
 
 .quick-actions {
@@ -178,7 +198,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-default);
-  background: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-bg-elevated));
+  background: var(--dashboard-support-surface);
 }
 
 .dashboard-note-card strong,
@@ -200,7 +220,7 @@
   gap: var(--space-1);
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+  background: var(--dashboard-activity-surface);
   border: 1px solid var(--color-border-default);
 }
 
@@ -211,6 +231,60 @@
 .activity-item .mono {
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
+}
+
+[data-theme="light"] .dashboard-action-deck {
+  --dashboard-action-surface:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(238, 242, 247, 0.94)),
+    var(--color-bg-elevated);
+}
+
+[data-theme="dark"] .dashboard-briefing-hero {
+  --dashboard-hero-surface:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 36%),
+    linear-gradient(155deg, rgba(9, 15, 26, 0.98), rgba(24, 38, 62, 0.96));
+  --dashboard-hero-border: rgba(147, 197, 253, 0.18);
+  --dashboard-hero-panel-bg: rgba(10, 17, 30, 0.56);
+  --dashboard-hero-panel-border: rgba(147, 197, 253, 0.18);
+  --dashboard-hero-button-bg: rgba(147, 197, 253, 0.12);
+  --dashboard-hero-button-bg-hover: rgba(147, 197, 253, 0.2);
+  --dashboard-hero-button-border: rgba(147, 197, 253, 0.28);
+  --dashboard-hero-button-border-hover: rgba(147, 197, 253, 0.4);
+}
+
+[data-theme="dark"] .stat-card {
+  --dashboard-stat-surface:
+    linear-gradient(180deg, rgba(24, 38, 62, 0.96), rgba(16, 26, 44, 0.98)),
+    var(--color-bg-elevated);
+}
+
+[data-theme="dark"] .dashboard-chart-panel-featured,
+[data-theme="dark"] .dashboard-action-deck,
+[data-theme="dark"] .dashboard-note-card,
+[data-theme="dark"] .dashboard-empty-state,
+[data-theme="dark"] .activity-item {
+  box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.05);
+}
+
+[data-theme="dark"] .dashboard-chart-panel-featured {
+  --dashboard-featured-surface:
+    linear-gradient(180deg, rgba(32, 47, 74, 0.96), rgba(18, 30, 49, 0.98)),
+    var(--color-bg-elevated);
+}
+
+[data-theme="dark"] .dashboard-action-deck {
+  --dashboard-action-surface:
+    linear-gradient(180deg, rgba(26, 40, 63, 0.96), rgba(16, 26, 44, 0.98)),
+    var(--color-bg-elevated);
+}
+
+[data-theme="dark"] .dashboard-note-card,
+[data-theme="dark"] .dashboard-empty-state {
+  --dashboard-support-surface: color-mix(in srgb, var(--color-bg-secondary) 86%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .activity-item {
+  --dashboard-activity-surface: color-mix(in srgb, var(--color-bg-secondary) 90%, var(--color-bg-elevated));
 }
 
 @media (max-width: 1200px) {

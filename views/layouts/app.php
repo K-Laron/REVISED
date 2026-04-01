@@ -7,8 +7,8 @@
     <meta name="csrf-token" content="<?= htmlspecialchars($layoutCsrfToken, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="application-name" content="Catarman Animal Shelter">
     <meta name="apple-mobile-web-app-title" content="Catarman Animal Shelter">
-    <meta name="theme-color" content="#f8fafc">
-    <meta name="msapplication-TileColor" content="#f8fafc">
+    <meta name="theme-color" content="#F5F1E8">
+    <meta name="msapplication-TileColor" content="#F5F1E8">
     <title><?= htmlspecialchars($title ?? ($GLOBALS['app']['name'] ?? 'Catarman Animal Shelter'), ENT_QUOTES, 'UTF-8') ?></title>
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -21,35 +21,47 @@
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             const theme = saved || (prefersDark ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);
-            const themeColor = theme === 'dark' ? '#020617' : '#f8fafc';
+            const themeColor = theme === 'dark' ? '#101A2C' : '#F5F1E8';
             document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
             document.querySelector('meta[name="msapplication-TileColor"]')?.setAttribute('content', themeColor);
         })();
     </script>
     <style>
+        :root {
+            --color-bg-primary: #F5F1E8;
+            --color-bg-secondary: #EBE4D6;
+            --color-text-primary: #14233B;
+        }
+
+        [data-theme="dark"] {
+            --color-bg-primary: #101A2C;
+            --color-bg-secondary: #16233B;
+            --color-text-primary: rgba(247, 242, 233, 0.96);
+        }
+
         html {
             min-height: 100%;
-            background-color: #f8fafc;
+            background-color: var(--color-bg-primary);
             color-scheme: light;
         }
 
         html[data-theme="dark"] {
-            background-color: #020617;
+            background-color: var(--color-bg-primary);
             color-scheme: dark;
         }
 
         body {
             min-height: 100%;
             margin: 0;
-            background-color: #f8fafc;
-            background-image: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            color: #0f172a;
+            background-color: var(--color-bg-primary);
+            background-image: linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+            color: var(--color-text-primary);
         }
 
         html[data-theme="dark"] body {
-            background-color: #020617;
-            background-image: linear-gradient(180deg, #020617 0%, #0f172a 100%);
-            color: rgba(248, 250, 252, 0.96);
+            background-color: var(--color-bg-primary);
+            background-image: linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+            color: var(--color-text-primary);
         }
 
         .page-transition-shield {
@@ -58,12 +70,12 @@
             z-index: 9999;
             pointer-events: none;
             opacity: 1;
-            background-color: #f8fafc;
+            background-color: var(--color-bg-primary);
             transition: opacity 140ms ease;
         }
 
         html[data-theme="dark"] .page-transition-shield {
-            background-color: #020617;
+            background-color: var(--color-bg-primary);
         }
 
         html[data-page-ready="true"] .page-transition-shield {
@@ -87,6 +99,7 @@
     <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css?v=<?= time() ?>" data-core-asset="css">
 </head>
 <?php
+    $renderedContent = \App\Support\Breadcrumbs::enhanceAuthenticatedContent($content, $_SERVER['REQUEST_URI'] ?? '/dashboard');
     $layoutPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     $layoutModule = explode('/', trim($layoutPath, '/'))[0] ?? '';
     $allowedModules = ['animals', 'medical', 'kennels', 'adoptions', 'billing', 'inventory', 'reports', 'users', 'settings', 'dashboard'];
@@ -100,7 +113,7 @@
         <div class="app-main">
             <?php require __DIR__ . '/../partials/header.php'; ?>
             <main class="content-area">
-                <?= $content ?>
+                <?= $renderedContent ?>
             </main>
             <?php require __DIR__ . '/../partials/footer.php'; ?>
             <?php require __DIR__ . '/../partials/qr-modal.php'; ?>
@@ -110,6 +123,7 @@
     <script src="/assets/js/toast.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/core/app-runtime.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/core/app-shell.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-breadcrumbs.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/core/app-navigation.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/app.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/notifications.js?v=<?= time() ?>" data-core-asset="js"></script>

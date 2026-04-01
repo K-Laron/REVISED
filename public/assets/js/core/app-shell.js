@@ -3,6 +3,78 @@
     return;
   }
 
+  const SIDEBAR_SCROLL_KEY = 'catarman:sidebar-scroll-top';
+
+  function getSidebarScrollRegion() {
+    return document.querySelector('[data-sidebar-scroll-region]');
+  }
+
+  function persistSidebarScrollPosition() {
+    const scrollRegion = getSidebarScrollRegion();
+    if (!scrollRegion) {
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(scrollRegion.scrollTop));
+    } catch {
+      // Ignore storage failures; losing scroll memory is preferable to breaking nav.
+    }
+  }
+
+  function restoreSidebarScrollPosition() {
+    const scrollRegion = getSidebarScrollRegion();
+    if (!scrollRegion) {
+      return;
+    }
+
+    let savedScrollTop = null;
+    try {
+      const rawValue = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+      savedScrollTop = rawValue === null ? null : Number.parseInt(rawValue, 10);
+    } catch {
+      savedScrollTop = null;
+    }
+
+    if (!Number.isFinite(savedScrollTop) || savedScrollTop === null || savedScrollTop <= 0) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const maxScrollTop = Math.max(0, scrollRegion.scrollHeight - scrollRegion.clientHeight);
+      scrollRegion.scrollTop = Math.min(savedScrollTop, maxScrollTop);
+    });
+  }
+
+  function bindSidebarScrollPersistence() {
+    const shell = document.querySelector('.app-shell');
+    const scrollRegion = getSidebarScrollRegion();
+
+    if (!shell || !scrollRegion || shell.dataset.sidebarScrollBound === 'true') {
+      restoreSidebarScrollPosition();
+      return;
+    }
+
+    shell.dataset.sidebarScrollBound = 'true';
+
+    scrollRegion.addEventListener('scroll', persistSidebarScrollPosition, { passive: true });
+
+    shell.querySelectorAll('.sidebar a[href]').forEach((link) => {
+      link.addEventListener('click', persistSidebarScrollPosition);
+    });
+
+    restoreSidebarScrollPosition();
+  }
+
+  function bindShellPersistenceGuards() {
+    if (document.body.dataset.shellPersistenceBound === 'true') {
+      return;
+    }
+
+    document.body.dataset.shellPersistenceBound = 'true';
+    window.addEventListener('pagehide', persistSidebarScrollPosition);
+  }
+
   function bindSidebarToggle() {
     const shell = document.querySelector('.app-shell');
     const toggle = document.querySelector('[data-sidebar-toggle]');
@@ -131,10 +203,13 @@
   }
 
   function syncSharedShellFeatures() {
+    bindShellPersistenceGuards();
+    bindSidebarScrollPersistence();
     bindSidebarToggle();
     bindPublicNavToggle();
     bindGlobalSearchShortcut();
     bindPasswordToggles();
+    window.CatarmanBreadcrumbs?.sync?.();
     window.CatarmanTheme?.init?.();
     window.CatarmanNotifications?.init?.();
     window.CatarmanNavigation?.scheduleInitialPrefetch?.();

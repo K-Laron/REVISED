@@ -245,6 +245,10 @@
   color: var(--color-text-primary);
 }
 
+.topbar-search input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -398,6 +402,23 @@
 
 .user-chip-name {
   font-weight: var(--font-weight-semibold);
+}
+
+[data-theme="dark"] .topbar-search,
+[data-theme="dark"] .topbar-status-pill,
+[data-theme="dark"] .icon-button,
+[data-theme="dark"] .user-chip {
+  border-color: var(--color-border-strong);
+}
+
+[data-theme="dark"] .topbar-search,
+[data-theme="dark"] .user-chip {
+  background: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .topbar-status-pill,
+[data-theme="dark"] .icon-button {
+  background: color-mix(in srgb, var(--color-bg-secondary) 76%, var(--color-bg-elevated));
 }
 
 .content-area {

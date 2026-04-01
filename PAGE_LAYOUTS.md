@@ -13,6 +13,7 @@ This document describes the current implemented page structure after the Civic L
 
 - The left rail is the persistent navigation spine for authenticated users.
 - The top command bar surfaces the current page title, user context, and high-signal utility actions.
+- Breadcrumb trails are enhanced centrally in the authenticated shell so prior path segments are clickable and accidental breadcrumb navigation can restore in-progress form input from session storage.
 - Shared shell styling lives in `public/assets/css/components.css`, `public/assets/css/layout.css`, and `public/assets/css/responsive.css`.
 
 ## Dashboard
