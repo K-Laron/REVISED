@@ -9,17 +9,23 @@ $searchIcon = '<svg class="topbar-search-icon" viewBox="0 0 24 24" fill="none" s
 $bellIcon = '<svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path><path d="M9.5 17a2.5 2.5 0 0 0 5 0"></path></svg>';
 ?>
 <header class="topbar">
-    <div class="cluster">
+    <div class="topbar-context">
         <button class="icon-button mobile-menu-toggle" type="button" data-sidebar-toggle aria-label="Open navigation">
             <?= $menuIcon ?>
         </button>
-        <form class="topbar-search" action="/search" method="get">
+        <div class="topbar-heading">
+            <span class="topbar-eyebrow">Shelter Operations</span>
+            <strong>Command surface</strong>
+        </div>
+    </div>
+    <form class="topbar-search topbar-command-shell" action="/search" method="get">
             <label class="sr-only" for="global-search-input">Global search</label>
             <?= $searchIcon ?>
-            <input id="global-search-input" type="search" name="q" value="<?= htmlspecialchars($headerSearchValue, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search animals, adopters, invoices" minlength="2" required data-global-search-input>
-        </form>
-    </div>
+            <input id="global-search-input" type="search" name="q" value="<?= htmlspecialchars($headerSearchValue, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search an animal ID, adopter, invoice, or SKU" minlength="2" required data-global-search-input>
+            <span class="topbar-status-pill">Ctrl /</span>
+    </form>
     <div class="topbar-actions">
+        <span class="topbar-status-pill"><?= htmlspecialchars($authUser['role_display_name'] ?? 'Guest', ENT_QUOTES, 'UTF-8') ?></span>
         <div class="notification-shell">
             <button class="icon-button notification-trigger" type="button" aria-label="Notifications" aria-haspopup="dialog" aria-controls="notification-panel" data-notification-trigger aria-expanded="false">
                 <?= $bellIcon ?>
@@ -54,7 +60,7 @@ $bellIcon = '<svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="cur
             <div class="user-avatar"><?= htmlspecialchars($userInitials, ENT_QUOTES, 'UTF-8') ?></div>
             <div class="user-chip-meta">
                 <div class="user-chip-name"><?= htmlspecialchars(($authUser['first_name'] ?? 'Guest') . ' ' . ($authUser['last_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
-                <small><?= htmlspecialchars($authUser['role_display_name'] ?? 'Guest', ENT_QUOTES, 'UTF-8') ?></small>
+                <small class="mono"><?= htmlspecialchars($authUser['role_name'] ?? 'guest', ENT_QUOTES, 'UTF-8') ?></small>
             </div>
         </div>
     </div>

@@ -28,4 +28,14 @@ final class AppShellViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('data-ui-theme="civic-ledger"', $html);
         self::assertStringContainsString('JetBrains+Mono', $html);
     }
+
+    public function testAppLayoutRendersTheNewCommandRailAndHeaderShell(): void
+    {
+        $html = $this->renderApp('dashboard.index');
+
+        self::assertStringContainsString('sidebar-rail-summary', $html);
+        self::assertStringContainsString('sidebar-group-card', $html);
+        self::assertStringContainsString('topbar-command-shell', $html);
+        self::assertStringContainsString('topbar-status-pill', $html);
+    }
 }

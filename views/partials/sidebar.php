@@ -36,14 +36,19 @@ $logoutIcon = $icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><p
 <aside class="sidebar">
     <div class="sidebar-brand">
         <div class="sidebar-logo"><?= htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') ?></div>
-        <div>
+        <div class="sidebar-brand-copy">
+            <span class="sidebar-brand-kicker">Operations Ledger</span>
             <strong><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></strong>
             <div class="text-muted"><?= htmlspecialchars((string) ($appSettings['organization_name'] ?? 'Animal Shelter'), ENT_QUOTES, 'UTF-8') ?></div>
         </div>
     </div>
+    <div class="sidebar-rail-summary">
+        <span class="sidebar-rail-label">Command rail</span>
+        <strong>Navigate every shelter workflow from one place.</strong>
+    </div>
     <nav class="sidebar-nav">
         <?php foreach ($groups as $groupLabel => $links): ?>
-            <div class="sidebar-group">
+            <section class="sidebar-group sidebar-group-card">
                 <span class="sidebar-group-label"><?= htmlspecialchars($groupLabel, ENT_QUOTES, 'UTF-8') ?></span>
                 <?php foreach ($links as $link): ?>
                     <?php if (isset($link['roles']) && !($can ?? static fn (): bool => true)(null, $link['roles'])) continue; ?>
@@ -54,7 +59,7 @@ $logoutIcon = $icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><p
                         <span class="sidebar-link-label"><?= htmlspecialchars($link['label'], ENT_QUOTES, 'UTF-8') ?></span>
                     </a>
                 <?php endforeach; ?>
-            </div>
+            </section>
         <?php endforeach; ?>
     </nav>
     <div>

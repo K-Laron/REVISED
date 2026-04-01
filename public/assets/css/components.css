@@ -230,6 +230,17 @@
   border-color: color-mix(in srgb, var(--color-accent-info) 18%, transparent);
 }
 
+.sidebar-brand-kicker,
+.sidebar-rail-label,
+.topbar-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--font-family-mono);
+}
+
 .tab-button {
   display: inline-flex;
   align-items: center;
