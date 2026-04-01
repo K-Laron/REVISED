@@ -26,6 +26,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     return response.json();
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
   function renderStats(items) {
     const root = document.getElementById('stats-grid');
     root.innerHTML = '';
@@ -33,11 +42,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       const card = document.createElement('article');
       card.className = 'card stat-card';
       card.innerHTML = `
-        <div class="stat-label">${item.label}</div>
-        <div class="stat-value mono">${item.value}</div>
-        <div class="stat-meta">${item.meta}</div>
+        <div class="stat-label">${escapeHtml(item.label)}</div>
+        <div class="stat-value mono">${escapeHtml(item.value)}</div>
+        <div class="stat-meta">${escapeHtml(item.meta)}</div>
       `;
       root.appendChild(card);
+    });
+  }
+
+  function renderLegacyActivity(items) {
+    const root = document.getElementById('activity-list');
+    root.innerHTML = '';
+    if (!items.length) {
+      root.innerHTML = '<div class="activity-item"><strong>No recent activity</strong><span class="text-muted">Audit log entries will appear here.</span></div>';
+      return;
+    }
+
+    items.forEach((item) => {
+      const row = document.createElement('div');
+      row.className = 'activity-item';
+      row.innerHTML = `
+        <strong>${item.module} · ${item.action}</strong>
+        <span class="text-muted">Record ${item.record_id ?? '-'} · ${item.created_at}</span>
+      `;
+      root.appendChild(row);
     });
   }
 
@@ -53,8 +81,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const row = document.createElement('div');
       row.className = 'activity-item';
       row.innerHTML = `
-        <strong>${item.module} · ${item.action}</strong>
-        <span class="text-muted">Record ${item.record_id ?? '-'} · ${item.created_at}</span>
+        <span class="field-label">${escapeHtml(item.module)}</span>
+        <strong>${escapeHtml(item.action)}</strong>
+        <span class="mono">${escapeHtml(item.record_id ?? '-')} / ${escapeHtml(item.created_at)}</span>
       `;
       root.appendChild(row);
     });

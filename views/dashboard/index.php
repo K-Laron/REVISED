@@ -1,74 +1,129 @@
-<section class="page-title" data-dashboard>
-    <div class="page-title-meta">
-        <h1>Dashboard</h1>
-        <p class="text-muted">Welcome back, <?= htmlspecialchars($user['first_name'], ENT_QUOTES, 'UTF-8') ?>.</p>
-        <div class="breadcrumb">Home &gt; Dashboard</div>
-    </div>
-    <div class="cluster">
-        <span class="badge badge-info">Live Session</span>
-        <button class="btn-secondary" id="logout">Logout</button>
-    </div>
+<?php
+    $dashboardQuickActions = [
+        ['label' => 'New Intake', 'href' => '/animals/create', 'class' => 'btn-primary', 'permission' => 'animals.create'],
+        ['label' => 'View Animals', 'href' => '/animals', 'class' => 'btn-secondary', 'permission' => 'animals.read'],
+        ['label' => 'View Kennels', 'href' => '/kennels', 'class' => 'btn-secondary', 'permission' => 'kennels.read'],
+        ['label' => 'Generate Report', 'href' => '/reports', 'class' => 'btn-secondary', 'permission' => 'reports.read'],
+    ];
+    $visibleQuickActions = array_values(array_filter($dashboardQuickActions, static fn (array $action): bool => ($can ?? static fn (): bool => false)($action['permission'])));
+?>
+
+<section class="dashboard-briefing" data-dashboard>
+    <article class="card dashboard-briefing-hero">
+        <div class="dashboard-briefing-copy">
+            <span class="badge badge-info">Live Operations</span>
+            <h1>Dashboard</h1>
+            <p class="text-muted">Review live shelter intake, occupancy, adoption movement, and medical volume from one command surface.</p>
+            <div class="breadcrumb">Home &gt; Dashboard</div>
+        </div>
+        <div class="dashboard-briefing-side">
+            <div class="dashboard-briefing-meta">
+                <span class="field-label">Current operator</span>
+                <strong><?= htmlspecialchars($user['first_name'], ENT_QUOTES, 'UTF-8') ?> <?= htmlspecialchars($user['last_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
+                <span class="mono"><?= htmlspecialchars($user['role_display_name'] ?? $user['role_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <button class="btn-secondary dashboard-logout-button" id="logout" type="button">Logout</button>
+        </div>
+    </article>
 </section>
 
-<section class="stats-grid" id="stats-grid"></section>
+<section class="dashboard-kpi-grid" id="stats-grid" aria-live="polite"></section>
 
-<section class="dashboard-grid">
-    <article class="card chart-card">
-        <h3>Intake Trend</h3>
-        <p class="text-muted">Animal intake over the last 12 months.</p>
+<section class="dashboard-command-grid">
+    <article class="card dashboard-chart-panel dashboard-chart-panel-featured">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Twelve-month intake</span>
+                <h3>Intake Trend</h3>
+            </div>
+            <p class="text-muted">Monitor monthly arrivals to spot surges before capacity tightens.</p>
+        </div>
         <canvas id="intake-chart"></canvas>
     </article>
-    <article class="card chart-card">
-        <h3>Kennel Occupancy</h3>
-        <p class="text-muted">Available versus occupied, maintenance, and quarantine.</p>
+
+    <aside class="card dashboard-action-deck">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Workflow shortcuts</span>
+                <h3>Quick Actions</h3>
+            </div>
+            <p class="text-muted">Jump directly into the workflows staff use most often.</p>
+        </div>
+
+        <?php if ($visibleQuickActions !== []): ?>
+            <div class="quick-actions">
+                <?php foreach ($visibleQuickActions as $action): ?>
+                    <button class="<?= htmlspecialchars($action['class'], ENT_QUOTES, 'UTF-8') ?>" type="button" data-quick-link="<?= htmlspecialchars($action['href'], ENT_QUOTES, 'UTF-8') ?>">
+                        <?= htmlspecialchars($action['label'], ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="dashboard-empty-state">
+                <strong>No quick actions are available.</strong>
+                <p class="text-muted">Your current access level does not expose command shortcuts yet.</p>
+            </div>
+        <?php endif; ?>
+
+        <div class="dashboard-action-notes">
+            <article class="dashboard-note-card">
+                <span class="field-label">Shift posture</span>
+                <strong>Stay ahead of kennel pressure and intake backlogs.</strong>
+            </article>
+            <article class="dashboard-note-card">
+                <span class="field-label">Best practice</span>
+                <strong>Review adoption movement and medical volume before daily intake starts.</strong>
+            </article>
+        </div>
+    </aside>
+</section>
+
+<section class="dashboard-command-grid">
+    <article class="card dashboard-chart-panel">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Capacity snapshot</span>
+                <h3>Kennel Occupancy</h3>
+            </div>
+            <p class="text-muted">Available, occupied, maintenance, and quarantine capacity in one glance.</p>
+        </div>
         <canvas id="occupancy-chart"></canvas>
     </article>
+
+    <article class="card dashboard-activity-feed">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Audit trail</span>
+                <h3>Recent Activity</h3>
+            </div>
+            <p class="text-muted">Latest cross-module records captured by the shelter ledger.</p>
+        </div>
+        <div class="activity-list" id="activity-list" aria-live="polite"></div>
+    </article>
 </section>
 
-<section class="dashboard-grid">
-    <article class="card chart-card">
-        <h3>Adoption Pipeline</h3>
-        <p class="text-muted">Applications created by month.</p>
+<section class="dashboard-command-grid dashboard-command-grid-supporting">
+    <article class="card dashboard-chart-panel">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Adoption throughput</span>
+                <h3>Adoption Pipeline</h3>
+            </div>
+            <p class="text-muted">Applications created by month to show conversion momentum.</p>
+        </div>
         <canvas id="adoption-chart"></canvas>
     </article>
-    <article class="card chart-card">
-        <h3>Recent Activity</h3>
-        <p class="text-muted">Latest audit log entries.</p>
-        <div class="activity-list" id="activity-list"></div>
-    </article>
-</section>
 
-<section class="card stack">
-    <div>
-        <h3>Quick Actions</h3>
-        <p class="text-muted">Common shortcuts for staff workflows.</p>
-    </div>
-    <?php
-        $dashboardQuickActions = [
-            ['label' => 'New Intake', 'href' => '/animals/create', 'class' => 'btn-primary', 'permission' => 'animals.create'],
-            ['label' => 'View Animals', 'href' => '/animals', 'class' => 'btn-secondary', 'permission' => 'animals.read'],
-            ['label' => 'View Kennels', 'href' => '/kennels', 'class' => 'btn-secondary', 'permission' => 'kennels.read'],
-            ['label' => 'Generate Report', 'href' => '/reports', 'class' => 'btn-secondary', 'permission' => 'reports.read'],
-        ];
-        $visibleQuickActions = array_values(array_filter($dashboardQuickActions, static fn (array $action): bool => ($can ?? static fn (): bool => false)($action['permission'])));
-    ?>
-    <?php if ($visibleQuickActions !== []): ?>
-        <div class="quick-actions">
-            <?php foreach ($visibleQuickActions as $action): ?>
-                <button class="<?= htmlspecialchars($action['class'], ENT_QUOTES, 'UTF-8') ?>" type="button" data-quick-link="<?= htmlspecialchars($action['href'], ENT_QUOTES, 'UTF-8') ?>">
-                    <?= htmlspecialchars($action['label'], ENT_QUOTES, 'UTF-8') ?>
-                </button>
-            <?php endforeach; ?>
+    <article class="card dashboard-chart-panel">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Care operations</span>
+                <h3>Medical Procedures</h3>
+            </div>
+            <p class="text-muted">Procedure volume by type for the current reporting period.</p>
         </div>
-    <?php else: ?>
-        <div class="text-muted">No quick actions are available for your current access level.</div>
-    <?php endif; ?>
-</section>
-
-<section class="card chart-card">
-    <h3>Medical Procedures</h3>
-    <p class="text-muted">Procedure volume by type.</p>
-    <canvas id="medical-chart"></canvas>
+        <canvas id="medical-chart"></canvas>
+    </article>
 </section>
 
 <script>
