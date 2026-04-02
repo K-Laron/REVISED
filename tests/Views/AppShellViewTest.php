@@ -98,4 +98,12 @@ final class AppShellViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('sessionStorage', $script);
         self::assertStringContainsString('data-sidebar-scroll-region', $script);
     }
+
+    public function testNotificationDropdownScriptHidesReadItemsAfterRefresh(): void
+    {
+        $script = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\notifications.js');
+
+        self::assertStringContainsString('filter((item) => !item.is_read)', $script);
+        self::assertStringContainsString('No unread notifications.', $script);
+    }
 }

@@ -50,13 +50,6 @@ class DashboardService
         return $this->bootstrap()['charts']['medical'];
     }
 
-    public function recentActivity(int $limit = 10): array
-    {
-        return $limit === 10
-            ? $this->bootstrap()['activity']
-            : $this->buildRecentActivity($limit);
-    }
-
     private function buildBootstrapPayload(): array
     {
         return [
@@ -167,6 +160,13 @@ class DashboardService
                 'data' => array_map('intval', array_column($rows, 'total')),
             ]],
         ];
+    }
+
+    public function recentActivity(int $limit = 18): array
+    {
+        return $limit === 10
+            ? $this->bootstrap()['activity']
+            : $this->buildRecentActivity($limit);
     }
 
     private function buildRecentActivity(int $limit = 10): array

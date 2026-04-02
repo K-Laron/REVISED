@@ -87,7 +87,13 @@
             </div>
             <p class="text-muted">Available, occupied, maintenance, and quarantine capacity in one glance.</p>
         </div>
-        <canvas id="occupancy-chart"></canvas>
+        <div class="dashboard-occupancy-module" data-occupancy-shell>
+            <div class="dashboard-occupancy-stage">
+                <canvas id="occupancy-chart"></canvas>
+            </div>
+            <div class="dashboard-occupancy-summary" id="occupancy-summary" data-occupancy-summary aria-live="polite"></div>
+            <div class="dashboard-occupancy-breakdown" id="occupancy-breakdown" aria-live="polite"></div>
+        </div>
     </article>
 
     <article class="card dashboard-activity-feed">
@@ -98,7 +104,10 @@
             </div>
             <p class="text-muted">Latest cross-module records captured by the shelter ledger.</p>
         </div>
-        <div class="activity-list" id="activity-list" aria-live="polite"></div>
+        <div class="dashboard-activity-module" data-activity-shell>
+            <div class="activity-list" id="activity-list" aria-live="polite"></div>
+            <div class="dashboard-activity-digest" id="activity-digest" data-activity-digest aria-live="polite"></div>
+        </div>
     </article>
 </section>
 

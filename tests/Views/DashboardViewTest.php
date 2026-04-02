@@ -27,4 +27,46 @@ final class DashboardViewTest extends ViewSmokeTestCase
 
         self::assertStringContainsString('/api/dashboard/bootstrap', $script);
     }
+
+    public function testDashboardRendersEnhancedOccupancyChartShell(): void
+    {
+        $html = $this->renderApp('dashboard.index', [
+            'title' => 'Dashboard',
+            'csrfToken' => 'test-token',
+        ]);
+
+        self::assertStringContainsString('data-occupancy-shell', $html);
+        self::assertStringContainsString('id="occupancy-breakdown"', $html);
+        self::assertStringContainsString('data-occupancy-summary', $html);
+    }
+
+    public function testDashboardScriptDeclaresOccupancyChartEnhancements(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/dashboard.js');
+
+        self::assertStringContainsString('occupancy-breakdown', $script);
+        self::assertStringContainsString('occupancyCenterLabel', $script);
+        self::assertStringContainsString('cutout', $script);
+    }
+
+    public function testDashboardRendersActivityDigestShell(): void
+    {
+        $html = $this->renderApp('dashboard.index', [
+            'title' => 'Dashboard',
+            'csrfToken' => 'test-token',
+        ]);
+
+        self::assertStringContainsString('data-activity-shell', $html);
+        self::assertStringContainsString('id="activity-digest"', $html);
+        self::assertStringContainsString('data-activity-digest', $html);
+    }
+
+    public function testDashboardScriptDeclaresActivityDigestRenderer(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/dashboard.js');
+
+        self::assertStringContainsString('renderActivityDigest', $script);
+        self::assertStringContainsString('activity-digest', $script);
+        self::assertStringContainsString('ACTIVITY_FEED_LIMIT', $script);
+    }
 }

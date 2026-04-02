@@ -157,6 +157,10 @@
   background: var(--dashboard-featured-surface);
 }
 
+.dashboard-activity-feed {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .dashboard-section-heading {
   display: grid;
   gap: var(--space-2);
@@ -170,6 +174,135 @@
 .dashboard-chart-panel canvas {
   width: 100% !important;
   height: 260px !important;
+}
+
+.dashboard-occupancy-module {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.dashboard-occupancy-stage {
+  position: relative;
+  min-height: 320px;
+  padding: var(--space-4);
+  border-radius: calc(var(--radius-lg) - 6px);
+  border: 1px solid var(--color-border-light);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(125, 211, 252, 0.16), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-elevated) 78%, var(--color-bg-secondary)) 0%, color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated)) 100%);
+  overflow: hidden;
+}
+
+.dashboard-occupancy-stage::before,
+.dashboard-occupancy-stage::after {
+  content: "";
+  position: absolute;
+  inset: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.dashboard-occupancy-stage::before {
+  width: min(68%, 340px);
+  aspect-ratio: 1;
+  border: 1px dashed rgba(125, 211, 252, 0.2);
+}
+
+.dashboard-occupancy-stage::after {
+  width: min(40%, 190px);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 72%);
+  filter: blur(6px);
+}
+
+.dashboard-occupancy-stage canvas {
+  height: 300px !important;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-occupancy-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.occupancy-summary-pill {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  background: color-mix(in srgb, var(--color-bg-secondary) 44%, var(--color-bg-elevated));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.occupancy-summary-pill strong {
+  font-size: clamp(1.15rem, 1rem + 0.45vw, 1.5rem);
+  line-height: var(--line-height-tight);
+}
+
+.occupancy-summary-pill-primary {
+  background:
+    linear-gradient(135deg, rgba(29, 78, 137, 0.16), transparent 75%),
+    color-mix(in srgb, var(--color-bg-secondary) 34%, var(--color-bg-elevated));
+}
+
+.dashboard-occupancy-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.occupancy-breakdown-chip {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  background: color-mix(in srgb, var(--color-bg-secondary) 52%, var(--color-bg-elevated));
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.occupancy-breakdown-chip.is-active {
+  transform: translateY(-1px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.occupancy-breakdown-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.occupancy-breakdown-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--occupancy-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--occupancy-accent) 20%, transparent);
+}
+
+.occupancy-breakdown-chip strong {
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-tight);
+}
+
+.occupancy-breakdown-track {
+  height: 0.45rem;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-bg-elevated));
+}
+
+.occupancy-breakdown-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--occupancy-accent), color-mix(in srgb, var(--occupancy-accent) 72%, white));
 }
 
 .dashboard-action-deck {
@@ -210,9 +343,69 @@
 .activity-list {
   display: grid;
   gap: var(--space-3);
-  max-height: 360px;
+  min-height: 0;
   overflow: auto;
   padding-right: var(--space-1);
+}
+
+.dashboard-activity-module {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  min-height: 0;
+}
+
+.dashboard-activity-digest {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.activity-digest-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.activity-digest-card {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  background: color-mix(in srgb, var(--dashboard-activity-surface) 68%, var(--color-bg-elevated));
+}
+
+.activity-digest-card strong {
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-tight);
+}
+
+.activity-digest-card-primary {
+  background:
+    linear-gradient(135deg, rgba(29, 78, 137, 0.14), transparent 80%),
+    color-mix(in srgb, var(--dashboard-activity-surface) 64%, var(--color-bg-elevated));
+}
+
+.activity-digest-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.activity-digest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-light);
+  background: color-mix(in srgb, var(--color-bg-secondary) 40%, var(--color-bg-elevated));
+}
+
+.activity-digest-chip strong {
+  font-size: var(--font-size-sm);
 }
 
 .activity-item {
@@ -262,7 +455,9 @@
 [data-theme="dark"] .dashboard-action-deck,
 [data-theme="dark"] .dashboard-note-card,
 [data-theme="dark"] .dashboard-empty-state,
-[data-theme="dark"] .activity-item {
+[data-theme="dark"] .activity-item,
+[data-theme="dark"] .activity-digest-card,
+[data-theme="dark"] .activity-digest-chip {
   box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.05);
 }
 
@@ -285,6 +480,58 @@
 
 [data-theme="dark"] .activity-item {
   --dashboard-activity-surface: color-mix(in srgb, var(--color-bg-secondary) 90%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .activity-digest-card {
+  background: color-mix(in srgb, var(--dashboard-activity-surface) 84%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .activity-digest-card-primary {
+  background:
+    linear-gradient(135deg, rgba(147, 197, 253, 0.14), transparent 78%),
+    color-mix(in srgb, var(--dashboard-activity-surface) 82%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .activity-digest-chip {
+  background: color-mix(in srgb, var(--color-bg-secondary) 88%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .dashboard-occupancy-stage {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(147, 197, 253, 0.16), transparent 40%),
+    linear-gradient(180deg, rgba(22, 35, 59, 0.96) 0%, rgba(16, 26, 44, 0.98) 100%);
+  box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.05);
+}
+
+[data-theme="dark"] .dashboard-occupancy-stage::before {
+  border-color: rgba(147, 197, 253, 0.18);
+}
+
+[data-theme="dark"] .dashboard-occupancy-stage::after {
+  background: radial-gradient(circle, rgba(147, 197, 253, 0.16), transparent 74%);
+}
+
+[data-theme="dark"] .occupancy-summary-pill,
+[data-theme="dark"] .occupancy-breakdown-chip {
+  box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.05);
+}
+
+[data-theme="dark"] .occupancy-summary-pill {
+  background: color-mix(in srgb, var(--color-bg-secondary) 88%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .occupancy-summary-pill-primary {
+  background:
+    linear-gradient(135deg, rgba(147, 197, 253, 0.14), transparent 72%),
+    color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .occupancy-breakdown-chip {
+  background: color-mix(in srgb, var(--color-bg-secondary) 90%, var(--color-bg-elevated));
+}
+
+[data-theme="dark"] .occupancy-breakdown-track {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 @media (max-width: 1200px) {
@@ -310,6 +557,23 @@
 
   .dashboard-chart-panel canvas {
     height: 220px !important;
+  }
+
+  .dashboard-occupancy-stage {
+    min-height: 280px;
+  }
+
+  .dashboard-occupancy-stage canvas {
+    height: 240px !important;
+  }
+
+  .dashboard-occupancy-summary,
+  .dashboard-occupancy-breakdown {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-digest-grid {
+    grid-template-columns: 1fr;
   }
 
   .quick-actions > * {

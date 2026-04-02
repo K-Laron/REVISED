@@ -68,6 +68,9 @@ function bindNotifications() {
     const count = Number(result.data?.count || 0);
     badge.textContent = String(count);
     badge.hidden = count < 1;
+    if (readAllButton) {
+      readAllButton.disabled = count < 1;
+    }
   }
 
   async function loadNotifications() {
@@ -84,17 +87,18 @@ function bindNotifications() {
     }
 
     const items = Array.isArray(result.data) ? result.data : [];
-    if (items.length === 0) {
-      list.innerHTML = '<div class="notification-empty">No notifications yet.</div>';
+    const unreadItems = items.filter((item) => !item.is_read);
+    if (unreadItems.length === 0) {
+      list.innerHTML = '<div class="notification-empty">No unread notifications.</div>';
       list.setAttribute('aria-busy', 'false');
       return;
     }
 
     list.innerHTML = '';
-    items.forEach((item) => {
+    unreadItems.forEach((item) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'notification-item' + (item.is_read ? '' : ' is-unread');
+      button.className = 'notification-item is-unread';
       button.innerHTML = `
         <div class="notification-item-meta">
           <strong>${escapeHtml(item.title || 'Notification')}</strong>
