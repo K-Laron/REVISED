@@ -400,6 +400,17 @@
   animation: toast-slide-out 300ms ease forwards;
 }
 
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .card,
+[data-theme="dark"] .input,
+[data-theme="dark"] .password-visibility-toggle,
+[data-theme="dark"] .select,
+[data-theme="dark"] .tab-button,
+[data-theme="dark"] .textarea,
+[data-theme="dark"] .toast {
+  backdrop-filter: blur(var(--surface-backdrop-blur));
+}
+
 .toast:nth-last-child(2) { transform: scale(0.95) translateY(-4px); opacity: 0.7; }
 .toast:nth-last-child(3) { transform: scale(0.90) translateY(-8px); opacity: 0.4; }
 .toast:nth-last-child(n+4) { display: none; }

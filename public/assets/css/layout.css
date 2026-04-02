@@ -560,6 +560,14 @@
   background: color-mix(in srgb, var(--color-bg-elevated) 84%, var(--color-bg-secondary));
 }
 
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .sidebar-group-card,
+[data-theme="dark"] .notification-panel,
+[data-theme="dark"] .public-nav,
+[data-theme="dark"] .public-brand-tag {
+  backdrop-filter: blur(var(--surface-backdrop-blur));
+}
+
 .public-nav-link {
   display: inline-flex;
   align-items: center;

@@ -100,6 +100,7 @@
   --z-tooltip: 600;
 
   --theme-transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+  --surface-backdrop-blur: 0px;
 }
 
 /* Module accent overrides — light mode */
@@ -112,13 +113,14 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --color-bg-primary: #101A2C;
-  --color-bg-secondary: #16233B;
-  --color-bg-tertiary: #22324D;
-  --color-bg-elevated: #18263E;
-  --color-bg-overlay: rgba(7, 12, 22, 0.72);
-  --color-bg-input: #142038;
-  --color-bg-hover: #1C2B44;
+  --color-bg-primary: rgba(16, 26, 44, 0.36);
+  --color-bg-secondary: rgba(22, 35, 59, 0.62);
+  --color-bg-tertiary: rgba(34, 50, 77, 0.74);
+  --color-bg-elevated: rgba(24, 38, 62, 0.72);
+  --color-bg-overlay: rgba(7, 12, 22, 0.56);
+  --color-bg-input: rgba(20, 32, 56, 0.68);
+  --color-bg-hover: rgba(28, 43, 68, 0.82);
+  --surface-backdrop-blur: 16px;
 
   --color-text-primary: rgba(247, 242, 233, 0.96);
   --color-text-secondary: rgba(228, 219, 205, 0.84);

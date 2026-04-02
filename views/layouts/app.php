@@ -97,6 +97,7 @@
         <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>" data-page-asset="css">
     <?php endforeach; ?>
     <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/background-canvas.css?v=<?= time() ?>" data-core-asset="css">
 </head>
 <?php
     $renderedContent = \App\Support\Breadcrumbs::enhanceAuthenticatedContent($content, $_SERVER['REQUEST_URI'] ?? '/dashboard');
@@ -106,6 +107,11 @@
     $dataModule = in_array($layoutModule, $allowedModules, true) ? $layoutModule : '';
 ?>
 <body<?= $dataModule !== '' ? ' data-module="' . $dataModule . '"' : '' ?>>
+    <!-- Animated background canvases -->
+    <div class="background-canvas-container" aria-hidden="true">
+        <canvas id="bg-canvas-dark"></canvas>
+        <canvas id="bg-canvas-light"></canvas>
+    </div>
     <div class="page-transition-shield" aria-hidden="true"></div>
     <div class="app-shell" data-page-shell="app">
         <?php require __DIR__ . '/../partials/sidebar.php'; ?>
@@ -128,6 +134,7 @@
     <script src="/assets/js/app.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/notifications.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/qr-modal.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/background-canvas.js?v=<?= time() ?>" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>" data-page-asset="js"></script>
     <?php endforeach; ?>

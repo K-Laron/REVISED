@@ -8,7 +8,7 @@
 .dashboard-command-grid {
   --dashboard-hero-surface:
     radial-gradient(circle at top right, rgba(125, 211, 252, 0.26), transparent 32%),
-    linear-gradient(155deg, rgba(15, 23, 42, 0.98), rgba(30, 58, 138, 0.9));
+    linear-gradient(155deg, rgba(15, 23, 42, 0.72), rgba(30, 58, 138, 0.62));
   --dashboard-hero-border: rgba(191, 219, 254, 0.18);
   --dashboard-hero-text: #F8FAFC;
   --dashboard-hero-muted: rgba(226, 232, 240, 0.8);
@@ -19,13 +19,13 @@
   --dashboard-hero-button-border: rgba(191, 219, 254, 0.28);
   --dashboard-hero-button-border-hover: rgba(191, 219, 254, 0.45);
   --dashboard-stat-surface:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(248, 250, 252, 0.56)),
     var(--color-bg-elevated);
   --dashboard-featured-surface:
-    linear-gradient(180deg, rgba(255, 247, 237, 0.72), rgba(255, 255, 255, 0.96)),
+    linear-gradient(180deg, rgba(255, 247, 237, 0.4), rgba(255, 255, 255, 0.58)),
     var(--color-bg-elevated);
   --dashboard-action-surface:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(238, 242, 247, 0.94)),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.5), rgba(238, 242, 247, 0.56)),
     var(--color-bg-elevated);
   --dashboard-support-surface: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-bg-elevated));
   --dashboard-activity-surface: color-mix(in srgb, var(--color-bg-secondary) 82%, var(--color-bg-elevated));
@@ -532,6 +532,16 @@
 
 [data-theme="dark"] .occupancy-breakdown-track {
   background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .dashboard-action-deck,
+[data-theme="dark"] .dashboard-activity-feed,
+[data-theme="dark"] .dashboard-briefing-hero,
+[data-theme="dark"] .dashboard-chart-panel,
+[data-theme="dark"] .occupancy-breakdown-chip,
+[data-theme="dark"] .occupancy-summary-pill,
+[data-theme="dark"] .stat-card {
+  backdrop-filter: blur(var(--surface-backdrop-blur));
 }
 
 @media (max-width: 1200px) {

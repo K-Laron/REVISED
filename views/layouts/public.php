@@ -77,6 +77,7 @@
     <link rel="stylesheet" href="/assets/css/base.css">
     <link rel="stylesheet" href="/assets/css/components.css">
     <link rel="stylesheet" href="/assets/css/toast.css">
+    <link rel="stylesheet" href="/assets/css/background-canvas.css">
     <link rel="stylesheet" href="/assets/css/layout.css">
     <link rel="stylesheet" href="/assets/css/responsive.css">
     <?php foreach (($extraCss ?? []) as $stylesheet): ?>
@@ -85,6 +86,11 @@
     <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css">
 </head>
 <body>
+    <!-- Animated background canvases -->
+    <div class="background-canvas-container" aria-hidden="true">
+        <canvas id="bg-canvas-dark"></canvas>
+        <canvas id="bg-canvas-light"></canvas>
+    </div>
     <div class="page-transition-shield" aria-hidden="true"></div>
     <?php
         $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/adopt', PHP_URL_PATH) ?: '/adopt';
@@ -182,6 +188,7 @@
     <script src="/assets/js/core/app-shell.js" data-core-asset="js"></script>
     <script src="/assets/js/core/app-navigation.js" data-core-asset="js"></script>
     <script src="/assets/js/app.js" data-core-asset="js"></script>
+    <script src="/assets/js/background-canvas.js" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="js"></script>
     <?php endforeach; ?>

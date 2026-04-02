@@ -1,0 +1,74 @@
+/**
+ * Background Canvas Styles
+ * Animated interactive backgrounds for dark/light themes
+ */
+
+/* Container: fixed positioning behind all content */
+.background-canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Individual canvas elements fill the container */
+.background-canvas-container canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 400ms ease;
+  will-change: opacity;
+}
+
+/* Show light canvas by default (fallback) */
+html:not([data-theme]) .background-canvas-container #bg-canvas-light,
+[data-theme="light"] .background-canvas-container #bg-canvas-light {
+  opacity: 1;
+}
+
+/* Show dark canvas when dark theme is active */
+[data-theme="dark"] .background-canvas-container #bg-canvas-dark {
+  opacity: 1;
+}
+
+/* Ensure only one canvas visible at a time */
+[data-theme="dark"] .background-canvas-container #bg-canvas-light {
+  opacity: 0;
+}
+
+/* 
+ * Make html, body and app-shell backgrounds transparent so canvas shows through
+ * The canvas provides the animated gradient background
+ */
+html:has(.background-canvas-container) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+body:has(.background-canvas-container) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+body:has(.background-canvas-container) .app-shell {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Respect reduced motion preference (animations only, not visibility) */
+@media (prefers-reduced-motion: reduce) {
+  .background-canvas-container canvas {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* Ensure background doesn't interfere with print */
+@media print {
+  .background-canvas-container {
+    display: none;
+  }
+}
