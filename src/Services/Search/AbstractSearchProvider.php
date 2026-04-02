@@ -29,6 +29,17 @@ abstract class AbstractSearchProvider implements SearchProviderInterface
         return $bindings;
     }
 
+    protected function previewResult(array $rows, int $limit, callable $countQuery): array
+    {
+        $overflow = count($rows) > $limit;
+        $items = $overflow ? array_slice($rows, 0, $limit) : $rows;
+
+        return [
+            'count' => $overflow ? (int) $countQuery() : count($items),
+            'items' => $items,
+        ];
+    }
+
     protected function standardFilterClause(string $statusValue, array $filters, string $statusColumn, string $dateColumn, string $prefix): array
     {
         $clauses = [];

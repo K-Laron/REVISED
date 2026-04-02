@@ -28,38 +28,41 @@ final class AnimalsSearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 2);
         $filterClause = $this->standardFilterClause((string) ($filters['animals_status'] ?? ''), $filters, 'a.status', 'a.intake_date', 'animals');
-        $count = Database::fetch(
-            "SELECT COUNT(*) AS aggregate
-             FROM animals a
-             WHERE a.is_deleted = 0
-               AND (a.animal_id LIKE :search_1 OR a.name LIKE :search_2)"
-               . $filterClause['sql'],
-            $bindings + $filterClause['bindings']
-        );
-
-        $items = Database::fetchAll(
+        $rows = Database::fetchAll(
             "SELECT a.id, a.animal_id, a.name, a.species, a.status
              FROM animals a
              WHERE a.is_deleted = 0
                AND (a.animal_id LIKE :search_1 OR a.name LIKE :search_2)"
                . $filterClause['sql'] . "
              ORDER BY a.created_at DESC, a.id DESC
-             LIMIT {$limit}",
+             LIMIT " . ($limit + 1),
             $bindings + $filterClause['bindings']
+        );
+        $preview = $this->previewResult(
+            $rows,
+            $limit,
+            static fn (): int => (int) ((Database::fetch(
+                "SELECT COUNT(*) AS aggregate
+                 FROM animals a
+                 WHERE a.is_deleted = 0
+                   AND (a.animal_id LIKE :search_1 OR a.name LIKE :search_2)"
+                   . $filterClause['sql'],
+                $bindings + $filterClause['bindings']
+            )['aggregate'] ?? 0))
         );
 
         return $this->section(
             'animals',
             'Animals',
             '/animals',
-            (int) ($count['aggregate'] ?? 0),
+            $preview['count'],
             array_map(static fn (array $item): array => [
                 'title' => trim((string) ($item['name'] ?: $item['animal_id'])),
                 'subtitle' => trim((string) $item['animal_id']),
                 'meta' => trim((string) (($item['species'] ?? '') . ' • ' . ($item['status'] ?? ''))),
                 'badge' => (string) ($item['status'] ?? ''),
                 'href' => '/animals/' . (int) $item['id'],
-            ], $items)
+            ], $preview['items'])
         );
     }
 }
