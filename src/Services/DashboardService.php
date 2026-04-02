@@ -5,42 +5,56 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
+use App\Support\Cache\FileCacheStore;
 
 class DashboardService
 {
+    private FileCacheStore $cache;
+
+    public function __construct(?FileCacheStore $cache = null)
+    {
+        $this->cache = $cache ?? new FileCacheStore();
+    }
+
     public function bootstrap(): array
     {
-        return $this->buildBootstrapPayload();
+        return $this->cache->remember(
+            'dashboard.bootstrap.v1',
+            15,
+            fn (): array => $this->buildBootstrapPayload()
+        );
     }
 
     public function stats(): array
     {
-        return $this->buildStats();
+        return $this->bootstrap()['stats'];
     }
 
     public function intakeChart(): array
     {
-        return $this->buildIntakeChart();
+        return $this->bootstrap()['charts']['intake'];
     }
 
     public function adoptionChart(): array
     {
-        return $this->buildAdoptionChart();
+        return $this->bootstrap()['charts']['adoptions'];
     }
 
     public function occupancyChart(): array
     {
-        return $this->buildOccupancyChart();
+        return $this->bootstrap()['charts']['occupancy'];
     }
 
     public function medicalChart(): array
     {
-        return $this->buildMedicalChart();
+        return $this->bootstrap()['charts']['medical'];
     }
 
     public function recentActivity(int $limit = 10): array
     {
-        return $this->buildRecentActivity($limit);
+        return $limit === 10
+            ? $this->bootstrap()['activity']
+            : $this->buildRecentActivity($limit);
     }
 
     private function buildBootstrapPayload(): array
