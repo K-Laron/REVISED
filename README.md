@@ -53,6 +53,12 @@ npm install
 npm run tooling:check
 ```
 
+## Performance Diagnostics
+
+- Set `APP_PERFORMANCE_DEBUG=1` locally to append request and query timing headers.
+- Run `php scripts/performance/report.php "Before Optimization" > docs/performance/2026-04-02-baseline.md` to capture the current dashboard and search baseline.
+- Keep the flag disabled outside local or debug environments.
+
 ## Functional Areas
 
 The implemented system currently covers:
