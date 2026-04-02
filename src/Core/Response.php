@@ -6,6 +6,8 @@ namespace App\Core;
 
 class Response
 {
+    private static array $sentHeaders = [];
+
     public function __construct(
         private readonly int $status,
         private readonly string $content,
@@ -52,8 +54,14 @@ class Response
         return new self($status, '', ['Location' => $location]);
     }
 
+    public function withHeaders(array $headers): self
+    {
+        return new self($this->status, $this->content, array_merge($this->headers, $headers));
+    }
+
     public function send(): void
     {
+        self::$sentHeaders = $this->headers;
         http_response_code($this->status);
 
         foreach ($this->headers as $name => $value) {
@@ -61,5 +69,15 @@ class Response
         }
 
         echo $this->content;
+    }
+
+    public static function sentHeaders(): array
+    {
+        return self::$sentHeaders;
+    }
+
+    public static function resetSentHeaders(): void
+    {
+        self::$sentHeaders = [];
     }
 }

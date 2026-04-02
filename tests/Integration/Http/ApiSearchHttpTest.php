@@ -30,4 +30,19 @@ final class ApiSearchHttpTest extends HttpIntegrationTestCase
         self::assertGreaterThanOrEqual(1, $response['json']['data']['sections'][0]['count']);
         self::assertStringStartsWith('/animals/', (string) $response['json']['data']['sections'][0]['items'][0]['href']);
     }
+
+    public function testGlobalSearchAcrossAllAccessibleModulesDoesNotError(): void
+    {
+        $user = $this->createUser('super_admin');
+        $this->authenticateUser($user);
+
+        $response = $this->dispatchJson('GET', '/api/search/global', [], [
+            'q' => 'Catarman',
+            'per_section' => 5,
+        ]);
+
+        self::assertSame(200, $response['status']);
+        self::assertTrue($response['json']['success']);
+        self::assertSame('Catarman', $response['json']['data']['query']);
+    }
 }

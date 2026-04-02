@@ -26,7 +26,7 @@ final class AdoptionsSearchProvider extends AbstractSearchProvider
 
     public function search(string $term, int $limit, array $filters): array
     {
-        $bindings = $this->likeBindings($term, 5);
+        $bindings = $this->likeBindings($term, 6);
         $filterClause = $this->standardFilterClause((string) ($filters['adoption_status'] ?? ''), $filters, 'aa.status', 'aa.created_at', 'adoptions');
         $count = Database::fetch(
             "SELECT COUNT(*) AS aggregate
@@ -38,9 +38,9 @@ final class AdoptionsSearchProvider extends AbstractSearchProvider
                     aa.application_number LIKE :search_1
                     OR CONCAT(u.first_name, ' ', u.last_name) LIKE :search_2
                     OR u.email LIKE :search_3
-                    OR u.username LIKE :search_3
-                    OR a.animal_id LIKE :search_4
-                    OR a.name LIKE :search_5
+                    OR u.username LIKE :search_4
+                    OR a.animal_id LIKE :search_5
+                    OR a.name LIKE :search_6
                )"
                . $filterClause['sql'],
             $bindings + $filterClause['bindings']
@@ -58,9 +58,9 @@ final class AdoptionsSearchProvider extends AbstractSearchProvider
                     aa.application_number LIKE :search_1
                     OR CONCAT(u.first_name, ' ', u.last_name) LIKE :search_2
                     OR u.email LIKE :search_3
-                    OR u.username LIKE :search_3
-                    OR a.animal_id LIKE :search_4
-                    OR a.name LIKE :search_5
+                    OR u.username LIKE :search_4
+                    OR a.animal_id LIKE :search_5
+                    OR a.name LIKE :search_6
                )"
              . $filterClause['sql'] . "
              ORDER BY aa.created_at DESC, aa.id DESC

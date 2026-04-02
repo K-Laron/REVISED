@@ -7,6 +7,7 @@ namespace Tests\Integration\Http;
 require_once __DIR__ . '/../DatabaseIntegrationTestCase.php';
 
 use App\Core\Request;
+use App\Core\Response;
 use App\Core\Router;
 use App\Core\Session;
 use App\Middleware\AuthMiddleware;
@@ -39,7 +40,9 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
         }
 
         $_SESSION = [];
+        unset($_ENV['APP_PERFORMANCE_DEBUG']);
         $GLOBALS['app'] = $this->appConfig();
+        Response::resetSentHeaders();
         header_remove();
         http_response_code(200);
     }
@@ -47,6 +50,8 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
     protected function tearDown(): void
     {
         $_SESSION = [];
+        unset($_ENV['APP_PERFORMANCE_DEBUG']);
+        Response::resetSentHeaders();
         header_remove();
         http_response_code(200);
 
@@ -67,6 +72,7 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
         $_POST = [];
         $_COOKIE = [];
         $GLOBALS['app'] = $this->appConfig();
+        Response::resetSentHeaders();
         header_remove();
         http_response_code(200);
 
@@ -84,6 +90,7 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
             'status' => http_response_code(),
             'content' => $content,
             'json' => $content !== '' ? json_decode($content, true, 512, JSON_THROW_ON_ERROR) : [],
+            'headers' => $this->capturedHeaders(),
         ];
     }
 
@@ -138,5 +145,25 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
                 'csrf' => CsrfMiddleware::class,
             ],
         ];
+    }
+
+    private function capturedHeaders(): array
+    {
+        $headers = Response::sentHeaders();
+
+        if ($headers !== []) {
+            return $headers;
+        }
+
+        foreach (headers_list() as $headerLine) {
+            if (!str_contains($headerLine, ':')) {
+                continue;
+            }
+
+            [$name, $value] = array_map('trim', explode(':', $headerLine, 2));
+            $headers[$name] = $value;
+        }
+
+        return $headers;
     }
 }

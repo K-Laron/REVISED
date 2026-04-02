@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Support\Performance\PerformanceProbe;
 use PDO;
 use PDOStatement;
 
@@ -42,8 +43,10 @@ class Database
 
     public static function query(string $sql, array $bindings = []): PDOStatement
     {
+        $startedAt = microtime(true);
         $statement = self::connect()->prepare($sql);
         $statement->execute($bindings);
+        PerformanceProbe::recordQuery($sql, (microtime(true) - $startedAt) * 1000);
 
         return $statement;
     }

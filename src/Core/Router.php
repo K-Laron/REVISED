@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Support\Performance\PerformanceProbe;
 use Closure;
 use RuntimeException;
 
@@ -43,6 +44,7 @@ class Router
     {
         $method = $request->method();
         $path = $request->path();
+        PerformanceProbe::startRequest($method, $path);
 
         foreach ($this->routes[$method] ?? [] as $route) {
             $matches = [];
@@ -65,19 +67,19 @@ class Router
             );
 
             if ($response instanceof Response) {
-                $response->send();
+                $this->sendResponse($response);
                 return;
             }
 
             if (is_string($response)) {
-                Response::html($response)->send();
+                $this->sendResponse(Response::html($response));
                 return;
             }
 
             return;
         }
 
-        ExceptionHandler::notFoundResponse($request)->send();
+        $this->sendResponse(ExceptionHandler::notFoundResponse($request));
     }
 
     private function addRoute(string $method, string $path, callable|string $handler, array $middleware): void
@@ -161,5 +163,12 @@ class Router
         $controller = new $controllerClass();
 
         return $controller->{$method}($request, ...array_values($params));
+    }
+
+    private function sendResponse(Response $response): void
+    {
+        $response->withHeaders(
+            PerformanceProbe::headersFromSummary(PerformanceProbe::finishRequest())
+        )->send();
     }
 }
