@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $router->get('/api/dashboard/stats', \App\Controllers\DashboardController::class . '@stats', ['cors', 'auth']);
+$router->get('/api/dashboard/bootstrap', \App\Controllers\DashboardController::class . '@bootstrapData', ['cors', 'auth']);
 $router->get('/api/dashboard/charts/intake', \App\Controllers\DashboardController::class . '@intakeChart', ['cors', 'auth']);
 $router->get('/api/dashboard/charts/adoptions', \App\Controllers\DashboardController::class . '@adoptionChart', ['cors', 'auth']);
 $router->get('/api/dashboard/charts/occupancy', \App\Controllers\DashboardController::class . '@occupancyChart', ['cors', 'auth']);

@@ -22,8 +22,7 @@ $_ENV['APP_PERFORMANCE_DEBUG'] = '1';
 $heading = $argv[1] ?? 'Before Optimization';
 
 $cases = [
-    ['label' => 'dashboard_stats', 'method' => 'GET', 'uri' => '/api/dashboard/stats', 'query' => []],
-    ['label' => 'dashboard_activity', 'method' => 'GET', 'uri' => '/api/dashboard/activity', 'query' => []],
+    ['label' => 'dashboard_bootstrap', 'method' => 'GET', 'uri' => '/api/dashboard/bootstrap', 'query' => []],
     ['label' => 'search_animals', 'method' => 'GET', 'uri' => '/api/search/global', 'query' => ['q' => 'Buddy', 'modules' => ['animals'], 'per_section' => 5]],
     ['label' => 'search_all', 'method' => 'GET', 'uri' => '/api/search/global', 'query' => ['q' => 'Catarman', 'per_section' => 5]],
 ];

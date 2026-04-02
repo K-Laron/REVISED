@@ -35,6 +35,14 @@ class DashboardController
         return Response::success($this->dashboard->stats(), 'Dashboard stats retrieved successfully.');
     }
 
+    public function bootstrapData(Request $request): Response
+    {
+        return Response::success(
+            $this->dashboard->bootstrap(),
+            'Dashboard bootstrap retrieved successfully.'
+        );
+    }
+
     public function intakeChart(Request $request): Response
     {
         return Response::success($this->dashboard->intakeChart(), 'Dashboard intake chart retrieved successfully.');

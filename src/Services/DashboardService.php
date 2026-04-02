@@ -8,7 +8,56 @@ use App\Core\Database;
 
 class DashboardService
 {
+    public function bootstrap(): array
+    {
+        return $this->buildBootstrapPayload();
+    }
+
     public function stats(): array
+    {
+        return $this->buildStats();
+    }
+
+    public function intakeChart(): array
+    {
+        return $this->buildIntakeChart();
+    }
+
+    public function adoptionChart(): array
+    {
+        return $this->buildAdoptionChart();
+    }
+
+    public function occupancyChart(): array
+    {
+        return $this->buildOccupancyChart();
+    }
+
+    public function medicalChart(): array
+    {
+        return $this->buildMedicalChart();
+    }
+
+    public function recentActivity(int $limit = 10): array
+    {
+        return $this->buildRecentActivity($limit);
+    }
+
+    private function buildBootstrapPayload(): array
+    {
+        return [
+            'stats' => $this->buildStats(),
+            'charts' => [
+                'intake' => $this->buildIntakeChart(),
+                'adoptions' => $this->buildAdoptionChart(),
+                'occupancy' => $this->buildOccupancyChart(),
+                'medical' => $this->buildMedicalChart(),
+            ],
+            'activity' => $this->buildRecentActivity(),
+        ];
+    }
+
+    private function buildStats(): array
     {
         $animals = (int) ($this->scalar('SELECT COUNT(*) FROM animals WHERE is_deleted = 0') ?? 0);
         $medical = (int) ($this->scalar("SELECT COUNT(*) FROM animals WHERE is_deleted = 0 AND status = 'Under Medical Care'") ?? 0);
@@ -40,7 +89,7 @@ class DashboardService
         ];
     }
 
-    public function intakeChart(): array
+    private function buildIntakeChart(): array
     {
         $rows = Database::fetchAll(
             "SELECT DATE_FORMAT(intake_date, '%Y-%m') AS month_key, COUNT(*) AS total
@@ -54,7 +103,7 @@ class DashboardService
         return $this->fillMonthlySeries($rows, 'total');
     }
 
-    public function adoptionChart(): array
+    private function buildAdoptionChart(): array
     {
         $rows = Database::fetchAll(
             "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key, COUNT(*) AS total
@@ -68,7 +117,7 @@ class DashboardService
         return $this->fillMonthlySeries($rows, 'total');
     }
 
-    public function occupancyChart(): array
+    private function buildOccupancyChart(): array
     {
         $rows = Database::fetchAll(
             "SELECT status, COUNT(*) AS total
@@ -87,7 +136,7 @@ class DashboardService
         ];
     }
 
-    public function medicalChart(): array
+    private function buildMedicalChart(): array
     {
         $rows = Database::fetchAll(
             "SELECT procedure_type, COUNT(*) AS total
@@ -106,7 +155,7 @@ class DashboardService
         ];
     }
 
-    public function recentActivity(int $limit = 10): array
+    private function buildRecentActivity(int $limit = 10): array
     {
         return Database::fetchAll(
             'SELECT action, module, record_id, created_at

@@ -135,23 +135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadDashboard() {
-    const [stats, intake, adoption, occupancy, medical, activity] = await Promise.all([
-      getJson('/api/dashboard/stats'),
-      getJson('/api/dashboard/charts/intake'),
-      getJson('/api/dashboard/charts/adoptions'),
-      getJson('/api/dashboard/charts/occupancy'),
-      getJson('/api/dashboard/charts/medical'),
-      getJson('/api/dashboard/activity')
-    ]);
+    const bootstrap = await getJson('/api/dashboard/bootstrap');
+    const payload = bootstrap.data;
 
-    renderStats(stats.data);
-    renderActivity(activity.data);
+    renderStats(payload.stats);
+    renderActivity(payload.activity);
 
     const colors = [palette().primary, palette().success, palette().warning, palette().info, palette().danger];
-    mountChart('intake-chart', 'line', intake.data, colors);
-    mountChart('adoption-chart', 'bar', adoption.data, colors);
-    mountChart('occupancy-chart', 'doughnut', occupancy.data, colors);
-    mountChart('medical-chart', 'bar', medical.data, colors);
+    mountChart('intake-chart', 'line', payload.charts.intake, colors);
+    mountChart('adoption-chart', 'bar', payload.charts.adoptions, colors);
+    mountChart('occupancy-chart', 'doughnut', payload.charts.occupancy, colors);
+    mountChart('medical-chart', 'bar', payload.charts.medical, colors);
   }
 
   document.querySelectorAll('[data-quick-link]').forEach((button) => {

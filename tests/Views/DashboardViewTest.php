@@ -20,4 +20,11 @@ final class DashboardViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('dashboard-action-deck', $html);
         self::assertStringContainsString('dashboard-activity-feed', $html);
     }
+
+    public function testDashboardScriptPrefersTheBootstrapEndpoint(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/dashboard.js');
+
+        self::assertStringContainsString('/api/dashboard/bootstrap', $script);
+    }
 }
