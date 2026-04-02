@@ -1,214 +1,200 @@
 # Catarman Dog Pound & Animal Shelter Management System
 
-This repository contains the current implemented CDP&ASMS runtime as of March 27, 2026. The application is a custom PHP 8.2 MVC system for shelter intake, medical records, adoptions, billing, inventory, reporting, search, user administration, system settings, backups, and the public adopter portal.
-
 ## Current Runtime Snapshot
 
-- Authentication uses server-side PHP sessions plus persisted `user_sessions` validation.
-- The app currently exposes 34 web routes and 126 API routes.
-- The runtime schema is 42 tables: 39 base tables from `database_schema.sql` plus 3 additional tables introduced by the current 5 SQL migrations.
-- PDF exports are generated on the server with `TCPDF`.
-- Dashboard charts use a vendored local Chart.js asset served from `public/assets/vendor/chart.js/chart.umd.js`.
-- System settings bootstrap from environment defaults plus `storage/cache/system_settings.json`, while writes persist to MySQL when the `system_settings` table is available and otherwise fall back to `storage/config/system_settings.json`.
+- Custom PHP 8.2 MVC application with a session-backed web UI and JSON API.
+- [public/index.php](/C:/Users/TESS%20LARON/Desktop/REVISED/public/index.php) boots Dotenv, [config/app.php](/C:/Users/TESS%20LARON/Desktop/REVISED/config/app.php), maintenance checks, [routes/web.php](/C:/Users/TESS%20LARON/Desktop/REVISED/routes/web.php), and the modular API loader in [routes/api.php](/C:/Users/TESS%20LARON/Desktop/REVISED/routes/api.php).
+- Current route surface:
+  - `34` web routes
+  - `126` production API routes across `15` route-module files
+  - `1` extra debug-only API route: `POST /api/validate-test`
+- Current schema baseline:
+  - `39` tables in [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database_schema.sql)
+  - `6` tracked SQL migrations in [database/migrations](/C:/Users/TESS%20LARON/Desktop/REVISED/database/migrations)
 
 ## Civic Ledger UI System
 
-The current flagship UI pass uses the `Civic Ledger` design system across both the internal operations app and the public adoption portal.
-
-- Typography is standardized to `Lexend` for headings and navigation, `Source Sans 3` for body and form copy, and `JetBrains Mono` for operational metadata, IDs, timestamps, and badges.
-- The internal shell, dashboard, search, and settings pages now share the same civic-professional token set, navigation language, and command-surface patterns.
-- The public landing page uses the same design system with a warmer trust-first presentation while keeping the current CTA and featured-animal behavior intact.
-- The rollout is intentionally view-layer only: routes, controllers, API payloads, and existing JavaScript contracts remain unchanged.
+- Authenticated pages use the Civic Ledger shell from [views/layouts/app.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/layouts/app.php).
+- Typography:
+  - `Lexend` for headings
+  - `Source Sans 3` for primary UI copy
+  - `JetBrains Mono` for technical labels and metrics
+- The authenticated shell currently includes:
+  - light and dark theme handoff on first paint
+  - persistent sidebar scroll state during soft navigation
+  - breadcrumb links with draft recovery for accidental navigation
+  - unread-only notification dropdown behavior
+- The dashboard is a bundled operations surface driven by `GET /api/dashboard/bootstrap` and rendered with the self-hosted Chart.js asset at [public/assets/vendor/chart.js/chart.umd.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/vendor/chart.js/chart.umd.js).
 
 ## Stack
 
 ### Application Runtime
 
-- PHP 8.2+
-- MySQL 8.0+
-- Composer PSR-4 autoloading under `App\\`
-- Vanilla HTML, CSS, and JavaScript views served from PHP templates
+- PHP `>=8.2`
+- MySQL-compatible relational database
+- Custom router, middleware pipeline, and response helpers under [src/Core](/C:/Users/TESS%20LARON/Desktop/REVISED/src/Core)
+- Server-rendered PHP views under [views](/C:/Users/TESS%20LARON/Desktop/REVISED/views)
 
 ### Composer Packages
 
-- `vlucas/phpdotenv` for environment loading
-- `chillerlan/php-qrcode` for QR code generation
-- `tecnickcom/tcpdf` for report, receipt, invoice, and dossier PDFs
-- `phpmailer/phpmailer` for optional SMTP delivery
-- `intervention/image` for image handling
-- `monolog/monolog` for structured logging support
+- `vlucas/phpdotenv`
+- `chillerlan/php-qrcode`
+- `tecnickcom/tcpdf`
+- `phpmailer/phpmailer`
+- `intervention/image`
+- `monolog/monolog`
+- Dev:
+  - `phpunit/phpunit`
+  - `fakerphp/faker`
 
 ### Optional Node Tooling
 
-The Node dependencies in `package.json` are not required to run the PHP app itself. They are used for local documentation and manuscript tooling:
+The app runtime does not require Node.js. The tracked Node dependencies are for documentation and asset tooling only.
 
 - `beautiful-mermaid`
 - `@resvg/resvg-js`
 - `docx`
 
-Install them only if you need the documentation tooling:
+Validate optional tooling with:
 
-```powershell
-npm install
+```bash
 npm run tooling:check
 ```
 
 ## Performance Diagnostics
 
-- Set `APP_PERFORMANCE_DEBUG=1` locally to append request and query timing headers.
-- Run `php scripts/performance/report.php "Before Optimization" > docs/performance/2026-04-02-baseline.md` to capture the current dashboard and search baseline.
-- Keep the flag disabled outside local or debug environments.
+- Request and query timing is instrumented through [src/Support/Performance/PerformanceProbe.php](/C:/Users/TESS%20LARON/Desktop/REVISED/src/Support/Performance/PerformanceProbe.php).
+- When `APP_PERFORMANCE_DEBUG=true` or `APP_DEBUG=true`, responses can emit:
+  - `X-App-Request-Time-Ms`
+  - `X-App-Query-Count`
+  - `X-App-Database-Time-Ms`
+- Local performance report script:
+
+```bash
+php scripts/performance/report.php "Manual Check"
+```
+
+- Dashboard first paint is aggregated and cached by [src/Services/DashboardService.php](/C:/Users/TESS%20LARON/Desktop/REVISED/src/Services/DashboardService.php) through [src/Support/Cache/FileCacheStore.php](/C:/Users/TESS%20LARON/Desktop/REVISED/src/Support/Cache/FileCacheStore.php).
+- Pagination-heavy list endpoints use [src/Support/Pagination/PaginatedWindow.php](/C:/Users/TESS%20LARON/Desktop/REVISED/src/Support/Pagination/PaginatedWindow.php) to avoid unnecessary count work when possible.
 
 ## Functional Areas
 
-The implemented system currently covers:
-
-- Authentication, profile management, password reset, forced password change, and session invalidation
-- Executive dashboard with KPI cards, charts, and recent activity
-- Animal intake, profile editing, photo uploads, status updates, soft delete and restore, QR generation, and timeline views
-- Medical records with procedure-specific forms for vaccination, surgery, examination, treatment, deworming, and euthanasia
-- Shared medical subsections for vital signs, prescriptions, and lab results
-- Kennel assignment, release, history, maintenance logging, and occupancy statistics
-- Adoption applications, interviews, seminars, completion, certificates, and adopter self-service workflows
-- Billing with invoices, payments, receipts, fee schedule management, and financial stats
-- Inventory categories, item management, stock movements, alerts, and transaction history
-- User management, role and permission updates, and per-user session management
-- Reports with CSV and PDF exports, saved templates, census summaries, and animal dossiers
-- Notifications, global search, deployment readiness checks, maintenance mode, system backups, and backup restore confirmation
-- Public adopter portal with landing page, animal browsing, registration, application submission, and application tracking
+- Authentication and session lifecycle
+- Dashboard operations and audit activity
+- Animals, breeds, intake, photos, and QR handling
+- Kennels, assignments, and maintenance logs
+- Medical records, prescriptions, lab results, and vital signs
+- Adoption workflow and public adopter portal
+- Billing, payments, receipts, and fee schedule
+- Inventory, categories, alerts, and stock movement
+- User, role, session, and permission management
+- Reports, exports, templates, and audit-trail review
+- Notifications, global search, system settings, backups, and readiness checks
 
 ## Local Setup
 
-1. Copy `.env.example` to `.env`.
-2. Set your database credentials and local `APP_URL`.
-3. Install PHP dependencies:
+1. Install Composer dependencies.
 
-```powershell
+```bash
 composer install
 ```
 
-4. Import the base schema and seeders:
+2. Install optional Node tooling if you need the docs or rendering helpers.
 
-```powershell
-mysql -u root -p -e "CREATE DATABASE catarman_shelter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p catarman_shelter < database_schema.sql
-mysql -u root -p catarman_shelter < seeders.sql
+```bash
+npm install
 ```
 
-5. Apply the current SQL migrations in order:
+3. Create `.env` from [.env.example](/C:/Users/TESS%20LARON/Desktop/REVISED/.env.example) and configure MySQL, app URL, mail, and session settings.
 
-```powershell
-mysql -u root -p catarman_shelter < database\migrations\2026_03_25_000001_add_usernames_to_users.sql
-mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000001_add_animal_detail_fields.sql
-mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000002_add_medical_vital_signs.sql
-mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000003_add_medical_prescriptions.sql
-mysql -u root -p catarman_shelter < database\migrations\2026_03_26_000004_add_medical_lab_results.sql
+4. Load the base schema and seed data.
+
+```bash
+mysql -u root -p < database_schema.sql
+mysql -u root -p < seeders.sql
 ```
 
-6. Start the PHP server:
+5. Apply tracked SQL migrations in [database/migrations](/C:/Users/TESS%20LARON/Desktop/REVISED/database/migrations).
+
+6. Start the local PHP server.
 
 ```powershell
-php -S localhost:8000 -t public
+.\start-app.vbs
 ```
 
-7. Run the PHPUnit suite:
-
-```powershell
-php vendor/bin/phpunit
-```
-
-The suite includes unit coverage plus database-backed adoption integration tests. Use a populated local database and valid `.env` connection settings before running it.
+The launcher wraps [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1), starts `php -S 127.0.0.1:8000 -t public`, and opens `http://127.0.0.1:8000/adopt`.
 
 ### Generate Additional Local Animal Data
 
-Use the dev-only CLI seeder to add randomized animal records to your current local database:
-
-```powershell
+```bash
 php scripts/seed_animals.php 80
 ```
 
-Optional: pass a reproducible random seed with `--seed=<number>`.
-
 ### Generate Additional Local Activity Data
 
-Use the dev-only CLI activity seeder to add randomized adoption workflow and medical records to your current local database:
-
-```powershell
-php scripts/seed_activity.php --medical=45 --adoptions=18 --seminars=3
+```bash
+php scripts/seed_activity.php 250
 ```
-
-Optional: pass a reproducible random seed with `--seed=<number>`.
 
 ### Recommended Local `.env` Defaults
 
-- `APP_URL=http://localhost:8000`
-- `APP_TIMEZONE=Asia/Manila`
+- `APP_ENV=local`
 - `APP_DEBUG=true`
-- `TRUSTED_PROXIES=`
-- `SESSION_LIFETIME=60`
-
-For local-only password recovery testing, `mail_delivery_mode=log_only` is acceptable. Reset URLs will be logged instead of sent.
+- `APP_URL=http://127.0.0.1:8000`
+- `APP_TIMEZONE=Asia/Manila`
+- `SESSION_LIFETIME=120`
 
 ## Quick Start Scripts
 
-- `start-app.vbs` starts the PHP server in the background and opens `/adopt`.
-- `stop-app.vbs` stops the background server tracked in `storage/runtime/app-server.json`.
-- Runtime logs for the VBScript helpers are written under `storage/runtime/`.
+- [start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/start-app.vbs)
+- [stop-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/stop-app.vbs)
+- [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1)
+- [scripts/stop-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.ps1)
 
 ## Storage and Generated Files
 
-The runtime expects these writable directories:
-
-- `storage/`
-- `storage/logs/`
-- `storage/sessions/`
-- `storage/backups/`
-- `storage/exports/`
-- `public/uploads/`
-
-Generated files currently include:
-
-- animal photo uploads in `public/uploads/animals/`
-- adoption documents in `public/uploads/adoptions/documents/`
-- QR SVG files in `public/uploads/qrcodes/`
-- report exports in `storage/exports/reports/`
-- compressed SQL backups in `storage/backups/`
-- cached runtime settings in `storage/cache/system_settings.json`
+- `storage/backups/` for compressed SQL backups
+- `storage/cache/` for runtime cache files including system settings and dashboard cache
+- `storage/config/` for legacy settings fallback
+- `storage/exports/` and `storage/pdfs/` for generated reports and billing/adoption documents
+- `storage/logs/` for application logs
+- `storage/runtime/` for local app-server state
+- `storage/sessions/` for PHP session files
+- `public/uploads/` for user-uploaded assets
 
 ## Security Model
 
-- Passwords are hashed with bcrypt using cost 12.
-- Authenticated browser and API requests share the same session-backed auth state.
-- Session cookies are configured as `HttpOnly` and `SameSite=Strict`.
-- Secure cookies are enabled automatically when the request is HTTPS or a trusted proxy reports HTTPS.
-- CSRF validation is applied to state-changing routes that use browser sessions.
-- Sensitive endpoints are rate limited via `rate_limit_attempts`.
-- Authorization is enforced by role and permission middleware aliases defined in `config/app.php`.
+- Server-side session auth for both the browser UI and the JSON API
+- `HttpOnly` and `SameSite=Strict` session cookies via [src/Core/Session.php](/C:/Users/TESS%20LARON/Desktop/REVISED/src/Core/Session.php)
+- CSRF protection on state-changing browser/API requests
+- Route-level permission and role gates
+- Rate limiting with database-backed tracking and file-store fallback
+- Backup restore requires an exact typed confirmation and revalidated checksum
 
 ## Release Checklist
 
-- Set a real HTTPS `APP_URL`.
-- Set a unique `APP_KEY`.
-- Configure `TRUSTED_PROXIES` if TLS terminates upstream.
-- Keep `APP_DEBUG=false` in production.
-- Rotate the seeded admin password `ChangeMe@2025`.
-- Ensure mail settings are complete if password-reset email must deliver outside QA.
-- Confirm readiness checks in `/settings` return no `fail` entries.
-- Rehearse backup creation and restore against a cloned database, not the live database.
-- Verify that `storage/` and `public/uploads/` are writable by the PHP runtime user.
+- Set a non-local `APP_URL`
+- Disable `APP_DEBUG` in production
+- Configure `APP_KEY`
+- Configure `TRUSTED_PROXIES` when behind a proxy
+- Configure SMTP or intentionally document a non-email recovery process
+- Rotate the seeded admin password
+- Verify writable `storage/` directories
+- Apply all SQL migrations
 
 ## Docs Map
 
-- `README.md`: current runtime overview and setup
-- `ARCHITECTURE.md`: request flow, directory map, and module boundaries
-- `API_ROUTES.md`: current web and API route inventory
-- `IMPLEMENTATION_GUIDE.md`: implemented runtime behavior and deployment notes
-- `VALIDATION_RULES.md`: validator capabilities and endpoint-specific rule highlights
-- `PAGE_LAYOUTS.md`: Civic Ledger page structure, shell zones, and flagship screen responsibilities
-- `PRD_Catarman_Dog_Pound.md`: product and scope document aligned to the current build
-- `system_summary.md`: concise system inventory and counts
-- `llm_context.md`: AI-facing implementation constraints and safe assumptions
+- [ARCHITECTURE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ARCHITECTURE.md)
+- [API_ROUTES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/API_ROUTES.md)
+- [IMPLEMENTATION_GUIDE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/IMPLEMENTATION_GUIDE.md)
+- [VALIDATION_RULES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/VALIDATION_RULES.md)
+- [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PAGE_LAYOUTS.md)
+- [PRD_Catarman_Dog_Pound.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PRD_Catarman_Dog_Pound.md)
+- [system_summary.md](/C:/Users/TESS%20LARON/Desktop/REVISED/system_summary.md)
+- [llm_context.md](/C:/Users/TESS%20LARON/Desktop/REVISED/llm_context.md)
+- [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ROOT_LAYOUT.md)
 
 ## Notes on Historical Files
 
-The chapter and manuscript Markdown files remain part of the capstone documentation set. They have been aligned to the current application where the content describes implemented system behavior, but their academic references and manuscript structure remain separate from the runtime documentation above.
+- The root Markdown files are the living system docs.
+- Dated files under [docs](/C:/Users/TESS%20LARON/Desktop/REVISED/docs) are historical specs, plans, and measurement snapshots unless they explicitly say otherwise.

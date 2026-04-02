@@ -1,99 +1,59 @@
 # Root Layout
 
-Date: 2026-04-02
-
-Purpose:
-- Keep the repository root readable as an application repository.
-- Prevent manuscript, export, and temporary tooling artifacts from mixing with runtime files.
-- Preserve a simple quarantine path for local cleanup without deleting files.
-
 ## What Belongs At The Root
 
-Keep only high-signal project files and top-level app folders here:
-
-- Runtime and source folders:
-  - `src/`
-  - `config/`
-  - `routes/`
-  - `views/`
-  - `public/`
-  - `storage/`
-  - `database/`
-  - `tests/`
-  - `docs/`
-- Dependency and environment folders:
-  - `vendor/`
-  - `node_modules/`
-  - `.codex/`
-  - `.composer/`
-- Core root files:
-  - `.env`
-  - `.env.example`
-  - `.gitignore`
-  - `.htaccess`
-  - `composer.json`
-  - `composer.lock`
-  - `package.json`
-  - `package-lock.json`
-  - `phpunit.xml`
-  - `README.md`
-  - `PAGE_LAYOUTS.md`
-  - `API_ROUTES.md`
-  - `ARCHITECTURE.md`
-  - `IMPLEMENTATION_GUIDE.md`
-  - `PRD_Catarman_Dog_Pound.md`
-  - `VALIDATION_RULES.md`
-  - `system_summary.md`
-  - `llm_context.md`
-  - `database_schema.sql`
-  - `seeders.sql`
-  - `start-app.vbs`
-  - `stop-app.vbs`
+- Runtime entry files:
+  - [composer.json](/C:/Users/TESS%20LARON/Desktop/REVISED/composer.json)
+  - [composer.lock](/C:/Users/TESS%20LARON/Desktop/REVISED/composer.lock)
+  - [package.json](/C:/Users/TESS%20LARON/Desktop/REVISED/package.json)
+  - [package-lock.json](/C:/Users/TESS%20LARON/Desktop/REVISED/package-lock.json)
+  - [phpunit.xml](/C:/Users/TESS%20LARON/Desktop/REVISED/phpunit.xml)
+  - [.env.example](/C:/Users/TESS%20LARON/Desktop/REVISED/.env.example)
+- Living system docs:
+  - [README.md](/C:/Users/TESS%20LARON/Desktop/REVISED/README.md)
+  - [ARCHITECTURE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ARCHITECTURE.md)
+  - [API_ROUTES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/API_ROUTES.md)
+  - [IMPLEMENTATION_GUIDE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/IMPLEMENTATION_GUIDE.md)
+  - [VALIDATION_RULES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/VALIDATION_RULES.md)
+  - [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PAGE_LAYOUTS.md)
+  - [PRD_Catarman_Dog_Pound.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PRD_Catarman_Dog_Pound.md)
+  - [system_summary.md](/C:/Users/TESS%20LARON/Desktop/REVISED/system_summary.md)
+  - [llm_context.md](/C:/Users/TESS%20LARON/Desktop/REVISED/llm_context.md)
+  - [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ROOT_LAYOUT.md)
+- Schema and seed files:
+  - [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database_schema.sql)
+  - [seeders.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/seeders.sql)
+- Convenience launchers:
+  - [start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/start-app.vbs)
+  - [stop-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/stop-app.vbs)
 
 ## What Should Not Stay At The Root
 
-Move these into a dedicated working folder or quarantine them under `_for-deletion/`:
+- manuscript drafts
+- generated chapter files
+- temporary exports
+- tool caches
+- ad-hoc one-off scripts that are not part of the app runtime
+- screenshots, logs, and local scratch artifacts
 
-- Manuscript files:
-  - chapter `.docx` and `.md` files
-  - abstract, appendix, CV, questionnaire, and similar capstone artifacts
-- Generated exports:
-  - temporary PDFs
-  - rendered diagrams
-  - chapter generation output
-  - browser screenshots and tool output
-- One-off local utilities:
-  - ad-hoc scripts made for a single local task
-  - cookies or session dumps
-  - failed command output files
-- Tool temp folders:
-  - `.tmp/`
-  - `output/`
-  - old local worktree leftovers when no longer needed
+Those should move into:
+
+- a proper app directory like `scripts/`, `docs/`, or `storage/`, or
+- a local quarantine folder such as `_for-deletion/YYYY-MM-DD-description/`
 
 ## Quarantine Rule
 
-Use this path for non-system clutter you do not want to delete yet:
-
-- `_for-deletion/YYYY-MM-DD-description/`
-
-Current quarantine:
-
-- `_for-deletion/2026-04-02-root-cleanup/`
-
-Rules:
-
-- Move files there instead of deleting them when you are unsure.
-- Add a `MANIFEST.md` describing what was moved and why.
-- Keep `_for-deletion/` visible in the workspace.
-- Ignore `_for-deletion/` locally through `.git/info/exclude` unless you explicitly want to version it.
+- If a file is clearly not part of the running app but you are not ready to delete it, move it into a visible `_for-deletion/` folder.
+- Keep a `MANIFEST.md` inside the quarantine folder that explains:
+  - what was moved
+  - when it was moved
+  - why it was quarantined
+- `_for-deletion/` should remain local-only unless there is a deliberate reason to version it.
 
 ## Root Hygiene Checklist
 
-Before adding a new root file, ask:
-
-1. Is this required to run, configure, test, or document the current system?
-2. Is this meant for long-term team use rather than one-time local work?
-3. Would a new developer expect to find this at the root?
-
-If the answer is `no`, do not leave it at the root.
+- Before adding a new root file, ask:
+  - Is this required to boot, configure, test, or understand the app?
+  - Does it belong in an existing folder instead?
+  - Is it historical or local-only clutter?
+- If the answer is "local-only" or "not runtime-relevant", quarantine it instead of leaving it at the root.

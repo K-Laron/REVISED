@@ -1,41 +1,106 @@
 # Civic Ledger Page Layouts
 
-This document describes the current implemented page structure after the Civic Ledger flagship UI pass. It covers layout responsibilities only; routes, controllers, and API contracts are documented separately.
-
 ## Shared Layout System
 
-- `views/layouts/app.php` renders the authenticated operations shell.
-- `views/layouts/public.php` renders the public adopter-facing shell.
-- Both layouts expose the same `data-ui-theme="civic-ledger"` marker and shared typography stack.
-- `Lexend` is reserved for headings and navigation, `Source Sans 3` for body copy, and `JetBrains Mono` for operational metadata such as IDs, timestamps, badges, and counters.
+- Authenticated layout: [views/layouts/app.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/layouts/app.php)
+- Public layout: [views/layouts/public.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/layouts/public.php)
+- Shared design assets:
+  - [public/assets/css/variables.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/variables.css)
+  - [public/assets/css/layout.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/layout.css)
+  - [public/assets/css/responsive.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/responsive.css)
+  - [public/assets/css/dark-mode-overrides.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/dark-mode-overrides.css)
+
+Typography:
+
+- Headings: `Lexend`
+- Body UI copy: `Source Sans 3`
+- Technical labels and metrics: `JetBrains Mono`
 
 ## Internal Operations Shell
 
-- The left rail is the persistent navigation spine for authenticated users.
-- The top command bar surfaces the current page title, user context, and high-signal utility actions.
-- Breadcrumb trails are enhanced centrally in the authenticated shell so prior path segments are clickable and accidental breadcrumb navigation can restore in-progress form input from session storage.
-- Shared shell styling lives in `public/assets/css/components.css`, `public/assets/css/layout.css`, and `public/assets/css/responsive.css`.
+The authenticated shell currently provides:
+
+- persistent left sidebar navigation
+- soft-navigation runtime
+- breadcrumb enhancement with clickable hierarchy links
+- form draft recovery on breadcrumb-triggered navigation
+- unread-only notification panel
+- theme switching with first-paint handoff
+- sidebar scroll-position persistence during shell swaps
+
+Key files:
+
+- [views/partials/sidebar.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/partials/sidebar.php)
+- [views/partials/header.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/partials/header.php)
+- [public/assets/js/core/app-shell.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/core/app-shell.js)
+- [public/assets/js/core/app-breadcrumbs.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/core/app-breadcrumbs.js)
+- [public/assets/js/core/app-navigation.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/core/app-navigation.js)
+- [public/assets/js/notifications.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/notifications.js)
 
 ## Dashboard
 
-- `views/dashboard/index.php` is structured as an executive briefing surface.
-- The page is organized into a KPI band, a command/action deck, chart panels, and a recent activity ledger.
-- `public/assets/js/dashboard.js` continues to own chart and activity rendering without changing endpoint contracts.
+- View: [views/dashboard/index.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/dashboard/index.php)
+- Script: [public/assets/js/dashboard.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/dashboard.js)
+- Styles: [public/assets/css/dashboard.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/dashboard.css)
+
+Current dashboard composition:
+
+- hero briefing with operator and breadcrumb
+- KPI stat grid
+- twelve-month intake line chart
+- quick-actions deck
+- enhanced kennel occupancy doughnut with center metric and breakdown rail
+- recent activity split into feed plus digest
+- adoption pipeline chart
+- medical procedures chart
+
+Data source:
+
+- `GET /api/dashboard/bootstrap`
+
+Charting:
+
+- [public/assets/vendor/chart.js/chart.umd.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/vendor/chart.js/chart.umd.js)
 
 ## Global Search
 
-- `views/search/index.php` is structured as a search command center.
-- The page pairs a query-focused command shell with module filters, guidance states, and ledger-style grouped results.
-- `public/assets/js/search.js` retains the existing request flow and renders results into the updated surface.
+- View: [views/search/index.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/search/index.php)
+- Script: [public/assets/js/search.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/search.js)
+- Styles: [public/assets/css/search.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/search.css)
+
+Current layout traits:
+
+- command-shell page intro
+- search query band
+- module chip filters
+- secondary per-module filter grid
+- empty/loading/no-results states
+- ledger-style grouped result sections
 
 ## Settings
 
-- `views/settings/index.php` is structured as an operations console.
-- The page groups configuration areas into readiness, profile, and backup-ledger zones while preserving the existing forms, IDs, and status hooks.
-- `public/assets/js/settings.js` still drives the current settings, backup, and readiness interactions.
+- View: [views/settings/index.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/settings/index.php)
+- Script: [public/assets/js/settings.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/settings.js)
+- Styles: [public/assets/css/settings.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/settings.css)
+
+Current layout traits:
+
+- runtime operations hero
+- health and profile summary cards
+- editable system configuration panel
+- backup ledger with restore-policy note
+- maintenance mode console
+- readiness board
+- operations notes panel
 
 ## Public Landing Page
 
-- `views/portal/landing.php` remains the public flagship entry point for adopters.
-- The hero, trust ribbon, featured proof card, and featured-animal carousel now share the Civic Ledger system with a warmer public tone.
-- `public/assets/js/portal.js` preserves the current CTA and carousel behavior while updating the visual state classes used by the redesigned slides.
+- Public layout: [views/layouts/public.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/layouts/public.php)
+- Portal styling: [public/assets/css/portal.css](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/css/portal.css)
+- Portal script: [public/assets/js/portal.js](/C:/Users/TESS%20LARON/Desktop/REVISED/public/assets/js/portal.js)
+
+Current public surface:
+
+- `/adopt` is the real public portal entry
+- `/` is still a minimal placeholder welcome page in [views/welcome.php](/C:/Users/TESS%20LARON/Desktop/REVISED/views/welcome.php)
+- public shell supports theme switching, responsive navigation, and handoff into either adopter pages or the authenticated system
