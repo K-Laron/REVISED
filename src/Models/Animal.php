@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
+use App\Support\Pagination\PaginatedWindow;
 
 class Animal
 {
@@ -44,21 +45,21 @@ class Animal
              LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
              {$whereSql}
              ORDER BY a.created_at DESC
-             LIMIT {$perPage} OFFSET {$offset}",
+             LIMIT " . ($perPage + 1) . " OFFSET {$offset}",
             $bindings
         );
 
-        $countRow = Database::fetch(
-            "SELECT COUNT(*) AS aggregate
-             FROM animals a
-             {$whereSql}",
-            $bindings
+        return PaginatedWindow::resolve(
+            $rows,
+            $page,
+            $perPage,
+            static fn (): int => (int) ((Database::fetch(
+                "SELECT COUNT(*) AS aggregate
+                 FROM animals a
+                 {$whereSql}",
+                $bindings
+            )['aggregate'] ?? 0))
         );
-
-        return [
-            'items' => $rows,
-            'total' => (int) ($countRow['aggregate'] ?? 0),
-        ];
     }
 
     public function create(array $data): int

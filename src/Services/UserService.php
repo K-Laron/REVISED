@@ -11,6 +11,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\InputNormalizer;
+use App\Support\Pagination\PaginatedWindow;
 use RuntimeException;
 
 class UserService
@@ -59,14 +60,8 @@ class UserService
         }
 
         $where = 'WHERE ' . implode(' AND ', $conditions);
-        $total = (int) (Database::fetch(
-            'SELECT COUNT(*) AS aggregate
-             FROM users u
-             ' . $where,
-            $bindings
-        )['aggregate'] ?? 0);
-
-        $items = Database::fetchAll(
+        $window = PaginatedWindow::resolve(
+            Database::fetchAll(
             'SELECT u.*, r.name AS role_name, r.display_name AS role_display_name,
                     CONCAT(cb.first_name, " ", cb.last_name) AS created_by_name
              FROM users u
@@ -74,15 +69,25 @@ class UserService
              LEFT JOIN users cb ON cb.id = u.created_by
              ' . $where . '
              ORDER BY u.created_at DESC, u.id DESC
-             LIMIT ' . (int) $perPage . ' OFFSET ' . (int) $offset,
+             LIMIT ' . (int) ($perPage + 1) . ' OFFSET ' . (int) $offset,
             $bindings
+        ),
+            $page,
+            $perPage,
+            static fn (): int => (int) (Database::fetch(
+                'SELECT COUNT(*) AS aggregate
+                 FROM users u
+                 ' . $where,
+                $bindings
+            )['aggregate'] ?? 0)
         );
+        $items = $window['items'];
 
         foreach ($items as &$item) {
             unset($item['password_hash']);
         }
 
-        return ['items' => $items, 'total' => $total];
+        return ['items' => $items, 'total' => $window['total']];
     }
 
     public function get(int $userId, bool $includeDeleted = true): array

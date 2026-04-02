@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
+use App\Support\Pagination\PaginatedWindow;
 
 class AuditLog
 {
@@ -51,10 +52,15 @@ class AuditLog
                      LEFT JOIN users u ON u.id = al.user_id
                      ' . $where . '
                      ORDER BY al.created_at DESC, al.id DESC
-                     LIMIT ' . (int) $perPage . ' OFFSET ' . (int) $offset;
+                     LIMIT ' . (int) ($perPage + 1) . ' OFFSET ' . (int) $offset;
 
-        $total = (int) ((Database::fetch($countSql, $bindings)['aggregate'] ?? 0));
-        $items = Database::fetchAll($itemsSql, $bindings);
+        $window = PaginatedWindow::resolve(
+            Database::fetchAll($itemsSql, $bindings),
+            $page,
+            $perPage,
+            static fn (): int => (int) ((Database::fetch($countSql, $bindings)['aggregate'] ?? 0))
+        );
+        $items = $window['items'];
 
         foreach ($items as &$item) {
             $item['old_values'] = $item['old_values'] ? json_decode((string) $item['old_values'], true) : [];
@@ -63,7 +69,7 @@ class AuditLog
 
         return [
             'items' => $items,
-            'total' => $total,
+            'total' => $window['total'],
         ];
     }
 }

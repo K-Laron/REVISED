@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
+use App\Support\Pagination\PaginatedWindow;
 
 class Invoice
 {
@@ -19,21 +20,21 @@ class Invoice
              LEFT JOIN animals a ON a.id = i.animal_id
              {$whereSql}
              ORDER BY i.created_at DESC
-             LIMIT {$perPage} OFFSET {$offset}",
+             LIMIT " . ($perPage + 1) . " OFFSET {$offset}",
             $bindings
         );
 
-        $count = Database::fetch(
-            "SELECT COUNT(*) AS aggregate
-             FROM invoices i
-             {$whereSql}",
-            $bindings
+        return PaginatedWindow::resolve(
+            $rows,
+            $page,
+            $perPage,
+            static fn (): int => (int) ((Database::fetch(
+                "SELECT COUNT(*) AS aggregate
+                 FROM invoices i
+                 {$whereSql}",
+                $bindings
+            )['aggregate'] ?? 0))
         );
-
-        return [
-            'items' => $rows,
-            'total' => (int) ($count['aggregate'] ?? 0),
-        ];
     }
 
     public function find(int $id): array|false

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
+use App\Support\Pagination\PaginatedWindow;
 
 class MedicalRecord
 {
@@ -21,23 +22,23 @@ class MedicalRecord
              INNER JOIN users v ON v.id = mr.veterinarian_id
              {$whereSql}
              ORDER BY mr.record_date DESC, mr.id DESC
-             LIMIT {$perPage} OFFSET {$offset}",
+             LIMIT " . ($perPage + 1) . " OFFSET {$offset}",
             $bindings
         );
 
-        $count = Database::fetch(
-            "SELECT COUNT(*) AS aggregate
-             FROM medical_records mr
-             INNER JOIN animals a ON a.id = mr.animal_id
-             INNER JOIN users v ON v.id = mr.veterinarian_id
-             {$whereSql}",
-            $bindings
+        return PaginatedWindow::resolve(
+            $rows,
+            $page,
+            $perPage,
+            static fn (): int => (int) ((Database::fetch(
+                "SELECT COUNT(*) AS aggregate
+                 FROM medical_records mr
+                 INNER JOIN animals a ON a.id = mr.animal_id
+                 INNER JOIN users v ON v.id = mr.veterinarian_id
+                 {$whereSql}",
+                $bindings
+            )['aggregate'] ?? 0))
         );
-
-        return [
-            'items' => $rows,
-            'total' => (int) ($count['aggregate'] ?? 0),
-        ];
     }
 
     public function create(array $data): int
