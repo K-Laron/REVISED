@@ -20,4 +20,15 @@ final class PortalLandingViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('portal-featured-ledger', $html);
         self::assertStringContainsString('data-carousel-track', $html);
     }
+
+    public function testPortalLandingStylesDeclareDarkThemeSurfaceOverrides(): void
+    {
+        $variables = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\css\\variables.css');
+        $stylesheet = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\css\\portal.css');
+
+        self::assertStringContainsString('--color-bg-warm: rgba(', $variables);
+        self::assertStringContainsString('[data-theme="dark"] .portal-proof-card,', $stylesheet);
+        self::assertStringContainsString('[data-theme="dark"] .portal-featured-ledger', $stylesheet);
+        self::assertStringContainsString('[data-theme="dark"] .portal-trust-ribbon .portal-landing-trust-item', $stylesheet);
+    }
 }

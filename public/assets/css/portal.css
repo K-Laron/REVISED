@@ -126,6 +126,20 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-warm) 70%, white), color-mix(in srgb, var(--color-bg-elevated) 94%, white));
 }
 
+[data-theme="dark"] .portal-proof-card,
+[data-theme="dark"] .portal-featured-ledger {
+  background:
+    radial-gradient(circle at top center, rgba(147, 197, 253, 0.14), transparent 46%),
+    linear-gradient(180deg, rgba(34, 51, 80, 0.94), rgba(18, 29, 48, 0.92));
+  border-color: rgba(226, 232, 240, 0.18);
+  box-shadow: 0 26px 68px rgba(7, 12, 22, 0.42);
+}
+
+[data-theme="dark"] .portal-trust-ribbon .portal-landing-trust-item {
+  background: linear-gradient(180deg, rgba(57, 73, 105, 0.94), rgba(28, 43, 68, 0.9));
+  border-color: rgba(226, 232, 240, 0.16);
+}
+
 .portal-landing-highlight-head,
 .portal-landing-band-copy,
 .portal-landing-cta-copy {
