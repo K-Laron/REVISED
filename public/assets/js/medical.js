@@ -1,3 +1,27 @@
+function apiRequest(url, options = {}) {
+  return window.CatarmanApi.request(url, options);
+}
+
+function extractError(payload) {
+  return window.CatarmanApi.extractError(payload, 'Unexpected server response.');
+}
+
+function escapeHtml(value) {
+  return window.CatarmanDom.escapeHtml(value);
+}
+
+function titleCase(value) {
+  return window.CatarmanFormatters.titleCase(value);
+}
+
+function formatDate(value, fallback = 'No due date') {
+  return window.CatarmanFormatters.formatDate(value, fallback);
+}
+
+function formatDateTime(value, fallback = 'N/A') {
+  return window.CatarmanFormatters.formatDateTime(value, fallback);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   bindMedicalIndex();
   bindMedicalForm();
@@ -40,12 +64,8 @@ function bindMedicalIndex() {
     params.set('page', String(pageNumber));
     params.set('per_page', '20');
 
-    const response = await fetch('/api/medical?' + params.toString(), {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
+    const { ok, data: result } = await apiRequest('/api/medical?' + params.toString());
+    if (!ok) {
       window.toast?.error('Medical records load failed', extractError(result));
       return;
     }
@@ -108,11 +128,8 @@ function bindMedicalIndex() {
   }
 
   async function loadDue(endpoint, listId, countId, labelKey, dueKey) {
-    const response = await fetch(endpoint, {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-    if (!response.ok) return;
+    const { ok, data: result } = await apiRequest(endpoint);
+    if (!ok) return;
 
     const items = Array.isArray(result.data) ? result.data : [];
     const container = document.getElementById(listId);
@@ -195,17 +212,13 @@ function bindMedicalForm() {
     formData.set('prescriptions', JSON.stringify(collectPrescriptionRows()));
     formData.set('lab_results', JSON.stringify(labRows));
 
-    const response = await fetch(endpoint, {
+    const { data: result } = await apiRequest(endpoint, {
       method,
-      headers: {
-        Accept: 'application/json',
-        'X-CSRF-TOKEN': form.elements._token.value
-      },
+      csrfToken: form.elements._token.value,
       body: formData
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Medical save failed', extractError(result));
       return;
     }
@@ -215,16 +228,12 @@ function bindMedicalForm() {
   });
 
   deleteButton?.addEventListener('click', async () => {
-    const response = await fetch(`/api/medical/${recordId}`, {
+    const { data: result } = await apiRequest(`/api/medical/${recordId}`, {
       method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'X-CSRF-TOKEN': form.elements._token.value
-      }
+      csrfToken: form.elements._token.value
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Delete failed', extractError(result));
       return;
     }
@@ -276,43 +285,6 @@ function addDays(value, days) {
   if (Number.isNaN(date.getTime())) return '';
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
-}
-
-function titleCase(value) {
-  return String(value)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatDate(value) {
-  if (!value) return 'No due date';
-  return new Date(value).toLocaleDateString();
-}
-
-function formatDateTime(value) {
-  if (!value) return 'N/A';
-  return new Date(value.replace(' ', 'T')).toLocaleString();
-}
-
-function extractError(result) {
-  if (result?.error?.details && typeof result.error.details === 'object') {
-    const firstKey = Object.keys(result.error.details)[0];
-    const detail = result.error.details[firstKey];
-    if (Array.isArray(detail) && detail[0]) {
-      return detail[0];
-    }
-  }
-
-  return result?.error?.message || 'Unexpected server response.';
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function collectPrescriptionRows() {

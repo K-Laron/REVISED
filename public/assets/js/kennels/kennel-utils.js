@@ -13,23 +13,11 @@
   }
 
   function extractError(result) {
-    if (result?.error?.details && typeof result.error.details === 'object') {
-      const firstKey = Object.keys(result.error.details)[0];
-      if (firstKey && Array.isArray(result.error.details[firstKey])) {
-        return result.error.details[firstKey][0];
-      }
-    }
-
-    return result?.error?.message || 'Request failed.';
+    return window.CatarmanApi.extractError(result);
   }
 
   function escapeHtml(value) {
-    return String(value ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
+    return window.CatarmanDom.escapeHtml(value);
   }
 
   function escapeRegExp(value) {

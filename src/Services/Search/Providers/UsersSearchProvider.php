@@ -9,6 +9,27 @@ use App\Services\Search\AbstractSearchProvider;
 
 final class UsersSearchProvider extends AbstractSearchProvider
 {
+    public function secondaryFilters(): array
+    {
+        return [
+            'users_status' => [
+                'label' => 'User State',
+                'options' => [
+                    ['value' => 'active', 'label' => 'Active'],
+                    ['value' => 'inactive', 'label' => 'Inactive'],
+                ],
+            ],
+        ];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [
+            'user_active' => ['key' => 'users_status', 'value' => 'active'],
+            'user_inactive' => ['key' => 'users_status', 'value' => 'inactive'],
+        ];
+    }
+
     public function key(): string
     {
         return 'users';

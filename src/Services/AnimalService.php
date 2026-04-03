@@ -24,13 +24,19 @@ class AnimalService
     private QrCodeService $qrCodes;
     private AuditService $audit;
 
-    public function __construct()
+    public function __construct(
+        ?Animal $animals = null,
+        ?Breed $breeds = null,
+        ?AnimalPhoto $photos = null,
+        ?QrCodeService $qrCodes = null,
+        ?AuditService $audit = null
+    )
     {
-        $this->animals = new Animal();
-        $this->breeds = new Breed();
-        $this->photos = new AnimalPhoto();
-        $this->qrCodes = new QrCodeService();
-        $this->audit = new AuditService();
+        $this->animals = $animals ?? new Animal();
+        $this->breeds = $breeds ?? new Breed();
+        $this->photos = $photos ?? new AnimalPhoto();
+        $this->qrCodes = $qrCodes ?? new QrCodeService();
+        $this->audit = $audit ?? new AuditService();
     }
 
     public function list(array $filters, int $page, int $perPage): array

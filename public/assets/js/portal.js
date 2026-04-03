@@ -1,31 +1,6 @@
 (() => {
-  const escapeHtml = (value) => String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-
-  const parseResponse = async (response) => {
-    let result;
-    try {
-      result = await response.json();
-    } catch {
-      if (!response.ok) {
-        throw { message: 'The server returned an unexpected response.', errors: {} };
-      }
-
-      return { success: true, data: {}, meta: {}, message: '' };
-    }
-
-    if (!response.ok) {
-      const errors = result.error?.details ?? {};
-      const message = result.error?.message ?? 'Request failed.';
-      throw { message, errors };
-    }
-
-    return result;
-  };
+  const escapeHtml = (value) => window.CatarmanDom.escapeHtml(value);
+  const parseResponse = (response) => window.CatarmanApi.parseResponse(response);
 
   const formatErrors = (errors) => {
     const parts = [];

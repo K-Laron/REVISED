@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
-use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\UserService;
@@ -18,6 +18,7 @@ use RuntimeException;
 class UserController
 {
     use InteractsWithApi;
+    use RendersViews;
 
     private UserService $users;
 
@@ -30,25 +31,25 @@ class UserController
     {
         $authUser = $this->currentUser($request);
 
-        return Response::html(View::render('users.index', [
+        return $this->renderAppView('users.index', [
             'title' => 'User Management',
             'extraCss' => ['/assets/css/users.css'],
             'extraJs' => ['/assets/js/users.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'roles' => $this->users->roles(),
             'canManageRolePermissions' => (($authUser['role_name'] ?? null) === 'super_admin'),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function create(Request $request): Response
     {
-        return Response::html(View::render('users.create', [
+        return $this->renderAppView('users.create', [
             'title' => 'Create User',
             'extraCss' => ['/assets/css/users.css'],
             'extraJs' => ['/assets/js/users.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'roles' => $this->users->roles(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function show(Request $request, string $id): Response
@@ -59,14 +60,14 @@ class UserController
             return Response::redirect('/users');
         }
 
-        return Response::html(View::render('users.show', [
+        return $this->renderAppView('users.show', [
             'title' => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
             'extraCss' => ['/assets/css/users.css'],
             'extraJs' => ['/assets/js/users.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'userRecord' => $user,
             'roles' => $this->users->roles(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function list(Request $request): Response

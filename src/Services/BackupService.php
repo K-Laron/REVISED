@@ -19,10 +19,10 @@ class BackupService
     private SystemBackup $backups;
     private AuditService $audit;
 
-    public function __construct()
+    public function __construct(?SystemBackup $backups = null, ?AuditService $audit = null)
     {
-        $this->backups = new SystemBackup();
-        $this->audit = new AuditService();
+        $this->backups = $backups ?? new SystemBackup();
+        $this->audit = $audit ?? new AuditService();
     }
 
     public function health(): array

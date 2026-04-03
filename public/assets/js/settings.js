@@ -2,6 +2,18 @@ document.addEventListener('DOMContentLoaded', () => {
   bindSettingsPage();
 });
 
+function apiRequest(url, options = {}) {
+  return window.CatarmanApi.request(url, options);
+}
+
+function extractError(payload) {
+  return window.CatarmanApi.extractError(payload);
+}
+
+function escapeHtml(value) {
+  return window.CatarmanDom.escapeHtml(value);
+}
+
 function bindSettingsPage() {
   const page = document.getElementById('settings-page');
   if (!page) return;
@@ -255,32 +267,6 @@ function bindSettingsPage() {
   }
 }
 
-async function apiRequest(url, options = {}) {
-  const headers = {
-    Accept: 'application/json',
-    ...(options.headers || {})
-  };
-
-  if (options.csrfToken) {
-    headers['X-CSRF-TOKEN'] = options.csrfToken;
-  }
-
-  const response = await fetch(url, {
-    method: options.method || 'GET',
-    headers,
-    body: options.body
-  });
-
-  let data = {};
-  try {
-    data = await response.json();
-  } catch (error) {
-    data = {};
-  }
-
-  return { ok: response.ok, data };
-}
-
 function renderStatus(status) {
   const normalized = String(status || '').toLowerCase();
   const variant = normalized === 'completed'
@@ -311,15 +297,3 @@ function truncate(value) {
   return stringValue.slice(0, 8) + '…' + stringValue.slice(-8);
 }
 
-function extractError(payload) {
-  return payload?.error?.message || 'Request failed.';
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}

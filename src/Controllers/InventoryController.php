@@ -5,29 +5,33 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
-use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\InventoryService;
 use App\Support\Pagination;
+use App\Support\Validation\InventoryInputValidator;
 use RuntimeException;
 
 class InventoryController
 {
     use InteractsWithApi;
+    use RendersViews;
 
     private InventoryService $inventory;
+    private InventoryInputValidator $validator;
 
     public function __construct()
     {
         $this->inventory = new InventoryService();
+        $this->validator = new InventoryInputValidator();
     }
 
     public function index(Request $request): Response
     {
-        return Response::html(View::render('inventory.index', [
+        return $this->renderAppView('inventory.index', [
             'title' => 'Inventory Management',
             'extraCss' => ['/assets/css/inventory.css'],
             'extraJs' => [
@@ -37,7 +41,7 @@ class InventoryController
             ],
             'csrfToken' => CsrfMiddleware::token(),
             'categories' => $this->inventory->categories(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function show(Request $request, string $id): Response
@@ -51,11 +55,11 @@ class InventoryController
             ]), 404);
         }
 
-        return Response::html(View::render('inventory.show', [
+        return $this->renderAppView('inventory.show', [
             'title' => (string) ($item['name'] ?? 'Inventory Item'),
             'extraCss' => ['/assets/css/inventory.css'],
             'item' => $item,
-        ], 'layouts.app'));
+        ]);
     }
 
     public function list(Request $request): Response
@@ -80,19 +84,7 @@ class InventoryController
 
     public function store(Request $request): Response
     {
-        $validator = (new Validator($request->body()))->rules([
-            'sku' => 'required|string|max:50',
-            'name' => 'required|string|max:200',
-            'category_id' => 'required|integer|exists:inventory_categories,id',
-            'unit_of_measure' => 'required|in:pcs,ml,mg,kg,box,pack,bottle,vial,tube,roll',
-            'cost_per_unit' => 'nullable|numeric|between:0,999999',
-            'supplier_name' => 'nullable|string|max:200',
-            'supplier_contact' => 'nullable|string|max:100',
-            'reorder_level' => 'required|integer|between:0,10000',
-            'quantity_on_hand' => 'required|integer|between:0,99999',
-            'storage_location' => 'nullable|string|max:100',
-            'expiry_date' => 'nullable|date',
-        ]);
+        $validator = $this->validator->validateCreateItem($request->body());
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
@@ -111,18 +103,7 @@ class InventoryController
 
     public function update(Request $request, string $id): Response
     {
-        $validator = (new Validator($request->body()))->rules([
-            'sku' => 'required|string|max:50',
-            'name' => 'required|string|max:200',
-            'category_id' => 'required|integer|exists:inventory_categories,id',
-            'unit_of_measure' => 'required|in:pcs,ml,mg,kg,box,pack,bottle,vial,tube,roll',
-            'cost_per_unit' => 'nullable|numeric|between:0,999999',
-            'supplier_name' => 'nullable|string|max:200',
-            'supplier_contact' => 'nullable|string|max:100',
-            'reorder_level' => 'required|integer|between:0,10000',
-            'storage_location' => 'nullable|string|max:100',
-            'expiry_date' => 'nullable|date',
-        ]);
+        $validator = $this->validator->validateUpdateItem($request->body());
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
@@ -162,12 +143,7 @@ class InventoryController
 
     public function adjust(Request $request, string $id): Response
     {
-        $validator = (new Validator($request->body()))->rules([
-            'quantity' => 'required|integer|between:0,100000',
-            'reason' => 'required|in:purchase,donation,return,usage,dispensed,wastage,transfer,count_correction',
-            'expiry_date' => 'nullable|date',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $validator = $this->validator->validateAdjustment($request->body());
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
@@ -202,10 +178,7 @@ class InventoryController
 
     public function storeCategory(Request $request): Response
     {
-        $validator = (new Validator($request->body()))->rules([
-            'name' => 'required|string|max:100',
-            'description' => 'nullable|string|max:2000',
-        ]);
+        $validator = $this->validator->validateCategory($request->body());
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
@@ -234,14 +207,7 @@ class InventoryController
 
     private function handleStockChange(Request $request, int $itemId, string $method): Response
     {
-        $validator = (new Validator($request->body()))->rules([
-            'quantity' => 'required|integer|between:1,10000',
-            'reason' => 'required|in:purchase,donation,return,usage,dispensed,wastage,transfer,count_correction',
-            'batch_lot_number' => 'nullable|string|max:50',
-            'expiry_date' => 'nullable|date',
-            'source_supplier' => 'nullable|string|max:200',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $validator = $this->validator->validateStockChange($request->body());
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Services\Search;
 
+use App\Services\Search\AbstractSearchProvider;
 use App\Services\Search\SearchProviderInterface;
 use App\Services\SearchService;
 use PHPUnit\Framework\TestCase;
@@ -81,6 +82,20 @@ final class SearchServiceTest extends TestCase
                 'href' => '/animals',
                 'count' => 0,
                 'items' => [],
+            ],
+            [
+                'animal_lifecycle' => [
+                    'label' => 'Lifecycle',
+                    'options' => [
+                        ['value' => 'Adopted', 'label' => 'Adopted'],
+                    ],
+                ],
+            ],
+            [
+                'animal_adopted' => [
+                    'key' => 'animal_lifecycle',
+                    'value' => 'Adopted',
+                ],
             ]
         );
 
@@ -96,10 +111,10 @@ final class SearchServiceTest extends TestCase
             'date_to' => 'invalid-date',
         ]);
 
-        self::assertSame('Adopted', $animals->calls[0]['filters']['animals_status']);
+        self::assertSame('Adopted', $animals->calls[0]['filters']['animal_lifecycle']);
         self::assertSame('2026-03-01', $animals->calls[0]['filters']['date_from']);
         self::assertNull($animals->calls[0]['filters']['date_to']);
-        self::assertSame('Adopted', $result['applied_filters']['animals_status']);
+        self::assertSame('Adopted', $result['applied_filters']['animal_lifecycle']);
         self::assertSame('2026-03-01', $result['applied_filters']['date_from']);
         self::assertSame('', $result['applied_filters']['date_to']);
     }
@@ -117,6 +132,13 @@ final class SearchServiceTest extends TestCase
                 'href' => '/animals',
                 'count' => 0,
                 'items' => [],
+            ], [
+                'animal_lifecycle' => [
+                    'label' => 'Lifecycle',
+                    'options' => [
+                        ['value' => 'Available', 'label' => 'Available'],
+                    ],
+                ],
             ]),
             $this->provider('users', 'Users', 'users.read', [
                 'key' => 'users',
@@ -124,6 +146,13 @@ final class SearchServiceTest extends TestCase
                 'href' => '/users',
                 'count' => 0,
                 'items' => [],
+            ], [
+                'account_state' => [
+                    'label' => 'Account State',
+                    'options' => [
+                        ['value' => 'active', 'label' => 'Active'],
+                    ],
+                ],
             ]),
         ]);
 
@@ -136,13 +165,28 @@ final class SearchServiceTest extends TestCase
             ['key' => 'animals', 'label' => 'Animals'],
         ], $service->availableModules($user));
 
-        self::assertArrayHasKey('animals_status', $service->availableSecondaryFilters($user));
-        self::assertArrayNotHasKey('users_status', $service->availableSecondaryFilters($user));
+        self::assertSame([
+            'animal_lifecycle' => [
+                'key' => 'animal_lifecycle',
+                'module' => 'animals',
+                'label' => 'Lifecycle',
+                'options' => [
+                    ['value' => 'Available', 'label' => 'Available'],
+                ],
+            ],
+        ], $service->availableSecondaryFilters($user));
     }
 
-    private function provider(string $key, string $label, string $permission, array $section): object
+    private function provider(
+        string $key,
+        string $label,
+        string $permission,
+        array $section,
+        array $secondaryFilters = [],
+        array $legacyStatusAliases = []
+    ): object
     {
-        return new class ($key, $label, $permission, $section) implements SearchProviderInterface {
+        return new class ($key, $label, $permission, $section, $secondaryFilters, $legacyStatusAliases) extends AbstractSearchProvider {
             /** @var array<int, array{term: string, limit: int, filters: array}> */
             public array $calls = [];
 
@@ -150,7 +194,9 @@ final class SearchServiceTest extends TestCase
                 private readonly string $key,
                 private readonly string $label,
                 private readonly string $permission,
-                private readonly array $section
+                private readonly array $section,
+                private readonly array $secondaryFilters,
+                private readonly array $legacyStatusAliases
             ) {
             }
 
@@ -178,6 +224,16 @@ final class SearchServiceTest extends TestCase
                 ];
 
                 return $this->section;
+            }
+
+            public function secondaryFilters(): array
+            {
+                return $this->secondaryFilters;
+            }
+
+            public function legacyStatusAliases(): array
+            {
+                return $this->legacyStatusAliases;
             }
         };
     }

@@ -19,9 +19,9 @@ class AuthService
 {
     private User $users;
 
-    public function __construct()
+    public function __construct(?User $users = null)
     {
-        $this->users = new User();
+        $this->users = $users ?? new User();
     }
 
     public function attemptLogin(string $identifier, string $password, Request $request): array

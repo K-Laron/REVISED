@@ -1,3 +1,15 @@
+function apiRequest(url, options = {}) {
+  return window.CatarmanApi.request(url, options);
+}
+
+function extractError(payload) {
+  return window.CatarmanApi.extractError(payload);
+}
+
+function escapeHtml(value) {
+  return window.CatarmanDom.escapeHtml(value);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   bindAnimalList();
   bindAnimalForm();
@@ -25,10 +37,7 @@ function bindAnimalList() {
     const params = new URLSearchParams(new FormData(form));
     params.set('page', pageNumber);
     params.set('per_page', 20);
-    const response = await fetch('/api/animals?' + params.toString(), {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
+    const { data: result } = await apiRequest('/api/animals?' + params.toString());
     const items = Array.isArray(result.data) ? result.data : [];
     const meta = result.meta || {};
 
@@ -187,31 +196,26 @@ function bindAnimalForm() {
     const token = form.querySelector('input[name="_token"]').value;
 
     try {
-      let response;
+      let result;
       if (mode === 'create') {
-        response = await fetch('/api/animals', {
+        ({ data: result } = await apiRequest('/api/animals', {
           method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'X-CSRF-TOKEN': token
-          },
+          csrfToken: token,
           body: new FormData(form)
-        });
+        }));
       } else {
         const params = new URLSearchParams(new FormData(form));
-        response = await fetch('/api/animals/' + form.dataset.animalId, {
+        ({ data: result } = await apiRequest('/api/animals/' + form.dataset.animalId, {
           method: 'PUT',
           headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'X-CSRF-TOKEN': token
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
           },
+          csrfToken: token,
           body: params.toString()
-        });
+        }));
       }
 
-      const result = await response.json();
-      if (!response.ok) {
+      if (!result || result.error) {
         window.toast?.error('Animal save failed', extractError(result));
         return;
       }
@@ -265,17 +269,15 @@ function bindStatusForm() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const token = form.querySelector('input[name="_token"]').value;
-    const response = await fetch('/api/animals/' + form.dataset.animalId + '/status', {
+    const { data: result } = await apiRequest('/api/animals/' + form.dataset.animalId + '/status', {
       method: 'PUT',
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': token
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken: token,
       body: new URLSearchParams(new FormData(form)).toString()
     });
-    const result = await response.json();
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Status update failed', extractError(result));
       return;
     }
@@ -291,16 +293,12 @@ function bindPhotoUpload() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const token = form.querySelector('input[name="_token"]').value;
-    const response = await fetch('/api/animals/' + form.dataset.animalId + '/photos', {
+    const { data: result } = await apiRequest('/api/animals/' + form.dataset.animalId + '/photos', {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'X-CSRF-TOKEN': token
-      },
+      csrfToken: token,
       body: new FormData(form)
     });
-    const result = await response.json();
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Photo upload failed', extractError(result));
       return;
     }
@@ -322,11 +320,8 @@ function bindScanner() {
   async function resolveScan(value) {
     if (!value) return;
     try {
-      const response = await fetch('/api/animals/scan/' + encodeURIComponent(value), {
-        headers: { Accept: 'application/json' }
-      });
-      const result = await response.json();
-      if (response.ok) {
+      const { ok, data: result } = await apiRequest('/api/animals/scan/' + encodeURIComponent(value));
+      if (ok) {
         window.CatarmanApp?.navigate?.(result.data.redirect) || (window.location.href = result.data.redirect);
         return;
       }
@@ -389,11 +384,8 @@ async function loadTimeline() {
   const timeline = document.getElementById('animal-timeline');
   if (!timeline) return;
 
-  const response = await fetch('/api/animals/' + timeline.dataset.animalId + '/timeline', {
-    headers: { Accept: 'application/json' }
-  });
-  const result = await response.json();
-  if (!response.ok) {
+  const { ok, data: result } = await apiRequest('/api/animals/' + timeline.dataset.animalId + '/timeline');
+  if (!ok) {
     timeline.innerHTML = '<div class="timeline-entry">Unable to load timeline.</div>';
     return;
   }
@@ -423,19 +415,4 @@ function badgeForStatus(status) {
     'Transferred': 'badge-info',
     'Quarantine': 'badge-warning'
   })[status] || 'badge-info';
-}
-
-function extractError(result) {
-  if (!result?.error) return 'Request failed.';
-  if (typeof result.error.message === 'string') return result.error.message;
-  return 'Request failed.';
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }

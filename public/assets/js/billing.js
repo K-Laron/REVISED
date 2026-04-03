@@ -1,3 +1,19 @@
+function apiRequest(url, options = {}) {
+  return window.CatarmanApi.request(url, options);
+}
+
+function extractError(payload) {
+  return window.CatarmanApi.extractError(payload);
+}
+
+function escapeHtml(value) {
+  return window.CatarmanDom.escapeHtml(value);
+}
+
+function currency(value) {
+  return window.CatarmanFormatters.currency(value);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   bindBillingTabs();
   bindBillingDashboard();
@@ -35,18 +51,16 @@ function bindBillingDashboard() {
     const endpoint = id ? `/api/billing/fee-schedule/${id}` : '/api/billing/fee-schedule';
     const method = id ? 'PUT' : 'POST';
 
-    const response = await fetch(endpoint, {
+    const { data: result } = await apiRequest(endpoint, {
       method,
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': csrfToken
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken,
       body: new URLSearchParams(formData).toString()
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Fee save failed', extractError(result));
       return;
     }
@@ -64,9 +78,8 @@ function bindBillingDashboard() {
   loadFees();
 
   async function loadStats() {
-    const response = await fetch('/api/billing/stats', { headers: { Accept: 'application/json' } });
-    const result = await response.json();
-    if (!response.ok) return;
+    const { ok, data: result } = await apiRequest('/api/billing/stats');
+    if (!ok) return;
 
     document.getElementById('billing-stat-revenue').textContent = currency(result.data.total_revenue_month);
     document.getElementById('billing-stat-outstanding').textContent = currency(result.data.outstanding_balance);
@@ -80,11 +93,8 @@ function bindBillingDashboard() {
     const form = document.getElementById('billing-invoice-filter-form');
     const params = new URLSearchParams(new FormData(form));
     params.set('per_page', '20');
-    const response = await fetch('/api/billing/invoices?' + params.toString(), {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-    if (!response.ok) return;
+    const { ok, data: result } = await apiRequest('/api/billing/invoices?' + params.toString());
+    if (!ok) return;
 
     const tbody = document.getElementById('billing-invoice-table-body');
     tbody.innerHTML = '';
@@ -109,11 +119,8 @@ function bindBillingDashboard() {
     const form = document.getElementById('billing-payment-filter-form');
     const params = new URLSearchParams(new FormData(form));
     params.set('per_page', '20');
-    const response = await fetch('/api/billing/payments?' + params.toString(), {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-    if (!response.ok) return;
+    const { ok, data: result } = await apiRequest('/api/billing/payments?' + params.toString());
+    if (!ok) return;
 
     const tbody = document.getElementById('billing-payment-table-body');
     tbody.innerHTML = '';
@@ -135,11 +142,8 @@ function bindBillingDashboard() {
   }
 
   async function loadFees() {
-    const response = await fetch('/api/billing/fee-schedule', {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-    if (!response.ok) return;
+    const { ok, data: result } = await apiRequest('/api/billing/fee-schedule');
+    if (!ok) return;
 
     const tbody = document.getElementById('billing-fee-table-body');
     tbody.innerHTML = '';
@@ -200,18 +204,16 @@ function bindInvoiceCreate() {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const response = await fetch('/api/billing/invoices', {
+    const { data: result } = await apiRequest('/api/billing/invoices', {
       method: 'POST',
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': csrfToken
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken,
       body: new URLSearchParams(new FormData(form)).toString()
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Invoice create failed', extractError(result));
       return;
     }
@@ -291,18 +293,16 @@ function bindInvoiceShow() {
 
   paymentForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const response = await fetch(`/api/billing/invoices/${invoiceId}/payments`, {
+    const { data: result } = await apiRequest(`/api/billing/invoices/${invoiceId}/payments`, {
       method: 'POST',
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': csrfToken
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken,
       body: new URLSearchParams(new FormData(paymentForm)).toString()
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Payment failed', extractError(result));
       return;
     }
@@ -313,18 +313,16 @@ function bindInvoiceShow() {
 
   voidForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const response = await fetch(`/api/billing/invoices/${invoiceId}/void`, {
+    const { data: result } = await apiRequest(`/api/billing/invoices/${invoiceId}/void`, {
       method: 'POST',
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': csrfToken
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken,
       body: new URLSearchParams(new FormData(voidForm)).toString()
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Void failed', extractError(result));
       return;
     }
@@ -332,31 +330,4 @@ function bindInvoiceShow() {
     window.toast?.success('Invoice voided', result.message);
     window.CatarmanApp?.reload?.() || window.location.reload();
   });
-}
-
-function currency(value) {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP'
-  }).format(Number(value || 0));
-}
-
-function extractError(result) {
-  if (result?.error?.details && typeof result.error.details === 'object') {
-    const firstKey = Object.keys(result.error.details)[0];
-    if (firstKey && Array.isArray(result.error.details[firstKey])) {
-      return result.error.details[firstKey][0];
-    }
-  }
-
-  return result?.error?.message || 'Request failed.';
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }

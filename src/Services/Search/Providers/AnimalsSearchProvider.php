@@ -9,6 +9,31 @@ use App\Services\Search\AbstractSearchProvider;
 
 final class AnimalsSearchProvider extends AbstractSearchProvider
 {
+    public function secondaryFilters(): array
+    {
+        return [
+            'animals_status' => [
+                'label' => 'Animal Status',
+                'options' => [
+                    ['value' => 'Available', 'label' => 'Available'],
+                    ['value' => 'Adopted', 'label' => 'Adopted'],
+                    ['value' => 'Under Medical Care', 'label' => 'Under Medical Care'],
+                    ['value' => 'Quarantine', 'label' => 'Quarantine'],
+                ],
+            ],
+        ];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [
+            'animal_available' => ['key' => 'animals_status', 'value' => 'Available'],
+            'animal_adopted' => ['key' => 'animals_status', 'value' => 'Adopted'],
+            'animal_medical' => ['key' => 'animals_status', 'value' => 'Under Medical Care'],
+            'animal_quarantine' => ['key' => 'animals_status', 'value' => 'Quarantine'],
+        ];
+    }
+
     public function key(): string
     {
         return 'animals';

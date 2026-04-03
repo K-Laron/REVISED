@@ -21,13 +21,19 @@ class KennelService
     private Animal $animals;
     private AuditService $audit;
 
-    public function __construct()
+    public function __construct(
+        ?Kennel $kennels = null,
+        ?KennelAssignment $assignments = null,
+        ?KennelMaintenanceLog $maintenance = null,
+        ?Animal $animals = null,
+        ?AuditService $audit = null
+    )
     {
-        $this->kennels = new Kennel();
-        $this->assignments = new KennelAssignment();
-        $this->maintenance = new KennelMaintenanceLog();
-        $this->animals = new Animal();
-        $this->audit = new AuditService();
+        $this->kennels = $kennels ?? new Kennel();
+        $this->assignments = $assignments ?? new KennelAssignment();
+        $this->maintenance = $maintenance ?? new KennelMaintenanceLog();
+        $this->animals = $animals ?? new Animal();
+        $this->audit = $audit ?? new AuditService();
     }
 
     public function list(array $filters = []): array

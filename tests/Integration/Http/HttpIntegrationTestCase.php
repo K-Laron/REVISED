@@ -5,76 +5,46 @@ declare(strict_types=1);
 namespace Tests\Integration\Http;
 
 require_once __DIR__ . '/../DatabaseIntegrationTestCase.php';
+require_once __DIR__ . '/../Support/HttpTestEnvironment.php';
 
 use App\Core\Request;
-use App\Core\Response;
 use App\Core\Router;
-use App\Core\Session;
-use App\Middleware\AuthMiddleware;
-use App\Middleware\CorsMiddleware;
 use App\Middleware\CsrfMiddleware;
-use App\Middleware\GuestMiddleware;
-use App\Middleware\PermissionMiddleware;
-use App\Middleware\RateLimitMiddleware;
-use App\Middleware\RoleMiddleware;
 use App\Models\User;
 use Tests\Integration\DatabaseIntegrationTestCase;
+use Tests\Integration\Support\HttpTestEnvironment;
 
 abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
 {
+    private ?HttpTestEnvironment $environment = null;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $_SERVER = [
-            'REMOTE_ADDR' => '127.0.0.1',
-            'HTTP_USER_AGENT' => 'PHPUnit HTTP Test',
-            'REQUEST_URI' => '/',
-        ];
-        $_GET = [];
-        $_POST = [];
-        $_COOKIE = [];
-
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            Session::start();
-        }
+        $this->environment()->resetGlobals();
+        $this->environment()->ensureSessionStarted();
 
         $_SESSION = [];
         unset($_ENV['APP_PERFORMANCE_DEBUG']);
-        $GLOBALS['app'] = $this->appConfig();
-        Response::resetSentHeaders();
-        header_remove();
-        http_response_code(200);
+        $GLOBALS['app'] = $this->environment()->appConfig();
+        $this->environment()->resetResponseState();
     }
 
     protected function tearDown(): void
     {
         $_SESSION = [];
         unset($_ENV['APP_PERFORMANCE_DEBUG']);
-        Response::resetSentHeaders();
-        header_remove();
-        http_response_code(200);
+        $this->environment()->resetResponseState();
 
         parent::tearDown();
     }
 
     protected function dispatchJson(string $method, string $uri, array $body = [], array $query = [], array $server = []): array
     {
-        $requestUri = $this->requestUri($uri, $query);
-        $_SERVER = array_merge([
-            'REQUEST_METHOD' => strtoupper($method),
-            'REQUEST_URI' => $requestUri,
-            'REMOTE_ADDR' => '127.0.0.1',
-            'HTTP_USER_AGENT' => 'PHPUnit HTTP Test',
-            'HTTP_ACCEPT' => 'application/json',
-        ], $server);
-        $_GET = $query;
-        $_POST = [];
-        $_COOKIE = [];
-        $GLOBALS['app'] = $this->appConfig();
-        Response::resetSentHeaders();
-        header_remove();
-        http_response_code(200);
+        $_SERVER = $this->environment()->primeJsonRequest($method, $uri, $query, $server);
+        $GLOBALS['app'] = $this->environment()->appConfig();
+        $this->environment()->resetResponseState();
 
         $request = new Request($_SERVER, $query, $body, [], $_COOKIE);
 
@@ -90,7 +60,7 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
             'status' => http_response_code(),
             'content' => $content,
             'json' => $content !== '' ? json_decode($content, true, 512, JSON_THROW_ON_ERROR) : [],
-            'headers' => $this->capturedHeaders(),
+            'headers' => $this->environment()->capturedHeaders(),
         ];
     }
 
@@ -110,8 +80,8 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
             date('Y-m-d H:i:s', time() + 3600)
         );
 
-        Session::put('auth.user', $hydrated);
-        Session::put('auth.session_token', $token);
+        \App\Core\Session::put('auth.user', $hydrated);
+        \App\Core\Session::put('auth.session_token', $token);
 
         return $hydrated;
     }
@@ -121,49 +91,12 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
         return CsrfMiddleware::token();
     }
 
-    private function requestUri(string $uri, array $query): string
+    private function environment(): HttpTestEnvironment
     {
-        if ($query === []) {
-            return $uri;
+        if ($this->environment === null) {
+            $this->environment = new HttpTestEnvironment();
         }
 
-        return $uri . '?' . http_build_query($query);
-    }
-
-    private function appConfig(): array
-    {
-        return [
-            'name' => 'Catarman Animal Shelter',
-            'settings' => [],
-            'middleware_aliases' => [
-                'auth' => AuthMiddleware::class,
-                'guest' => GuestMiddleware::class,
-                'role' => RoleMiddleware::class,
-                'perm' => PermissionMiddleware::class,
-                'throttle' => RateLimitMiddleware::class,
-                'cors' => CorsMiddleware::class,
-                'csrf' => CsrfMiddleware::class,
-            ],
-        ];
-    }
-
-    private function capturedHeaders(): array
-    {
-        $headers = Response::sentHeaders();
-
-        if ($headers !== []) {
-            return $headers;
-        }
-
-        foreach (headers_list() as $headerLine) {
-            if (!str_contains($headerLine, ':')) {
-                continue;
-            }
-
-            [$name, $value] = array_map('trim', explode(':', $headerLine, 2));
-            $headers[$name] = $value;
-        }
-
-        return $headers;
+        return $this->environment;
     }
 }

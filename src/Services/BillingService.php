@@ -12,6 +12,8 @@ use App\Models\FeeSchedule;
 use App\Models\Invoice;
 use App\Models\InvoiceLineItem;
 use App\Models\Payment;
+use App\Services\Billing\BillingDocumentManager;
+use App\Services\Billing\BillingNotificationDispatcher;
 use App\Services\Billing\InvoiceComputation;
 use App\Support\InputNormalizer;
 use RuntimeException;
@@ -25,16 +27,30 @@ class BillingService
     private PdfService $pdfs;
     private AuditService $audit;
     private InvoiceComputation $computation;
+    private BillingDocumentManager $documents;
+    private BillingNotificationDispatcher $notifications;
 
-    public function __construct()
+    public function __construct(
+        ?Invoice $invoices = null,
+        ?InvoiceLineItem $lineItems = null,
+        ?Payment $payments = null,
+        ?FeeSchedule $fees = null,
+        ?PdfService $pdfs = null,
+        ?AuditService $audit = null,
+        ?InvoiceComputation $computation = null,
+        ?BillingDocumentManager $documents = null,
+        ?BillingNotificationDispatcher $notifications = null
+    )
     {
-        $this->invoices = new Invoice();
-        $this->lineItems = new InvoiceLineItem();
-        $this->payments = new Payment();
-        $this->fees = new FeeSchedule();
-        $this->pdfs = new PdfService();
-        $this->audit = new AuditService();
-        $this->computation = new InvoiceComputation();
+        $this->invoices = $invoices ?? new Invoice();
+        $this->lineItems = $lineItems ?? new InvoiceLineItem();
+        $this->payments = $payments ?? new Payment();
+        $this->fees = $fees ?? new FeeSchedule();
+        $this->pdfs = $pdfs ?? new PdfService();
+        $this->audit = $audit ?? new AuditService();
+        $this->computation = $computation ?? new InvoiceComputation();
+        $this->documents = $documents ?? new BillingDocumentManager($this->invoices, $this->payments, $this->pdfs);
+        $this->notifications = $notifications ?? new BillingNotificationDispatcher(new NotificationService());
     }
 
     public function listInvoices(array $filters, int $page, int $perPage): array
@@ -121,18 +137,11 @@ class BillingService
         }
 
         $invoice = $this->getInvoice($invoiceId);
-        $pdfPath = $this->pdfs->invoice($invoice);
-        $this->invoices->updatePdfPath($invoiceId, $pdfPath);
+        $this->documents->refreshInvoicePdf($invoice);
         $invoice = $this->getInvoice($invoiceId);
 
         $this->audit->record($userId, 'create', 'billing', 'invoices', $invoiceId, [], $invoice, $request);
-
-        (new \App\Services\NotificationService())->notifyRole('billing_clerk', [
-            'type' => 'info',
-            'title' => 'New Invoice Created',
-            'message' => 'Invoice ' . $invoice['invoice_number'] . ' is pending payment.',
-            'link' => '/billing/invoices/' . $invoiceId
-        ]);
+        $this->notifications->notifyInvoiceCreated($invoice);
 
         return $invoice;
     }
@@ -183,8 +192,7 @@ class BillingService
         }
 
         $invoice = $this->getInvoice($invoiceId);
-        $pdfPath = $this->pdfs->invoice($invoice);
-        $this->invoices->updatePdfPath($invoiceId, $pdfPath);
+        $this->documents->refreshInvoicePdf($invoice);
         $invoice = $this->getInvoice($invoiceId);
 
         $this->audit->record($userId, 'update', 'billing', 'invoices', $invoiceId, $current, $invoice, $request);
@@ -272,8 +280,7 @@ class BillingService
             throw new RuntimeException('Payment record was not created.');
         }
 
-        $receiptPath = $this->pdfs->receipt($payment, $updatedInvoice);
-        $this->payments->updateReceiptPath($paymentId, $receiptPath);
+        $this->documents->refreshReceipt($payment, $updatedInvoice);
         $payment = $this->payments->find($paymentId);
 
         $this->audit->record($userId, 'create', 'billing', 'payments', $paymentId, [], $payment ?: [], $request);

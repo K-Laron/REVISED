@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Middleware\CsrfMiddleware;
 use App\Services\DashboardService;
 
 class DashboardController
 {
+    use RendersViews;
+
     private DashboardService $dashboard;
 
     public function __construct()
@@ -21,13 +23,13 @@ class DashboardController
 
     public function index(Request $request): Response
     {
-        return Response::html(View::render('dashboard.index', [
+        return $this->renderAppView('dashboard.index', [
             'user' => $request->attribute('auth_user'),
             'csrfToken' => CsrfMiddleware::token(),
             'title' => 'Dashboard',
             'extraCss' => ['/assets/css/dashboard.css'],
             'extraJs' => ['/assets/vendor/chart.js/chart.umd.js', '/assets/js/dashboard.js'],
-        ], 'layouts.app'));
+        ]);
     }
 
     public function stats(Request $request): Response

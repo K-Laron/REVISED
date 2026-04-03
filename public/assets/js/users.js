@@ -4,6 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
   bindUserShow();
 });
 
+function apiRequest(url, options = {}) {
+  return window.CatarmanApi.request(url, options);
+}
+
+function extractError(payload) {
+  return window.CatarmanApi.extractError(payload);
+}
+
+function escapeHtml(value) {
+  return window.CatarmanDom.escapeHtml(value);
+}
+
 function bindUsersIndex() {
   const page = document.getElementById('users-page');
   if (!page) return;
@@ -298,47 +310,8 @@ function bindUserShow() {
   });
 }
 
-async function apiRequest(url, options = {}) {
-  const headers = {
-    Accept: 'application/json',
-    ...(options.headers || {})
-  };
-
-  if (options.csrfToken) {
-    headers['X-CSRF-TOKEN'] = options.csrfToken;
-  }
-
-  const response = await fetch(url, {
-    method: options.method || 'GET',
-    headers,
-    body: options.body
-  });
-
-  let data = {};
-  try {
-    data = await response.json();
-  } catch (error) {
-    data = {};
-  }
-
-  return { ok: response.ok, data };
-}
-
-function extractError(payload) {
-  return payload?.error?.message || 'Request failed.';
-}
-
 function renderUserStatus(item) {
   if (Number(item.is_deleted) === 1) return '<span class="badge badge-danger">Deleted</span>';
   if (Number(item.is_active) === 1) return '<span class="badge badge-success">Active</span>';
   return '<span class="badge badge-warning">Inactive</span>';
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }

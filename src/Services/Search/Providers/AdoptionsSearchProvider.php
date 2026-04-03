@@ -9,6 +9,30 @@ use App\Services\Search\AbstractSearchProvider;
 
 final class AdoptionsSearchProvider extends AbstractSearchProvider
 {
+    public function secondaryFilters(): array
+    {
+        return [
+            'adoption_status' => [
+                'label' => 'Adoption Status',
+                'options' => [
+                    ['value' => 'pending_review', 'label' => 'Pending Review'],
+                    ['value' => 'interview_scheduled', 'label' => 'Interview Scheduled'],
+                    ['value' => 'completed', 'label' => 'Completed'],
+                    ['value' => 'rejected', 'label' => 'Rejected'],
+                ],
+            ],
+        ];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [
+            'adoption_pending' => ['key' => 'adoption_status', 'value' => 'pending_review'],
+            'adoption_completed' => ['key' => 'adoption_status', 'value' => 'completed'],
+            'adoption_rejected' => ['key' => 'adoption_status', 'value' => 'rejected'],
+        ];
+    }
+
     public function key(): string
     {
         return 'adoptions';

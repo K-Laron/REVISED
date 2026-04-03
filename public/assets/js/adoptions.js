@@ -1,3 +1,27 @@
+function apiRequest(url, options = {}) {
+  return window.CatarmanApi.request(url, options);
+}
+
+function extractError(payload) {
+  return window.CatarmanApi.extractError(payload, 'Unexpected server response.');
+}
+
+function escapeHtml(value) {
+  return window.CatarmanDom.escapeHtml(value);
+}
+
+function toDateTimeLocal(value) {
+  return window.CatarmanFormatters.toDateTimeLocal(value);
+}
+
+function formatDateTime(value, fallback = 'N/A') {
+  return window.CatarmanFormatters.formatDateTime(value, fallback);
+}
+
+function titleCase(value) {
+  return window.CatarmanFormatters.titleCase(value);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   bindAdoptionIndex();
   bindAdoptionShow();
@@ -28,18 +52,16 @@ function bindAdoptionIndex() {
   seminarForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const response = await fetch('/api/adoptions/seminars', {
+    const { data: result } = await apiRequest('/api/adoptions/seminars', {
       method: 'POST',
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': pageData.csrfToken
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken: pageData.csrfToken,
       body: new URLSearchParams(new FormData(seminarForm)).toString()
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error('Seminar create failed', extractError(result));
       return;
     }
@@ -55,12 +77,8 @@ function bindAdoptionIndex() {
   loadSeminars();
 
   async function loadStats() {
-    const response = await fetch('/api/adoptions/pipeline-stats', {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
+    const { ok, data: result } = await apiRequest('/api/adoptions/pipeline-stats');
+    if (!ok) {
       window.toast?.error('Pipeline load failed', extractError(result));
       return;
     }
@@ -90,12 +108,8 @@ function bindAdoptionIndex() {
     params.set('page', '1');
     params.set('per_page', '60');
 
-    const response = await fetch('/api/adoptions?' + params.toString(), {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
+    const { ok, data: result } = await apiRequest('/api/adoptions?' + params.toString());
+    if (!ok) {
       window.toast?.error('Application load failed', extractError(result));
       return;
     }
@@ -106,12 +120,8 @@ function bindAdoptionIndex() {
   }
 
   async function loadSeminars() {
-    const response = await fetch('/api/adoptions/seminars', {
-      headers: { Accept: 'application/json' }
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
+    const { ok, data: result } = await apiRequest('/api/adoptions/seminars');
+    if (!ok) {
       window.toast?.error('Seminar load failed', extractError(result));
       return;
     }
@@ -282,18 +292,16 @@ function bindAdoptionShow() {
   });
 
   async function submitForm(endpoint, method, formData, successTitle) {
-    const response = await fetch(endpoint, {
+    const { data: result } = await apiRequest(endpoint, {
       method,
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-CSRF-TOKEN': csrfToken
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
+      csrfToken,
       body: new URLSearchParams(formData).toString()
     });
-    const result = await response.json();
 
-    if (!response.ok) {
+    if (result.error) {
       window.toast?.error(successTitle + ' failed', extractError(result));
       return;
     }
@@ -301,41 +309,4 @@ function bindAdoptionShow() {
     window.toast?.success(successTitle, result.message);
     window.CatarmanApp?.reload?.() || window.location.reload();
   }
-}
-
-function extractError(result) {
-  if (result?.error?.details && typeof result.error.details === 'object') {
-    const firstKey = Object.keys(result.error.details)[0];
-    const detail = result.error.details[firstKey];
-    if (Array.isArray(detail) && detail[0]) {
-      return detail[0];
-    }
-  }
-
-  return result?.error?.message || 'Unexpected server response.';
-}
-
-function toDateTimeLocal(value) {
-  if (!value) return '';
-  return String(value).replace(' ', 'T').slice(0, 16);
-}
-
-function formatDateTime(value) {
-  if (!value) return 'N/A';
-  return new Date(String(value).replace(' ', 'T')).toLocaleString();
-}
-
-function titleCase(value) {
-  return String(value)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

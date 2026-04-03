@@ -10,9 +10,9 @@ class ExportService
 {
     private PdfService $pdfs;
 
-    public function __construct()
+    public function __construct(?PdfService $pdfs = null)
     {
-        $this->pdfs = new PdfService();
+        $this->pdfs = $pdfs ?? new PdfService();
     }
 
     public function reportCsv(array $report): string

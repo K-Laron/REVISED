@@ -9,6 +9,31 @@ use App\Services\Search\AbstractSearchProvider;
 
 final class MedicalSearchProvider extends AbstractSearchProvider
 {
+    public function secondaryFilters(): array
+    {
+        return [
+            'medical_type' => [
+                'label' => 'Procedure Type',
+                'options' => [
+                    ['value' => 'vaccination', 'label' => 'Vaccination'],
+                    ['value' => 'treatment', 'label' => 'Treatment'],
+                    ['value' => 'surgery', 'label' => 'Surgery'],
+                    ['value' => 'examination', 'label' => 'Examination'],
+                ],
+            ],
+        ];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [
+            'medical_vaccination' => ['key' => 'medical_type', 'value' => 'vaccination'],
+            'medical_treatment' => ['key' => 'medical_type', 'value' => 'treatment'],
+            'medical_surgery' => ['key' => 'medical_type', 'value' => 'surgery'],
+            'medical_examination' => ['key' => 'medical_type', 'value' => 'examination'],
+        ];
+    }
+
     public function key(): string
     {
         return 'medical';
