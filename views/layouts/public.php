@@ -184,6 +184,8 @@
     </div>
     <script src="/assets/js/theme.js" data-core-asset="js"></script>
     <script src="/assets/js/toast.js" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-api.js" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-formatters.js" data-core-asset="js"></script>
     <script src="/assets/js/core/app-runtime.js" data-core-asset="js"></script>
     <script src="/assets/js/core/app-shell.js" data-core-asset="js"></script>
     <script src="/assets/js/core/app-navigation.js" data-core-asset="js"></script>

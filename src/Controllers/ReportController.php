@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\ExportService;
@@ -18,6 +18,7 @@ use RuntimeException;
 class ReportController
 {
     use InteractsWithApi;
+    use RendersViews;
 
     private ReportService $reports;
     private ExportService $exports;
@@ -33,23 +34,23 @@ class ReportController
         $authUser = $this->currentUser($request);
         $canViewAuditTrail = (($authUser['role_name'] ?? null) === 'super_admin');
 
-        return Response::html(View::render('reports.index', [
+        return $this->renderAppView('reports.index', [
             'title' => 'Reports & Analytics',
             'extraCss' => ['/assets/css/reports.css'],
             'extraJs' => ['/assets/js/reports.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'templates' => $this->reports->templates((int) $authUser['id']),
             'canViewAuditTrail' => $canViewAuditTrail,
-        ], 'layouts.app'));
+        ]);
     }
 
     public function viewer(Request $request): Response
     {
-        return Response::html(View::render('reports.viewer', [
+        return $this->renderAppView('reports.viewer', [
             'title' => 'Report Viewer',
             'extraCss' => ['/assets/css/reports.css'],
             'extraJs' => ['/assets/js/reports.js'],
-        ], 'layouts.app'));
+        ]);
     }
 
     public function generate(Request $request): Response

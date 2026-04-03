@@ -7,19 +7,25 @@ namespace App\Services;
 use App\Core\Database;
 use App\Models\AuditLog;
 use App\Models\ReportTemplate;
+use App\Services\Reports\AnimalDossierService;
+use App\Services\Reports\ReportRange;
 use RuntimeException;
 
 class ReportService
 {
     private AuditLog $auditLogs;
     private ReportTemplate $templates;
-    private AnimalService $animals;
+    private AnimalDossierService $dossiers;
 
-    public function __construct()
+    public function __construct(
+        ?AuditLog $auditLogs = null,
+        ?ReportTemplate $templates = null,
+        ?AnimalDossierService $dossiers = null
+    )
     {
-        $this->auditLogs = new AuditLog();
-        $this->templates = new ReportTemplate();
-        $this->animals = new AnimalService();
+        $this->auditLogs = $auditLogs ?? new AuditLog();
+        $this->templates = $templates ?? new ReportTemplate();
+        $this->dossiers = $dossiers ?? new AnimalDossierService(new AnimalService());
     }
 
     public function generate(string $reportType, array $filters): array
@@ -56,77 +62,12 @@ class ReportService
 
     public function animalDossier(int $animalId): array
     {
-        $animal = $this->animals->get((string) $animalId, true);
-
-        $animal['adoption_application'] = Database::fetch(
-            'SELECT aa.*, CONCAT(u.first_name, " ", u.last_name) AS adopter_name
-             FROM adoption_applications aa
-             INNER JOIN users u ON u.id = aa.adopter_id
-             WHERE aa.animal_id = :animal_id
-               AND aa.is_deleted = 0
-             ORDER BY aa.created_at DESC
-             LIMIT 1',
-            ['animal_id' => $animalId]
-        ) ?: null;
-
-        $animal['adoption_completion'] = Database::fetch(
-            'SELECT ac.*, CONCAT(u.first_name, " ", u.last_name) AS processed_by_name
-             FROM adoption_completions ac
-             LEFT JOIN users u ON u.id = ac.processed_by
-             WHERE ac.animal_id = :animal_id
-             LIMIT 1',
-            ['animal_id' => $animalId]
-        ) ?: null;
-
-        $animal['invoices'] = Database::fetchAll(
-            'SELECT *
-             FROM invoices
-             WHERE animal_id = :animal_id
-               AND is_deleted = 0
-             ORDER BY issue_date DESC, id DESC',
-            ['animal_id' => $animalId]
-        );
-
-        $animal['payments'] = Database::fetchAll(
-            'SELECT p.*, i.invoice_number
-             FROM payments p
-             INNER JOIN invoices i ON i.id = p.invoice_id
-             WHERE i.animal_id = :animal_id
-               AND i.is_deleted = 0
-             ORDER BY p.payment_date DESC, p.id DESC',
-            ['animal_id' => $animalId]
-        );
-
-        $animal['audit_trail'] = Database::fetchAll(
-            'SELECT al.*, CONCAT(u.first_name, " ", u.last_name) AS user_name
-             FROM audit_logs al
-             LEFT JOIN users u ON u.id = al.user_id
-             WHERE (al.record_table = "animals" AND al.record_id = :animal_id)
-                OR (al.record_table = "animal_photos" AND al.record_id = :animal_photo_record_id)
-             ORDER BY al.created_at DESC, al.id DESC',
-            ['animal_id' => $animalId, 'animal_photo_record_id' => $animalId]
-        );
-
-        foreach ($animal['audit_trail'] as &$entry) {
-            $entry['old_values'] = $entry['old_values'] ? json_decode((string) $entry['old_values'], true) : [];
-            $entry['new_values'] = $entry['new_values'] ? json_decode((string) $entry['new_values'], true) : [];
-        }
-
-        return $animal;
+        return $this->dossiers->assemble($animalId);
     }
 
     private function normalizeFilters(array $filters): array
     {
-        $groupBy = $filters['group_by'] ?? 'month';
-        if (!in_array($groupBy, ['day', 'week', 'month', 'quarter', 'year'], true)) {
-            $groupBy = 'month';
-        }
-
-        return [
-            'start_date' => (string) ($filters['start_date'] ?? date('Y-m-01')),
-            'end_date' => (string) ($filters['end_date'] ?? date('Y-m-d')),
-            'group_by' => $groupBy,
-        ];
+        return ReportRange::fromFilters($filters)->toArray();
     }
 
     private function intakeReport(array $filters): array

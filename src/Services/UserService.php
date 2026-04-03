@@ -22,13 +22,19 @@ class UserService
     private AuditService $audit;
     private NotificationService $notifications;
 
-    public function __construct()
+    public function __construct(
+        ?User $users = null,
+        ?Role $roles = null,
+        ?Permission $permissions = null,
+        ?AuditService $audit = null,
+        ?NotificationService $notifications = null
+    )
     {
-        $this->users = new User();
-        $this->roles = new Role();
-        $this->permissions = new Permission();
-        $this->audit = new AuditService();
-        $this->notifications = new NotificationService();
+        $this->users = $users ?? new User();
+        $this->roles = $roles ?? new Role();
+        $this->permissions = $permissions ?? new Permission();
+        $this->audit = $audit ?? new AuditService();
+        $this->notifications = $notifications ?? new NotificationService();
     }
 
     public function list(array $filters, int $page, int $perPage): array

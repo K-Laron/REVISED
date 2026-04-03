@@ -3,6 +3,8 @@
     return;
   }
 
+  const formatters = window.CatarmanFormatters;
+
   function addDays(date, days) {
     const next = new Date(date);
     next.setDate(next.getDate() + days);
@@ -10,10 +12,7 @@
   }
 
   function currency(value) {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
-    }).format(Number(value || 0));
+    return formatters.currency(value);
   }
 
   function formatNumber(value) {
@@ -21,18 +20,11 @@
   }
 
   function formatDate(value, fallback) {
-    if (!value) return fallback || '-';
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
-
-    return new Intl.DateTimeFormat('en-PH', {
+    return formatters.formatDate(value, fallback || '-', 'en-PH', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
-    }).format(date);
+    });
   }
 
   function formatTransactionType(value) {
@@ -48,23 +40,11 @@
   }
 
   function extractError(result) {
-    if (result?.error?.details && typeof result.error.details === 'object') {
-      const firstKey = Object.keys(result.error.details)[0];
-      if (firstKey && Array.isArray(result.error.details[firstKey])) {
-        return result.error.details[firstKey][0];
-      }
-    }
-
-    return result?.error?.message || 'Request failed.';
+    return window.CatarmanApi.extractError(result);
   }
 
   function escapeHtml(value) {
-    return String(value ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
+    return window.CatarmanDom.escapeHtml(value);
   }
 
   function itemState(item) {

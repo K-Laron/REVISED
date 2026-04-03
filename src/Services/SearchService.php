@@ -11,6 +11,7 @@ use App\Services\Search\Providers\InventorySearchProvider;
 use App\Services\Search\Providers\MedicalSearchProvider;
 use App\Services\Search\Providers\UsersSearchProvider;
 use App\Services\Search\SearchFilterCatalog;
+use App\Services\Search\SearchModuleCatalog;
 use App\Services\Search\SearchProviderInterface;
 
 class SearchService
@@ -26,7 +27,9 @@ class SearchService
             $this->providers[$provider->key()] = $provider;
         }
 
-        $this->filterCatalog = $filterCatalog ?? new SearchFilterCatalog();
+        $this->filterCatalog = $filterCatalog ?? new SearchFilterCatalog(
+            new SearchModuleCatalog(array_values($this->providers))
+        );
     }
 
     public function search(string $query, array $user, array $filters = []): array

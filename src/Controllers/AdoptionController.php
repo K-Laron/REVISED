@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\AdoptionService;
@@ -18,6 +18,7 @@ use RuntimeException;
 class AdoptionController
 {
     use InteractsWithApi;
+    use RendersViews;
 
     private AdoptionService $adoptions;
 
@@ -28,14 +29,14 @@ class AdoptionController
 
     public function index(Request $request): Response
     {
-        return Response::html(View::render('adoptions.index', [
+        return $this->renderAppView('adoptions.index', [
             'title' => 'Adoptions',
             'extraCss' => ['/assets/css/adoptions.css'],
             'extraJs' => ['/assets/js/adoptions.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'statusLabels' => $this->adoptions->statusLabels(),
             'staff' => $this->adoptions->staffOptions(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function show(Request $request, string $id): Response
@@ -46,7 +47,7 @@ class AdoptionController
             return Response::redirect('/adoptions');
         }
 
-        return Response::html(View::render('adoptions.show', [
+        return $this->renderAppView('adoptions.show', [
             'title' => $application['application_number'],
             'extraCss' => ['/assets/css/adoptions.css'],
             'extraJs' => ['/assets/js/adoptions.js'],
@@ -55,7 +56,7 @@ class AdoptionController
             'seminars' => $this->adoptions->seminarsList(['status' => 'scheduled']),
             'statusLabels' => $this->adoptions->statusLabels(),
             'staff' => $this->adoptions->staffOptions(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function list(Request $request): Response

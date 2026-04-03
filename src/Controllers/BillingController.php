@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Controllers\Concerns\InteractsWithApi;
+use App\Controllers\Concerns\RendersViews;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\View;
 use App\Helpers\Validator;
 use App\Middleware\CsrfMiddleware;
 use App\Services\BillingService;
@@ -17,6 +17,7 @@ use RuntimeException;
 class BillingController
 {
     use InteractsWithApi;
+    use RendersViews;
 
     private BillingService $billing;
 
@@ -27,24 +28,24 @@ class BillingController
 
     public function index(Request $request): Response
     {
-        return Response::html(View::render('billing.index', [
+        return $this->renderAppView('billing.index', [
             'title' => 'Billing & Invoicing',
             'extraCss' => ['/assets/css/billing.css'],
             'extraJs' => ['/assets/js/billing.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'fees' => $this->billing->feeSchedule(),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function createInvoice(Request $request): Response
     {
-        return Response::html(View::render('billing.create-invoice', [
+        return $this->renderAppView('billing.create-invoice', [
             'title' => 'Create Invoice',
             'extraCss' => ['/assets/css/billing.css'],
             'extraJs' => ['/assets/js/billing.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'fees' => $this->billing->feeSchedule(true),
-        ], 'layouts.app'));
+        ]);
     }
 
     public function showInvoice(Request $request, string $id): Response
@@ -55,13 +56,13 @@ class BillingController
             return Response::redirect('/billing');
         }
 
-        return Response::html(View::render('billing.show-invoice', [
+        return $this->renderAppView('billing.show-invoice', [
             'title' => $invoice['invoice_number'],
             'extraCss' => ['/assets/css/billing.css'],
             'extraJs' => ['/assets/js/billing.js'],
             'csrfToken' => CsrfMiddleware::token(),
             'invoice' => $invoice,
-        ], 'layouts.app'));
+        ]);
     }
 
     public function listInvoices(Request $request): Response

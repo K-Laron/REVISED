@@ -16,9 +16,9 @@ class SystemSettingsService
 
     private AuditService $audit;
 
-    public function __construct()
+    public function __construct(?AuditService $audit = null)
     {
-        $this->audit = new AuditService();
+        $this->audit = $audit ?? new AuditService();
     }
 
     public function settings(): array

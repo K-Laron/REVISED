@@ -23,8 +23,19 @@ class AdoptionService
     private AdoptionPortalService $portal;
     private AdoptionWorkflowService $workflow;
 
-    public function __construct()
+    public function __construct(
+        ?AdoptionReadService $reads = null,
+        ?AdoptionPortalService $portal = null,
+        ?AdoptionWorkflowService $workflow = null
+    )
     {
+        if ($reads !== null && $portal !== null && $workflow !== null) {
+            $this->reads = $reads;
+            $this->portal = $portal;
+            $this->workflow = $workflow;
+            return;
+        }
+
         $applications = new AdoptionApplication();
         $interviews = new AdoptionInterview();
         $seminars = new AdoptionSeminar();
@@ -38,7 +49,7 @@ class AdoptionService
         $statusPolicy = new AdoptionStatusPolicy();
         $billingSummary = new AdoptionBillingSummary();
 
-        $this->reads = new AdoptionReadService(
+        $this->reads = $reads ?? new AdoptionReadService(
             $applications,
             $interviews,
             $seminars,
@@ -47,7 +58,7 @@ class AdoptionService
             $billingSummary
         );
 
-        $this->portal = new AdoptionPortalService(
+        $this->portal = $portal ?? new AdoptionPortalService(
             $applications,
             $animals,
             $users,
@@ -56,7 +67,7 @@ class AdoptionService
             $notifications
         );
 
-        $this->workflow = new AdoptionWorkflowService(
+        $this->workflow = $workflow ?? new AdoptionWorkflowService(
             $applications,
             $interviews,
             $seminars,

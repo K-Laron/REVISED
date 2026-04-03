@@ -127,6 +127,8 @@
     </div>
     <script src="/assets/js/theme.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/toast.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-api.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/core/app-formatters.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/core/app-runtime.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/core/app-shell.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/core/app-breadcrumbs.js?v=<?= time() ?>" data-core-asset="js"></script>

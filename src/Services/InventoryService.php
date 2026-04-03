@@ -18,12 +18,17 @@ class InventoryService
     private StockTransaction $transactions;
     private AuditService $audit;
 
-    public function __construct()
+    public function __construct(
+        ?InventoryItem $items = null,
+        ?InventoryCategory $categories = null,
+        ?StockTransaction $transactions = null,
+        ?AuditService $audit = null
+    )
     {
-        $this->items = new InventoryItem();
-        $this->categories = new InventoryCategory();
-        $this->transactions = new StockTransaction();
-        $this->audit = new AuditService();
+        $this->items = $items ?? new InventoryItem();
+        $this->categories = $categories ?? new InventoryCategory();
+        $this->transactions = $transactions ?? new StockTransaction();
+        $this->audit = $audit ?? new AuditService();
     }
 
     public function list(array $filters, int $page, int $perPage): array

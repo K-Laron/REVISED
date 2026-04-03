@@ -6,6 +6,16 @@ namespace App\Services\Search;
 
 abstract class AbstractSearchProvider implements SearchProviderInterface
 {
+    public function secondaryFilters(): array
+    {
+        return [];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [];
+    }
+
     protected function section(string $key, string $label, string $href, int $count, array $items): array
     {
         return [

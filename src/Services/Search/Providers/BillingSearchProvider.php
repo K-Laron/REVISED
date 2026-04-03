@@ -9,6 +9,31 @@ use App\Services\Search\AbstractSearchProvider;
 
 final class BillingSearchProvider extends AbstractSearchProvider
 {
+    public function secondaryFilters(): array
+    {
+        return [
+            'billing_status' => [
+                'label' => 'Payment Status',
+                'options' => [
+                    ['value' => 'unpaid', 'label' => 'Unpaid'],
+                    ['value' => 'partial', 'label' => 'Partial'],
+                    ['value' => 'paid', 'label' => 'Paid'],
+                    ['value' => 'void', 'label' => 'Void'],
+                ],
+            ],
+        ];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [
+            'billing_unpaid' => ['key' => 'billing_status', 'value' => 'unpaid'],
+            'billing_partial' => ['key' => 'billing_status', 'value' => 'partial'],
+            'billing_paid' => ['key' => 'billing_status', 'value' => 'paid'],
+            'billing_void' => ['key' => 'billing_status', 'value' => 'void'],
+        ];
+    }
+
     public function key(): string
     {
         return 'billing';

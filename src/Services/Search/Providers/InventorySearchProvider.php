@@ -9,6 +9,31 @@ use App\Services\Search\AbstractSearchProvider;
 
 final class InventorySearchProvider extends AbstractSearchProvider
 {
+    public function secondaryFilters(): array
+    {
+        return [
+            'inventory_status' => [
+                'label' => 'Inventory State',
+                'options' => [
+                    ['value' => 'low_stock', 'label' => 'Low Stock'],
+                    ['value' => 'expiring', 'label' => 'Expiring Soon'],
+                    ['value' => 'active', 'label' => 'Active'],
+                    ['value' => 'inactive', 'label' => 'Inactive'],
+                ],
+            ],
+        ];
+    }
+
+    public function legacyStatusAliases(): array
+    {
+        return [
+            'inventory_low_stock' => ['key' => 'inventory_status', 'value' => 'low_stock'],
+            'inventory_expiring' => ['key' => 'inventory_status', 'value' => 'expiring'],
+            'inventory_active' => ['key' => 'inventory_status', 'value' => 'active'],
+            'inventory_inactive' => ['key' => 'inventory_status', 'value' => 'inactive'],
+        ];
+    }
+
     public function key(): string
     {
         return 'inventory';
