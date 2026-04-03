@@ -432,6 +432,21 @@
     var(--color-bg-elevated);
 }
 
+[data-theme="light"] .dashboard-briefing-hero {
+  --dashboard-hero-surface:
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.24), transparent 34%),
+    linear-gradient(150deg, rgba(255, 252, 247, 0.96), rgba(231, 240, 251, 0.94));
+  --dashboard-hero-border: rgba(29, 78, 137, 0.16);
+  --dashboard-hero-text: var(--color-text-primary);
+  --dashboard-hero-muted: var(--color-text-secondary);
+  --dashboard-hero-panel-bg: rgba(255, 255, 255, 0.52);
+  --dashboard-hero-panel-border: rgba(29, 78, 137, 0.14);
+  --dashboard-hero-button-bg: rgba(255, 255, 255, 0.82);
+  --dashboard-hero-button-bg-hover: rgba(255, 255, 255, 0.94);
+  --dashboard-hero-button-border: rgba(29, 78, 137, 0.18);
+  --dashboard-hero-button-border-hover: rgba(29, 78, 137, 0.28);
+}
+
 [data-theme="dark"] .dashboard-briefing-hero {
   --dashboard-hero-surface:
     radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 36%),
