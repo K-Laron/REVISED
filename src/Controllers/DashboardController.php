@@ -23,12 +23,22 @@ class DashboardController
 
     public function index(Request $request): Response
     {
+        $user = $request->attribute('auth_user');
+        $actionQueue = [];
+
+        try {
+            $actionQueue = $this->dashboard->actionQueue($user ?? []);
+        } catch (\Throwable) {
+            $actionQueue = [];
+        }
+
         return $this->renderAppView('dashboard.index', [
-            'user' => $request->attribute('auth_user'),
+            'user' => $user,
             'csrfToken' => CsrfMiddleware::token(),
             'title' => 'Dashboard',
             'extraCss' => ['/assets/css/dashboard.css'],
             'extraJs' => ['/assets/vendor/chart.js/chart.umd.js', '/assets/js/dashboard.js'],
+            'actionQueue' => $actionQueue,
         ]);
     }
 

@@ -49,11 +49,19 @@ final class ApiRouteRegistrationTest extends TestCase
 
         $routes = $this->registeredRoutes(true);
 
+        self::assertCount(15, glob($routeDirectory . '/*.php'));
+        self::assertCount(61, $routes['GET']);
+        self::assertCount(39, $routes['POST']);
+        self::assertCount(21, $routes['PUT']);
+        self::assertCount(0, $routes['PATCH']);
+        self::assertCount(7, $routes['DELETE']);
+
         self::assertArrayHasKey('/api/ping', $routes['GET']);
         self::assertArrayHasKey('/api/system/health', $routes['GET']);
         self::assertArrayHasKey('/api/auth/login', $routes['POST']);
-        self::assertArrayHasKey('/api/dashboard/stats', $routes['GET']);
+        self::assertArrayHasKey('/api/dashboard/bootstrap', $routes['GET']);
         self::assertArrayHasKey('/api/animals', $routes['GET']);
+        self::assertArrayHasKey('/api/animals/{id}/photos', $routes['POST']);
         self::assertArrayHasKey('/api/animals/{id}/photos/reorder', $routes['PUT']);
         self::assertArrayHasKey('/api/billing/invoices', $routes['POST']);
         self::assertArrayHasKey('/api/inventory', $routes['GET']);

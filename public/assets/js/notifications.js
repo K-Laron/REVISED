@@ -54,7 +54,6 @@ function bindNotifications() {
 
   loadUnreadCount();
 
-  // Poll for unread count every 30 seconds
   const pollInterval = setInterval(loadUnreadCount, 30000);
   signal.addEventListener('abort', () => clearInterval(pollInterval));
 
@@ -94,41 +93,140 @@ function bindNotifications() {
       return;
     }
 
+    const groups = groupNotifications(unreadItems);
     list.innerHTML = '';
-    unreadItems.forEach((item) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'notification-item is-unread';
-      button.innerHTML = `
-        <div class="notification-item-meta">
-          <strong>${escapeHtml(item.title || 'Notification')}</strong>
-          <span>${formatNotificationDate(item.created_at)}</span>
+
+    groups.forEach((group) => {
+      const section = document.createElement('section');
+      section.className = 'notification-group';
+      section.innerHTML = `
+        <div class="notification-group-head">
+          <div>
+            <span class="field-label">${escapeHtml(group.module)}</span>
+            <strong>${escapeHtml(group.severity.label)} priority</strong>
+          </div>
+          <span class="notification-group-count">${group.items.length}</span>
         </div>
-        <div>${escapeHtml(item.message || '')}</div>
-        <div class="text-muted">${escapeHtml(item.type || '')}</div>
+        <div class="notification-group-list"></div>
       `;
-      button.addEventListener('click', async () => {
-        if (!item.is_read) {
-          await fetch('/api/notifications/' + item.id + '/read', {
-            method: 'PUT',
-            headers: {
-              Accept: 'application/json',
-              'X-CSRF-TOKEN': csrfToken
-            }
-          });
-        }
 
-        if (item.link) {
-          window.CatarmanApp?.navigate?.(item.link) || (window.location.href = item.link);
-          return;
-        }
+      const groupList = section.querySelector('.notification-group-list');
+      group.items.forEach((item) => {
+        const meta = categorizeNotification(item);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'notification-item is-unread';
+        button.innerHTML = `
+          <div class="notification-item-meta">
+            <strong>${escapeHtml(item.title || 'Notification')}</strong>
+            <span>${formatNotificationDate(item.created_at)}</span>
+          </div>
+          <div>${escapeHtml(item.message || '')}</div>
+          <div class="notification-item-tags">
+            <span class="notification-severity notification-severity-${meta.severity.key}">${escapeHtml(meta.severity.label)}</span>
+            <span class="text-muted">${escapeHtml(item.type || '')}</span>
+          </div>
+        `;
+        button.addEventListener('click', async () => {
+          if (!item.is_read) {
+            await fetch('/api/notifications/' + item.id + '/read', {
+              method: 'PUT',
+              headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+              }
+            });
+          }
 
-        await Promise.all([loadUnreadCount(), loadNotifications()]);
+          if (item.link) {
+            window.CatarmanApp?.navigate?.(item.link) || (window.location.href = item.link);
+            return;
+          }
+
+          await Promise.all([loadUnreadCount(), loadNotifications()]);
+        });
+        groupList.appendChild(button);
       });
-      list.appendChild(button);
+
+      list.appendChild(section);
     });
+
     list.setAttribute('aria-busy', 'false');
   }
+}
+
+function groupNotifications(items) {
+  const groups = new Map();
+
+  items.forEach((item) => {
+    const meta = categorizeNotification(item);
+    const key = meta.module + ':' + meta.severity.key;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        module: meta.module,
+        severity: meta.severity,
+        items: [],
+      });
+    }
+
+    groups.get(key).items.push(item);
+  });
+
+  return [...groups.values()].sort((left, right) => {
+    if (left.severity.rank !== right.severity.rank) {
+      return left.severity.rank - right.severity.rank;
+    }
+
+    if (left.items.length !== right.items.length) {
+      return right.items.length - left.items.length;
+    }
+
+    return left.module.localeCompare(right.module);
+  });
+}
+
+function categorizeNotification(item) {
+  return {
+    module: notificationModule(item),
+    severity: notificationSeverity(item),
+  };
+}
+
+function notificationModule(item) {
+  const link = String(item.link || '').toLowerCase();
+  const type = String(item.type || '').toLowerCase();
+  const content = `${item.title || ''} ${item.message || ''}`.toLowerCase();
+
+  if (link.includes('/billing') || type.includes('billing') || content.includes('invoice')) {
+    return 'Billing';
+  }
+  if (link.includes('/inventory') || type.includes('inventory') || content.includes('stock')) {
+    return 'Inventory';
+  }
+  if (link.includes('/medical') || type.includes('medical') || content.includes('vaccin') || content.includes('deworm')) {
+    return 'Medical';
+  }
+  if (link.includes('/adoptions') || type.includes('adoption') || content.includes('adoption')) {
+    return 'Adoptions';
+  }
+  if (link.includes('/animals') || type.includes('animal')) {
+    return 'Animals';
+  }
+
+  return 'System';
+}
+
+function notificationSeverity(item) {
+  const content = `${item.title || ''} ${item.message || ''} ${item.type || ''}`.toLowerCase();
+
+  if (content.includes('overdue') || content.includes('warning') || content.includes('urgent') || content.includes('low stock') || content.includes('due soon')) {
+    return { key: 'high', label: 'High', rank: 0 };
+  }
+  if (content.includes('pending') || content.includes('review') || content.includes('scheduled') || content.includes('upcoming')) {
+    return { key: 'medium', label: 'Medium', rank: 1 };
+  }
+
+  return { key: 'low', label: 'Low', rank: 2 };
 }
 
 function formatNotificationDate(value) {

@@ -23,16 +23,17 @@ final class SharedBrowserHelpersTest extends ViewSmokeTestCase
 
     public function testPageScriptsReferenceSharedBrowserHelpers(): void
     {
-        $animalsScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\animals.js');
-        $adoptionsScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\adoptions.js');
-        $billingScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\billing.js');
-        $medicalScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\medical.js');
-        $usersScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\users.js');
-        $settingsScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\settings.js');
-        $portalScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\portal.js');
-        $billingFormatterScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\billing.js');
-        $medicalFormatterScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\medical.js');
-        $adoptionsFormatterScript = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\adoptions.js');
+        $root = dirname(__DIR__, 2);
+        $animalsScript = (string) file_get_contents($root . '/public/assets/js/animals.js');
+        $adoptionsScript = (string) file_get_contents($root . '/public/assets/js/adoptions.js');
+        $billingScript = (string) file_get_contents($root . '/public/assets/js/billing.js');
+        $medicalScript = (string) file_get_contents($root . '/public/assets/js/medical.js');
+        $usersScript = (string) file_get_contents($root . '/public/assets/js/users.js');
+        $settingsScript = (string) file_get_contents($root . '/public/assets/js/settings.js');
+        $portalScript = (string) file_get_contents($root . '/public/assets/js/portal.js');
+        $billingFormatterScript = (string) file_get_contents($root . '/public/assets/js/billing.js');
+        $medicalFormatterScript = (string) file_get_contents($root . '/public/assets/js/medical.js');
+        $adoptionsFormatterScript = (string) file_get_contents($root . '/public/assets/js/adoptions.js');
 
         self::assertStringContainsString('window.CatarmanApi', $animalsScript);
         self::assertStringContainsString('window.CatarmanDom', $animalsScript);
@@ -65,8 +66,9 @@ final class SharedBrowserHelpersTest extends ViewSmokeTestCase
 
     public function testModuleUtilityWrappersDelegateToSharedBrowserHelpers(): void
     {
-        $inventoryFormatters = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\inventory\\inventory-formatters.js');
-        $kennelUtils = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\kennels\\kennel-utils.js');
+        $root = dirname(__DIR__, 2);
+        $inventoryFormatters = (string) file_get_contents($root . '/public/assets/js/inventory/inventory-formatters.js');
+        $kennelUtils = (string) file_get_contents($root . '/public/assets/js/kennels/kennel-utils.js');
 
         self::assertStringContainsString('window.CatarmanApi', $inventoryFormatters);
         self::assertStringContainsString('window.CatarmanDom', $inventoryFormatters);

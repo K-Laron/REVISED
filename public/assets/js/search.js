@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
   bindSearchPage();
 });
 
+const presetStorageKey = 'catarman:search-presets';
+
 function bindSearchPage() {
   const page = document.getElementById('search-page');
   if (!page) return;
@@ -16,8 +18,11 @@ function bindSearchPage() {
   const input = form?.elements?.q;
   const initialQuery = String(data.initialQuery || '').trim();
   const initialFilters = data.initialFilters || {};
+  const defaultPresets = Array.isArray(data.defaultPresets) ? data.defaultPresets : [];
   const moduleCheckboxes = Array.from(form?.querySelectorAll('input[name="modules[]"]') || []);
   const secondaryFields = Array.from(form?.querySelectorAll('[data-module-filter]') || []);
+  const presetList = document.querySelector('[data-search-preset-list]');
+  const savePresetButton = document.querySelector('[data-search-save-preset]');
 
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -40,8 +45,29 @@ function bindSearchPage() {
     checkbox.addEventListener('change', syncSecondaryFilters);
   });
 
+  savePresetButton?.addEventListener('click', () => {
+    const current = serializeCurrentPreset();
+    const suggestedName = current.query ? `Search: ${current.query}` : 'Saved search';
+    const name = window.prompt('Preset name', suggestedName);
+    if (!name) {
+      return;
+    }
+
+    const presets = readSavedPresets();
+    presets.unshift({
+      id: 'saved-' + Date.now(),
+      label: name.trim(),
+      query: current.query,
+      filters: current.filters,
+    });
+    localStorage.setItem(presetStorageKey, JSON.stringify(presets.slice(0, 8)));
+    renderPresets();
+    totalBadge.textContent = 'Saved';
+  });
+
   applyInitialFilters(initialFilters);
   syncSecondaryFilters();
+  renderPresets();
 
   if (initialQuery.length >= 2) {
     runSearch(true);
@@ -89,9 +115,9 @@ function bindSearchPage() {
       return;
     }
 
-    const data = payload.data || {};
-    const sections = Array.isArray(data.sections) ? data.sections : [];
-    const total = Number(data.total_results || 0);
+    const responseData = payload.data || {};
+    const sections = Array.isArray(responseData.sections) ? responseData.sections : [];
+    const total = Number(responseData.total_results || 0);
     totalBadge.textContent = `${total} result${total === 1 ? '' : 's'}`;
 
     if (sections.length === 0) {
@@ -158,6 +184,10 @@ function bindSearchPage() {
   }
 
   function applyInitialFilters(filters) {
+    if (form?.elements?.q) {
+      form.elements.q.value = String(data.initialQuery || '');
+    }
+
     if (form?.elements?.per_section && filters.per_section) {
       form.elements.per_section.value = String(filters.per_section);
     }
@@ -207,6 +237,97 @@ function bindSearchPage() {
           select.value = '';
         }
       }
+    });
+  }
+
+  function serializeCurrentPreset() {
+    return {
+      query: String(input?.value || '').trim(),
+      filters: {
+        per_section: String(form?.elements?.per_section?.value || '5'),
+        date_from: String(form?.elements?.date_from?.value || '').trim(),
+        date_to: String(form?.elements?.date_to?.value || '').trim(),
+        modules: selectedModuleKeys(),
+        ...selectedSecondaryFilterValues()
+      }
+    };
+  }
+
+  function selectedSecondaryFilterValues() {
+    const filters = {};
+
+    selectedModuleKeys().forEach((moduleKey) => {
+      form?.querySelectorAll(`[data-module-filter="${moduleKey}"] select`).forEach((select) => {
+        const value = String(select.value || '').trim();
+        if (value) {
+          filters[select.name] = value;
+        }
+      });
+    });
+
+    return filters;
+  }
+
+  function applyPreset(preset) {
+    if (!form) {
+      return;
+    }
+
+    form.elements.q.value = String(preset.query || '');
+    form.elements.per_section.value = String(preset.filters?.per_section || '5');
+    form.elements.date_from.value = String(preset.filters?.date_from || '');
+    form.elements.date_to.value = String(preset.filters?.date_to || '');
+
+    const selected = new Set(Array.isArray(preset.filters?.modules) ? preset.filters.modules : []);
+    moduleCheckboxes.forEach((checkbox) => {
+      checkbox.checked = selected.size === 0 ? checkbox.checked : selected.has(checkbox.value);
+    });
+
+    secondaryFields.forEach((field) => {
+      const select = field.querySelector('select');
+      if (!select) {
+        return;
+      }
+
+      select.value = String(preset.filters?.[select.name] || '');
+    });
+
+    syncSecondaryFilters();
+    runSearch().catch((error) => {
+      console.error(error);
+    });
+  }
+
+  function readSavedPresets() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(presetStorageKey) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function renderPresets() {
+    if (!presetList) {
+      return;
+    }
+
+    const presets = [...defaultPresets, ...readSavedPresets()];
+    if (presets.length === 0) {
+      presetList.innerHTML = '<p class="text-muted">No presets saved yet.</p>';
+      return;
+    }
+
+    presetList.innerHTML = presets.map((preset, index) => `
+      <button class="search-preset-chip" type="button" data-search-preset-index="${index}">
+        <span>${escapeHtml(preset.label || 'Preset')}</span>
+      </button>
+    `).join('');
+
+    presetList.querySelectorAll('[data-search-preset-index]').forEach((button) => {
+      button.addEventListener('click', () => {
+        applyPreset(presets[Number(button.dataset.searchPresetIndex || 0)] || {});
+      });
     });
   }
 }

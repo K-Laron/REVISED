@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
 
 function getClassNames(node) {
@@ -20,7 +21,6 @@ class FakeElement {
     this.children = [];
     this.listeners = {};
     this.hidden = false;
-    this.innerHTML = '';
     this.src = '';
     this.value = '';
     this.files = [];
@@ -28,12 +28,8 @@ class FakeElement {
     this.draggable = false;
     this.parentNode = null;
     this.classList = {
-      add: (...tokens) => {
-        setClassNames(this, [...getClassNames(this), ...tokens]);
-      },
-      remove: (...tokens) => {
-        setClassNames(this, getClassNames(this).filter((token) => !tokens.includes(token)));
-      },
+      add: (...tokens) => setClassNames(this, [...getClassNames(this), ...tokens]),
+      remove: (...tokens) => setClassNames(this, getClassNames(this).filter((token) => !tokens.includes(token))),
       contains: (token) => getClassNames(this).includes(token),
       toggle: (token, force) => {
         const hasToken = getClassNames(this).includes(token);
@@ -109,7 +105,7 @@ class FakeElement {
 
 function matchesSelector(node, selector) {
   if (selector === '.animal-photo-upload-form') {
-    return node.className.split(/\s+/).includes('animal-photo-upload-form');
+    return getClassNames(node).includes('animal-photo-upload-form');
   }
 
   if (selector === '[data-photo-upload-input]') {
@@ -162,11 +158,10 @@ function createPhotoCollectionRoot(animalId) {
   const empty = new FakeElement({ dataset: { animalPhotoEmpty: '' } });
   const heading = new FakeElement({ dataset: { animalPhotoHeading: '' } });
 
-  const root = new FakeElement({ dataset: { animalPhotoCollection: '', animalId: String(animalId), csrfToken: 'test-token' } });
-  root.children = [stage, grid, empty, heading];
-  root.children.forEach((child) => {
-    child.parentNode = root;
+  const root = new FakeElement({
+    dataset: { animalPhotoCollection: '', animalId: String(animalId), csrfToken: 'test-token' }
   });
+  root.replaceChildren(stage, grid, empty, heading);
   return { root, stage, grid, empty, heading };
 }
 
@@ -212,8 +207,6 @@ function createContext({ form, root, requestHandler, reloadCountRef }) {
       },
     },
     document: {
-      addEventListener() {
-      },
       querySelectorAll(selector) {
         if (selector === '.animal-photo-upload-form') {
           return form ? [form] : [];
@@ -237,15 +230,26 @@ function createContext({ form, root, requestHandler, reloadCountRef }) {
       },
     },
   };
-  context.globalThis = context;
 
+  context.globalThis = context;
   return context;
 }
 
-function loadAnimalsScript(context) {
-  const source = fs.readFileSync('C:/Users/TESS LARON/Desktop/REVISED/public/assets/js/animals.js', 'utf8');
+function loadScript(context, relativePath) {
+  const absolutePath = path.join(process.cwd(), relativePath);
+  const source = fs.readFileSync(absolutePath, 'utf8');
+  vm.runInContext(source, context, { filename: absolutePath });
+}
+
+function loadAnimalsModules(context) {
   vm.createContext(context);
-  vm.runInContext(source, context);
+  loadScript(context, 'public/assets/js/animals/shared.js');
+  loadScript(context, 'public/assets/js/animals/photo-upload.js');
+  return context.window.CatarmanAnimals;
+}
+
+function flushAsync() {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 async function testInlineUpload() {
@@ -259,10 +263,9 @@ async function testInlineUpload() {
     dataset: { animalId: '7' },
     type: 'form',
   });
-  form.children = [tokenInput, photoInput, preview];
+  form.replaceChildren(tokenInput, photoInput, preview);
 
   const { root, stage, grid, empty, heading } = createPhotoCollectionRoot(7);
-
   const reloadCountRef = { count: 0 };
   const context = createContext({
     form,
@@ -278,20 +281,20 @@ async function testInlineUpload() {
       },
     }),
   });
-  loadAnimalsScript(context);
-  assert.strictEqual(typeof context.bindPhotoUpload, 'function', 'bindPhotoUpload should be defined');
-  context.bindPhotoUpload();
+  const animals = loadAnimalsModules(context);
 
+  animals.bindPhotoUpload(context.document);
   await form.dispatch('submit');
+  await flushAsync();
 
-  assert.strictEqual(reloadCountRef.count, 0, 'successful upload should not reload the page');
-  assert.strictEqual(stage.children.length, 1, 'stage should render the primary photo inline');
+  assert.strictEqual(reloadCountRef.count, 0);
+  assert.strictEqual(stage.children.length, 1);
   assert.strictEqual(stage.children[0].src, '/uploads/animals/7/animal-photo-1.jpg');
-  assert.strictEqual(grid.children.length, 2, 'thumbnail grid should refresh inline');
+  assert.strictEqual(grid.children.length, 2);
   assert.strictEqual(grid.children[1].children[0].src, '/uploads/animals/7/animal-photo-2.jpg');
-  assert.strictEqual(empty.hidden, true, 'empty state should be hidden once photos exist');
-  assert.strictEqual(heading.hidden, false, 'photo heading should stay visible once photos exist');
-  assert.strictEqual(photoInput.value, '', 'file input should reset after successful inline upload');
+  assert.strictEqual(empty.hidden, true);
+  assert.strictEqual(heading.hidden, false);
+  assert.strictEqual(photoInput.value, '');
 }
 
 async function testInlineDelete() {
@@ -304,31 +307,27 @@ async function testInlineDelete() {
     reloadCountRef,
     requestHandler: async (url, options = {}) => {
       requests.push({ url, options });
-
-      if (options.method === 'DELETE') {
-        return { data: { data: {}, message: 'Photo deleted successfully.' } };
-      }
-
-      throw new Error('Unexpected request: ' + url);
+      return { data: { data: {}, message: 'Photo deleted successfully.' } };
     },
   });
-  loadAnimalsScript(context);
+  const animals = loadAnimalsModules(context);
 
-  context.syncAnimalPhotoCollection(root, [
+  animals.syncAnimalPhotoCollection(root, [
     { id: 11, file_path: 'uploads/animals/7/animal-photo-1.jpg', is_primary: 1 },
     { id: 12, file_path: 'uploads/animals/7/animal-photo-2.jpg', is_primary: 0 },
   ]);
-  context.bindAnimalPhotoCollections();
+  animals.bindAnimalPhotoCollections(context.document);
 
   const deleteButton = findActionButton(grid.children[0], 'delete');
   await deleteButton.dispatch('click');
+  await flushAsync();
 
-  assert.strictEqual(reloadCountRef.count, 0, 'inline delete should not reload the page');
-  assert.strictEqual(requests.length, 1, 'inline delete should not request a follow-up photo refresh');
+  assert.strictEqual(reloadCountRef.count, 0);
+  assert.strictEqual(requests.length, 1);
   assert.strictEqual(requests[0].url, '/api/animals/7/photos/11');
   assert.strictEqual(requests[0].options.method, 'DELETE');
   assert.strictEqual(stage.children[0].src, '/uploads/animals/7/animal-photo-2.jpg');
-  assert.strictEqual(grid.children.length, 1, 'delete should refresh the grid inline');
+  assert.strictEqual(grid.children.length, 1);
   assert.strictEqual(grid.children[0].dataset.photoId, '12');
   assert.strictEqual(empty.hidden, true);
   assert.strictEqual(heading.hidden, false);
@@ -356,14 +355,14 @@ async function testDragDropReorder() {
       };
     },
   });
-  loadAnimalsScript(context);
+  const animals = loadAnimalsModules(context);
 
-  context.syncAnimalPhotoCollection(root, [
+  animals.syncAnimalPhotoCollection(root, [
     { id: 11, file_path: 'uploads/animals/7/animal-photo-1.jpg', is_primary: 1 },
     { id: 12, file_path: 'uploads/animals/7/animal-photo-2.jpg', is_primary: 0 },
     { id: 13, file_path: 'uploads/animals/7/animal-photo-3.jpg', is_primary: 0 },
   ]);
-  context.bindAnimalPhotoCollections();
+  animals.bindAnimalPhotoCollections(context.document);
 
   const dataTransfer = {
     effectAllowed: 'move',
@@ -376,8 +375,9 @@ async function testDragDropReorder() {
   await grid.children[0].dispatch('dragover', { dataTransfer });
   await grid.children[0].dispatch('drop', { dataTransfer });
   await grid.children[2].dispatch('dragend', { dataTransfer });
+  await flushAsync();
 
-  assert.strictEqual(reloadCountRef.count, 0, 'drag-drop reorder should not reload the page');
+  assert.strictEqual(reloadCountRef.count, 0);
   assert.strictEqual(requests[0].url, '/api/animals/7/photos/reorder');
   assert.strictEqual(requests[0].options.method, 'PUT');
   assert.strictEqual(requests[0].options.body, JSON.stringify({ photo_ids: [13, 11, 12] }));

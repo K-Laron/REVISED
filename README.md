@@ -151,6 +151,16 @@ php scripts/seed_activity.php 250
 - [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1)
 - [scripts/stop-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.ps1)
 
+## Verification
+
+Run the release gate locally before pushing:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-release-checks.ps1
+```
+
+This command runs route coverage, critical HTTP smoke tests, the full PHPUnit suite, the tracked Node tooling check, and the frontend smoke test.
+
 ## Storage and Generated Files
 
 - `storage/backups/` for compressed SQL backups

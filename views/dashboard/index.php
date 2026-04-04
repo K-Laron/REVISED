@@ -79,6 +79,47 @@
 </section>
 
 <section class="dashboard-command-grid">
+    <article class="card dashboard-action-queue">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Operator focus</span>
+                <h3>Action Queue</h3>
+            </div>
+            <p class="text-muted">Prioritized follow-up work assembled from billing, inventory, adoption, and medical signals.</p>
+        </div>
+
+        <?php if (($actionQueue ?? []) !== []): ?>
+            <div class="dashboard-action-queue-list">
+                <?php foreach (($actionQueue ?? []) as $item): ?>
+                    <?php
+                        $queueModule = (string) ($item['module'] ?? 'Operations');
+                        $queueUrgency = (string) ($item['urgency'] ?? 'Low');
+                    ?>
+                    <a class="dashboard-queue-item" href="<?= htmlspecialchars((string) $item['href'], ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="dashboard-queue-item-head">
+                            <span class="field-label"><?= htmlspecialchars($queueModule, ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="badge <?= $queueUrgency === 'High' ? 'badge-danger' : ($queueUrgency === 'Medium' ? 'badge-warning' : 'badge-info') ?>">
+                                <?= htmlspecialchars($queueUrgency, ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                        </div>
+                        <div class="dashboard-queue-item-body">
+                            <div>
+                                <strong><?= htmlspecialchars((string) $item['label'], ENT_QUOTES, 'UTF-8') ?></strong>
+                                <p class="text-muted"><?= htmlspecialchars((string) $item['summary'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                            <span class="dashboard-queue-count mono"><?= htmlspecialchars((string) $item['count'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="dashboard-empty-state">
+                <strong>No immediate action items are active.</strong>
+                <p class="text-muted">The current signals are clear across the modules you can access.</p>
+            </div>
+        <?php endif; ?>
+    </article>
+
     <article class="card dashboard-chart-panel">
         <div class="dashboard-section-heading">
             <div>
@@ -95,7 +136,9 @@
             <div class="dashboard-occupancy-breakdown" id="occupancy-breakdown" aria-live="polite"></div>
         </div>
     </article>
+</section>
 
+<section class="dashboard-command-grid">
     <article class="card dashboard-activity-feed">
         <div class="dashboard-section-heading">
             <div>

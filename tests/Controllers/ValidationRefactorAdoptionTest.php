@@ -10,9 +10,10 @@ final class ValidationRefactorAdoptionTest extends TestCase
 {
     public function testTargetControllersDelegateValidationToDedicatedValidatorClasses(): void
     {
-        $animalController = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\AnimalController.php');
-        $inventoryController = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\InventoryController.php');
-        $medicalController = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\MedicalController.php');
+        $root = dirname(__DIR__, 2);
+        $animalController = (string) file_get_contents($root . '/src/Controllers/AnimalController.php');
+        $inventoryController = (string) file_get_contents($root . '/src/Controllers/InventoryController.php');
+        $medicalController = (string) file_get_contents($root . '/src/Controllers/MedicalController.php');
 
         self::assertStringContainsString('AnimalInputValidator', $animalController);
         self::assertStringContainsString('InventoryInputValidator', $inventoryController);

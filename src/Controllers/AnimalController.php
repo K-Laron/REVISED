@@ -34,7 +34,7 @@ class AnimalController
         return $this->renderAppView('animals.index', [
             'title' => 'Animals',
             'extraCss' => ['/assets/css/animals.css'],
-            'extraJs' => ['https://unpkg.com/html5-qrcode', '/assets/js/animals.js'],
+            'extraJs' => $this->animalPageScripts(),
             'filters' => $request->query(),
         ]);
     }
@@ -44,7 +44,7 @@ class AnimalController
         return $this->renderAppView('animals.create', [
             'title' => 'New Animal Intake',
             'extraCss' => ['/assets/css/animals.css'],
-            'extraJs' => ['https://unpkg.com/html5-qrcode', '/assets/js/animals.js'],
+            'extraJs' => $this->animalPageScripts(),
             'csrfToken' => CsrfMiddleware::token(),
             'breeds' => $this->animals->breeds(),
             'kennels' => $this->animals->availableKennels(),
@@ -62,7 +62,7 @@ class AnimalController
         return $this->renderAppView('animals.show', [
             'title' => $animal['animal_id'] . ' · Animal Detail',
             'extraCss' => ['/assets/css/animals.css'],
-            'extraJs' => ['https://unpkg.com/html5-qrcode', '/assets/js/animals.js'],
+            'extraJs' => $this->animalPageScripts(),
             'animal' => $animal,
             'csrfToken' => CsrfMiddleware::token(),
         ]);
@@ -79,7 +79,7 @@ class AnimalController
         return $this->renderAppView('animals.edit', [
             'title' => $animal['animal_id'] . ' · Edit Animal',
             'extraCss' => ['/assets/css/animals.css'],
-            'extraJs' => ['https://unpkg.com/html5-qrcode', '/assets/js/animals.js'],
+            'extraJs' => $this->animalPageScripts(),
             'animal' => $animal,
             'csrfToken' => CsrfMiddleware::token(),
             'breeds' => $this->animals->breeds(),
@@ -250,5 +250,21 @@ class AnimalController
         }
 
         return Response::success($timeline, 'Animal timeline retrieved successfully.');
+    }
+
+    private function animalPageScripts(): array
+    {
+        return [
+            'https://unpkg.com/html5-qrcode',
+            '/assets/js/animals/shared.js',
+            '/assets/js/animals/list.js',
+            '/assets/js/animals/form.js',
+            '/assets/js/animals/tabs.js',
+            '/assets/js/animals/status-form.js',
+            '/assets/js/animals/photo-upload.js',
+            '/assets/js/animals/scanner.js',
+            '/assets/js/animals/timeline.js',
+            '/assets/js/animals/boot.js',
+        ];
     }
 }
