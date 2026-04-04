@@ -39,7 +39,7 @@ class AdopterPortalController
         return $this->renderPortalPage('portal.landing', $request, [
             'title' => 'Adopt',
             'extraCss' => ['/assets/css/portal.css'],
-            'extraJs' => ['/assets/js/portal.js'],
+            'extraJs' => $this->portalScripts(),
             'csrfToken' => CsrfMiddleware::token(),
             'featuredAnimals' => $this->adoptions->featuredAnimals(4),
         ]);
@@ -63,7 +63,7 @@ class AdopterPortalController
         return $this->renderPortalPage('portal.animals', $request, [
             'title' => 'Available Animals',
             'extraCss' => ['/assets/css/portal.css'],
-            'extraJs' => ['/assets/js/portal.js'],
+            'extraJs' => $this->portalScripts(),
             'filters' => $filters,
             'animals' => $result['items'],
             'page' => $page,
@@ -88,7 +88,7 @@ class AdopterPortalController
         return $this->renderPortalPage('portal.animal-detail', $request, [
             'title' => $animal['name'] ?: $animal['animal_id'],
             'extraCss' => ['/assets/css/portal.css'],
-            'extraJs' => ['/assets/js/portal.js'],
+            'extraJs' => $this->portalScripts(),
             'animal' => $animal,
         ]);
     }
@@ -168,7 +168,7 @@ class AdopterPortalController
         return $this->renderPortalPage('portal.apply', $request, [
             'title' => 'Apply For Adoption',
             'extraCss' => ['/assets/css/portal.css'],
-            'extraJs' => ['/assets/js/portal.js'],
+            'extraJs' => $this->portalScripts(),
             'csrfToken' => CsrfMiddleware::token(),
             'currentUser' => $authUser,
             'myApplications' => $this->adoptions->myApplications((int) $authUser['id']),
@@ -270,7 +270,7 @@ class AdopterPortalController
         return $this->renderPortalPage('portal.register', $request, [
             'title' => 'Create Adopter Account',
             'extraCss' => ['/assets/css/portal.css'],
-            'extraJs' => ['/assets/js/portal.js'],
+            'extraJs' => $this->portalScripts(),
             'csrfToken' => CsrfMiddleware::token(),
             'errors' => $errors,
             'old' => $old,
@@ -282,5 +282,17 @@ class AdopterPortalController
         return $this->renderPublicView($view, $data + [
             'currentUser' => $this->auth->userFromRequest($request),
         ], $status);
+    }
+
+    private function portalScripts(): array
+    {
+        return [
+            '/assets/js/portal/shared.js',
+            '/assets/js/portal/register-form.js',
+            '/assets/js/portal/apply-form.js',
+            '/assets/js/portal/logout.js',
+            '/assets/js/portal/featured-carousel.js',
+            '/assets/js/portal/boot.js',
+        ];
     }
 }

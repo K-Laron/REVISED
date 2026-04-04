@@ -76,7 +76,7 @@ final class AppShellViewTest extends ViewSmokeTestCase
 
     public function testDashboardStylesDeclareThemeAwareSurfaceOverrides(): void
     {
-        $stylesheet = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\css\\dashboard.css');
+        $stylesheet = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/css/dashboard.css');
 
         self::assertStringContainsString('[data-theme="dark"] .dashboard-briefing-hero', $stylesheet);
         self::assertStringContainsString('[data-theme="dark"] .stat-card', $stylesheet);
@@ -92,7 +92,7 @@ final class AppShellViewTest extends ViewSmokeTestCase
 
     public function testSharedShellScriptPersistsSidebarScrollState(): void
     {
-        $script = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\core\\app-shell.js');
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/core/app-shell.js');
 
         self::assertStringContainsString('catarman:sidebar-scroll-top', $script);
         self::assertStringContainsString('sessionStorage', $script);
@@ -101,9 +101,18 @@ final class AppShellViewTest extends ViewSmokeTestCase
 
     public function testNotificationDropdownScriptHidesReadItemsAfterRefresh(): void
     {
-        $script = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\js\\notifications.js');
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/notifications.js');
 
         self::assertStringContainsString('filter((item) => !item.is_read)', $script);
         self::assertStringContainsString('No unread notifications.', $script);
+    }
+
+    public function testNotificationDropdownScriptBuildsTriageGroups(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/notifications.js');
+
+        self::assertStringContainsString('categorizeNotification', $script);
+        self::assertStringContainsString('notification-group', $script);
+        self::assertStringContainsString('severity', $script);
     }
 }
