@@ -55,12 +55,15 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
         ob_start();
         $router->dispatch($request);
         $content = ob_get_clean() ?: '';
+        $headers = $this->environment()->capturedHeaders();
 
         return [
             'status' => http_response_code(),
             'content' => $content,
-            'json' => $content !== '' ? json_decode($content, true, 512, JSON_THROW_ON_ERROR) : [],
-            'headers' => $this->environment()->capturedHeaders(),
+            'json' => $this->shouldDecodeJson($headers, (string) ($_SERVER['HTTP_ACCEPT'] ?? 'application/json'))
+                ? ($content !== '' ? json_decode($content, true, 512, JSON_THROW_ON_ERROR) : [])
+                : [],
+            'headers' => $headers,
         ];
     }
 
@@ -98,5 +101,23 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
         }
 
         return $this->environment;
+    }
+
+    /**
+     * The page smoke tests reuse this helper to route HTML responses through the app.
+     * Only attempt JSON decoding when the response or request explicitly indicates JSON.
+     *
+     * @param array<string, string> $headers
+     */
+    private function shouldDecodeJson(array $headers, string $acceptHeader): bool
+    {
+        $contentType = strtolower((string) ($headers['Content-Type'] ?? ''));
+        $normalizedAccept = strtolower($acceptHeader);
+
+        if ($contentType !== '') {
+            return str_contains($contentType, 'application/json') || str_contains($contentType, '+json');
+        }
+
+        return str_contains($normalizedAccept, 'application/json') || str_contains($normalizedAccept, '+json');
     }
 }

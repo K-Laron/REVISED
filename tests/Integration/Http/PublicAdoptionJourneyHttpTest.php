@@ -27,6 +27,6 @@ final class PublicAdoptionJourneyHttpTest extends HttpIntegrationTestCase
         self::assertSame(200, $response['status']);
         self::assertStringContainsString('My Adoption Application', $response['content']);
         self::assertStringContainsString('id="portal-apply-form"', $response['content']);
-        self::assertStringContainsString('availableAnimals', $response['content']);
+        self::assertStringContainsString('name="animal_id"', $response['content']);
     }
 }
