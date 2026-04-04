@@ -111,11 +111,11 @@ $hasFilters = array_filter($filters ?? [], static fn ($value) => (string) $value
             <?php endforeach; ?>
 
             <?php if ($animals === []): ?>
-                <article class="portal-empty-card card">
+                <article class="portal-empty-card card empty-state empty-state-compact">
                     <span class="portal-landing-eyebrow">No matches</span>
                     <h3>No animals matched the current filters.</h3>
                     <p class="text-muted">Try removing one or more filters, or return later when new animals become available for adoption.</p>
-                    <div class="cluster portal-empty-actions">
+                    <div class="cluster portal-empty-actions empty-state-action">
                         <a class="btn-secondary" href="/adopt/animals">Reset filters</a>
                     </div>
                 </article>

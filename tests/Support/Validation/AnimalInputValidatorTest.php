@@ -48,6 +48,16 @@ final class AnimalInputValidatorTest extends TestCase
         self::assertSame('You may upload at most 5 photos.', $validator->errors()['photos'][0]);
     }
 
+    public function testValidatePhotoReorderRequiresUniquePhotoIdsArray(): void
+    {
+        $validator = (new AnimalInputValidator())->validatePhotoReorder([
+            'photo_ids' => [7, 7],
+        ]);
+
+        self::assertTrue($validator->fails());
+        self::assertSame('Photo order must contain unique photo ids.', $validator->errors()['photo_ids'][0]);
+    }
+
     private function basePayload(): array
     {
         return [

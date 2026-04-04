@@ -14,6 +14,7 @@ use App\Services\Animal\AnimalKennelCoordinator;
 use App\Services\Animal\AnimalPayloadFactory;
 use App\Services\Animal\AnimalPhotoManager;
 use App\Support\MediaPath;
+use InvalidArgumentException;
 use RuntimeException;
 
 class AnimalService
@@ -192,10 +193,67 @@ class AnimalService
         return $updated['photos'];
     }
 
+    public function reorderPhotos(int $animalId, array $photoIds, int $userId, Request $request): array
+    {
+        $animal = $this->get((string) $animalId);
+        $currentPhotoIds = array_map('intval', array_column($animal['photos'], 'id'));
+
+        if ($currentPhotoIds === []) {
+            throw new InvalidArgumentException('Animal has no photos to reorder.');
+        }
+
+        $normalizedPhotoIds = array_values(array_map('intval', $photoIds));
+        $expectedPhotoIds = $currentPhotoIds;
+        sort($expectedPhotoIds);
+        $sortedPhotoIds = $normalizedPhotoIds;
+        sort($sortedPhotoIds);
+
+        if ($sortedPhotoIds !== $expectedPhotoIds) {
+            throw new InvalidArgumentException('Photo order payload does not match the current animal photos.');
+        }
+
+        Database::beginTransaction();
+
+        try {
+            foreach ($normalizedPhotoIds as $index => $photoId) {
+                $this->photos->updateOrdering($animalId, $photoId, $index, $index === 0 ? 1 : 0);
+            }
+
+            Database::commit();
+        } catch (\Throwable $exception) {
+            Database::rollBack();
+            throw $exception;
+        }
+
+        $updated = $this->get((string) $animalId);
+        $this->audit->record(
+            $userId,
+            'update',
+            'animals',
+            'animal_photos',
+            $animalId,
+            ['photo_ids' => $currentPhotoIds],
+            ['photo_ids' => array_map('intval', array_column($updated['photos'], 'id'))],
+            $request
+        );
+
+        return $updated['photos'];
+    }
+
     public function deletePhoto(int $animalId, int $photoId, int $userId, Request $request): void
     {
         $photo = $this->photos->find($animalId, $photoId);
-        $this->photoManager->delete($animalId, $photoId);
+        Database::beginTransaction();
+
+        try {
+            $this->photoManager->delete($animalId, $photoId);
+            $this->normalizePhotoOrdering($animalId);
+            Database::commit();
+        } catch (\Throwable $exception) {
+            Database::rollBack();
+            throw $exception;
+        }
+
         $this->audit->record($userId, 'delete', 'animals', 'animal_photos', $photoId, $photo ?: [], [], $request);
     }
 
@@ -230,5 +288,14 @@ class AnimalService
         usort($entries, static fn (array $a, array $b) => strcmp((string) $b['date'], (string) $a['date']));
 
         return $entries;
+    }
+
+    private function normalizePhotoOrdering(int $animalId): void
+    {
+        $photos = $this->photos->listByAnimal($animalId);
+
+        foreach ($photos as $index => $photo) {
+            $this->photos->updateOrdering($animalId, (int) $photo['id'], $index, $index === 0 ? 1 : 0);
+        }
     }
 }

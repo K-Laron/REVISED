@@ -12,6 +12,7 @@ use App\Middleware\CsrfMiddleware;
 use App\Services\AnimalService;
 use App\Support\Pagination;
 use App\Support\Validation\AnimalInputValidator;
+use InvalidArgumentException;
 use RuntimeException;
 
 class AnimalController
@@ -205,6 +206,28 @@ class AnimalController
         }
 
         return Response::success($photos, 'Photos uploaded successfully.');
+    }
+
+    public function reorderPhotos(Request $request, string $id): Response
+    {
+        $validator = $this->validator->validatePhotoReorder($request->body());
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        $authUserId = $this->currentUserId($request);
+
+        try {
+            $photos = $this->animals->reorderPhotos((int) $id, $request->body('photo_ids', []), $authUserId, $request);
+        } catch (RuntimeException) {
+            return Response::error(404, 'NOT_FOUND', 'Animal not found.');
+        } catch (InvalidArgumentException $exception) {
+            return Response::error(422, 'VALIDATION_ERROR', $exception->getMessage());
+        } catch (\Throwable $exception) {
+            return Response::error(500, 'SERVER_ERROR', $exception->getMessage());
+        }
+
+        return Response::success($photos, 'Photos reordered successfully.');
     }
 
     public function deletePhoto(Request $request, string $id, string $photoId): Response

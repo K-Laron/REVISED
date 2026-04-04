@@ -39,4 +39,19 @@ class AnimalPhoto
     {
         Database::execute('DELETE FROM animal_photos WHERE id = :id', ['id' => $photoId]);
     }
+
+    public function updateOrdering(int $animalId, int $photoId, int $sortOrder, int $isPrimary): void
+    {
+        Database::execute(
+            'UPDATE animal_photos
+             SET sort_order = :sort_order, is_primary = :is_primary
+             WHERE animal_id = :animal_id AND id = :id',
+            [
+                'animal_id' => $animalId,
+                'id' => $photoId,
+                'sort_order' => $sortOrder,
+                'is_primary' => $isPrimary,
+            ]
+        );
+    }
 }

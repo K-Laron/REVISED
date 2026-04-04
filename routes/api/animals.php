@@ -8,6 +8,7 @@ $router->post('/api/animals', \App\Controllers\AnimalController::class . '@store
 $router->get('/api/animals/{id}/timeline', \App\Controllers\AnimalController::class . '@timeline', ['cors', 'auth', 'perm:animals.read']);
 $router->put('/api/animals/{id}/status', \App\Controllers\AnimalController::class . '@updateStatus', ['cors', 'csrf', 'auth', 'perm:animals.update']);
 $router->post('/api/animals/{id}/photos', \App\Controllers\AnimalController::class . '@uploadPhoto', ['cors', 'csrf', 'auth', 'perm:animals.update']);
+$router->put('/api/animals/{id}/photos/reorder', \App\Controllers\AnimalController::class . '@reorderPhotos', ['cors', 'csrf', 'auth', 'perm:animals.update']);
 $router->delete('/api/animals/{id}/photos/{photoId}', \App\Controllers\AnimalController::class . '@deletePhoto', ['cors', 'csrf', 'auth', 'perm:animals.update']);
 $router->get('/api/animals/{id}/qr', \App\Controllers\QrCodeController::class . '@generate', ['cors', 'auth', 'perm:animals.read']);
 $router->get('/api/animals/{id}/qr/download', \App\Controllers\QrCodeController::class . '@download', ['cors', 'auth', 'perm:animals.read']);

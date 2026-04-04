@@ -9,6 +9,26 @@ $statusClassMap = [
     'Quarantine' => 'badge-warning',
 ];
 $statusClass = $statusClassMap[$animal['status']] ?? 'badge-info';
+$renderPhotoCard = static function (array $photo, int $index, int $total): void {
+    $photoId = (int) ($photo['id'] ?? 0);
+    $isPrimary = (int) ($photo['is_primary'] ?? 0) === 1;
+    $filePath = (string) ($photo['file_path'] ?? '');
+    ?>
+    <article class="animal-photo-card" data-animal-photo-item data-photo-id="<?= $photoId ?>" data-file-path="<?= htmlspecialchars($filePath, ENT_QUOTES, 'UTF-8') ?>" data-is-primary="<?= $isPrimary ? '1' : '0' ?>" draggable="true">
+        <img src="/<?= htmlspecialchars($filePath, ENT_QUOTES, 'UTF-8') ?>" alt="Animal thumbnail">
+        <div class="animal-photo-card-meta">
+            <span class="animal-photo-badge<?= $isPrimary ? ' is-primary' : '' ?>"><?= $isPrimary ? 'Primary' : 'Gallery' ?></span>
+            <span class="animal-photo-drag-handle">Drag to reorder</span>
+        </div>
+        <div class="animal-photo-card-actions">
+            <button class="animal-photo-action" type="button" data-animal-photo-action="make-primary" data-photo-id="<?= $photoId ?>" <?= $isPrimary ? 'disabled' : '' ?>>Primary</button>
+            <button class="animal-photo-action" type="button" data-animal-photo-action="move-left" data-photo-id="<?= $photoId ?>" <?= $index === 0 ? 'disabled' : '' ?>>Left</button>
+            <button class="animal-photo-action" type="button" data-animal-photo-action="move-right" data-photo-id="<?= $photoId ?>" <?= $index === ($total - 1) ? 'disabled' : '' ?>>Right</button>
+            <button class="animal-photo-action is-danger" type="button" data-animal-photo-action="delete" data-photo-id="<?= $photoId ?>">Delete</button>
+        </div>
+    </article>
+    <?php
+};
 ?>
 <section class="page-title">
     <div class="page-title-meta">
@@ -25,18 +45,21 @@ $statusClass = $statusClassMap[$animal['status']] ?? 'badge-info';
 </section>
 
 <section class="animal-detail-grid">
-    <article class="card stack">
-        <h3>Photo Gallery</h3>
-        <div class="animal-photo-stage">
+    <article class="card stack" data-animal-photo-collection data-animal-id="<?= (int) $animal['id'] ?>" data-csrf-token="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+        <div>
+            <h3>Photo Gallery</h3>
+            <p class="text-muted">Drag photos to reorder them. Primary and delete controls stay available for quick changes.</p>
+        </div>
+        <div class="animal-photo-stage" data-animal-photo-stage>
             <?php if (!empty($animal['photos'])): ?>
                 <img src="/<?= htmlspecialchars($animal['photos'][0]['file_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Animal photo">
             <?php else: ?>
                 <div class="animal-photo-empty">No photos uploaded</div>
             <?php endif; ?>
         </div>
-        <div class="animal-thumb-grid">
-            <?php foreach ($animal['photos'] as $photo): ?>
-                <img src="/<?= htmlspecialchars($photo['file_path'], ENT_QUOTES, 'UTF-8') ?>" alt="Animal thumbnail">
+        <div class="animal-thumb-grid" data-animal-photo-grid <?= empty($animal['photos']) ? 'hidden' : '' ?>>
+            <?php foreach ($animal['photos'] as $index => $photo): ?>
+                <?php $renderPhotoCard($photo, $index, count($animal['photos'])); ?>
             <?php endforeach; ?>
         </div>
         <div class="qr-panel" style="cursor:pointer" data-qr-preview data-qr-src="/api/animals/<?= (int) $animal['id'] ?>/qr" data-qr-name="<?= htmlspecialchars($animal['name'] ?: 'Unnamed Animal', ENT_QUOTES, 'UTF-8') ?>" data-qr-code="<?= htmlspecialchars($animal['animal_id'], ENT_QUOTES, 'UTF-8') ?>" data-qr-download="/api/animals/<?= (int) $animal['id'] ?>/qr/download">

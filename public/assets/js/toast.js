@@ -28,8 +28,9 @@
   }
 
   function dismiss(toast) {
+    const exitDuration = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
     toast.classList.add('toast-exit');
-    window.setTimeout(() => toast.remove(), 300);
+    window.setTimeout(() => toast.remove(), exitDuration);
   }
 
   function show(type, title, description = '', options = {}) {

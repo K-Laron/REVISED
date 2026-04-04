@@ -22,6 +22,8 @@ storage/runtime/
 /.playwright-cli/
 /output/
 /.superpowers/
+/.worktrees/
+/worktrees/
 
 # Extraneous files / Temp Code Generation
 /.tmp/

@@ -1,0 +1,138 @@
+/**
+ * Loading Skeletons - Civic Ledger Design System
+ * 
+ * Shimmer loading placeholders for content that is loading.
+ * Uses design tokens from variables.css for consistent theming.
+ * 
+ * Usage:
+ *   <div class="skeleton skeleton-text"></div>
+ *   <div class="skeleton skeleton-circle"></div>
+ *   <div class="skeleton-stack">
+ *     <div class="skeleton skeleton-text"></div>
+ *     <div class="skeleton skeleton-text skeleton-sm"></div>
+ *   </div>
+ */
+
+/* ==========================================================================
+   Base Skeleton
+   ========================================================================== */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer var(--skeleton-animation-duration) ease-in-out infinite;
+  border-radius: var(--skeleton-radius);
+}
+
+/* ==========================================================================
+   Shape Variants
+   ========================================================================== */
+
+/**
+ * Text skeleton - Single line placeholder
+ * Default height approximates body text
+ */
+.skeleton-text {
+  height: 1em;
+  width: 100%;
+  border-radius: var(--radius-sm, 4px);
+}
+
+/**
+ * Circle skeleton - Avatar/icon placeholder
+ * Uses aspect-ratio for perfect circles
+ */
+.skeleton-circle {
+  width: 3rem;
+  height: 3rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/**
+ * Rectangle skeleton - Card/image placeholder
+ * For larger content blocks
+ */
+.skeleton-rect {
+  width: 100%;
+  height: 8rem;
+  border-radius: var(--skeleton-radius);
+}
+
+/* ==========================================================================
+   Size Variants
+   ========================================================================== */
+
+/**
+ * Small variant - Smaller text/elements
+ */
+.skeleton-sm.skeleton-text {
+  height: 0.75em;
+  width: 60%;
+}
+
+.skeleton-sm.skeleton-circle {
+  width: 2rem;
+  height: 2rem;
+}
+
+.skeleton-sm.skeleton-rect {
+  height: 4rem;
+}
+
+/**
+ * Large variant - Headers/larger elements
+ */
+.skeleton-lg.skeleton-text {
+  height: 1.5em;
+  width: 80%;
+}
+
+.skeleton-lg.skeleton-circle {
+  width: 5rem;
+  height: 5rem;
+}
+
+.skeleton-lg.skeleton-rect {
+  height: 12rem;
+}
+
+/* ==========================================================================
+   Layout Helpers
+   ========================================================================== */
+
+/**
+ * Stack - Vertical layout with consistent spacing
+ */
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+}
+
+/**
+ * Row - Horizontal layout with consistent spacing
+ */
+.skeleton-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+/* ==========================================================================
+   Accessibility - Reduced Motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--skeleton-base);
+  }
+}

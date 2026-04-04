@@ -2,28 +2,39 @@
 .qr-preview-modal {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--z-modal-backdrop);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: var(--space-4);
+    animation: modal-fade-in var(--duration-normal) var(--ease-out-expo);
 }
 
 .qr-preview-modal[hidden] {
     display: none;
 }
 
+.qr-preview-modal[data-closing] {
+    animation: modal-fade-out var(--duration-normal) var(--ease-out-expo);
+}
+
 .qr-preview-backdrop {
     position: absolute;
     inset: 0;
+    z-index: var(--z-modal-backdrop);
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    animation: backdrop-fade-in var(--duration-normal) var(--ease-out-expo);
+}
+
+.qr-preview-modal[data-closing] .qr-preview-backdrop {
+    animation: backdrop-fade-out var(--duration-normal) var(--ease-out-expo);
 }
 
 .qr-preview-card {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-modal);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -35,12 +46,64 @@
     padding: var(--space-6);
     width: 100%;
     max-width: 380px;
-    animation: qr-pop-in 200ms ease;
+    animation: modal-scale-in var(--duration-normal) var(--ease-out-back);
 }
 
-@keyframes qr-pop-in {
-    from { opacity: 0; transform: scale(0.92); }
-    to   { opacity: 1; transform: scale(1); }
+.qr-preview-modal[data-closing] .qr-preview-card {
+    animation: modal-scale-out var(--duration-normal) var(--ease-out-expo);
+}
+
+/* Entry Animations */
+@keyframes modal-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes backdrop-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes modal-scale-in {
+    from { 
+        opacity: 0; 
+        transform: scale(0.90) translateY(8px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
+}
+
+/* Exit Animations */
+@keyframes modal-fade-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+@keyframes backdrop-fade-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+@keyframes modal-scale-out {
+    from { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
+    to { 
+        opacity: 0; 
+        transform: scale(0.95) translateY(4px); 
+    }
+}
+
+/* Reduced Motion Fallback */
+@media (prefers-reduced-motion: reduce) {
+    .qr-preview-modal,
+    .qr-preview-backdrop,
+    .qr-preview-card {
+        animation: none;
+    }
 }
 
 .qr-preview-close {
