@@ -1,0 +1,135 @@
+/* ==========================================================================
+   Tooltip System
+   ========================================================================== */
+
+.tooltip {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  max-width: 280px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-accent);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-floating);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transform-origin: center;
+  will-change: opacity, transform;
+  transition: opacity var(--duration-quick) ease, transform var(--duration-quick) ease;
+}
+
+[data-theme="dark"] .tooltip {
+  backdrop-filter: blur(var(--surface-backdrop-blur));
+}
+
+/* Show State */
+.tooltip[data-visible="true"] {
+  opacity: 1;
+}
+
+/* Position-Specific Transform States */
+.tooltip[data-position="top"] {
+  transform: translateY(4px);
+}
+
+.tooltip[data-position="top"][data-visible="true"] {
+  transform: translateY(0);
+}
+
+.tooltip[data-position="bottom"] {
+  transform: translateY(-4px);
+}
+
+.tooltip[data-position="bottom"][data-visible="true"] {
+  transform: translateY(0);
+}
+
+.tooltip[data-position="left"] {
+  transform: translateX(4px);
+}
+
+.tooltip[data-position="left"][data-visible="true"] {
+  transform: translateX(0);
+}
+
+.tooltip[data-position="right"] {
+  transform: translateX(-4px);
+}
+
+.tooltip[data-position="right"][data-visible="true"] {
+  transform: translateX(0);
+}
+
+/* Arrow Pointer */
+.tooltip-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--color-bg-accent);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+[data-theme="dark"] .tooltip-arrow {
+  backdrop-filter: blur(var(--surface-backdrop-blur));
+}
+
+/* Arrow Position - Top */
+.tooltip[data-position="top"] .tooltip-arrow {
+  bottom: -4px;
+  left: 50%;
+  margin-left: -5px;
+}
+
+/* Arrow Position - Bottom */
+.tooltip[data-position="bottom"] .tooltip-arrow {
+  top: -4px;
+  left: 50%;
+  margin-left: -5px;
+}
+
+/* Arrow Position - Left */
+.tooltip[data-position="left"] .tooltip-arrow {
+  right: -4px;
+  top: 50%;
+  margin-top: -5px;
+}
+
+/* Arrow Position - Right */
+.tooltip[data-position="right"] .tooltip-arrow {
+  left: -4px;
+  top: 50%;
+  margin-top: -5px;
+}
+
+/* Keyboard Focus Indicator */
+[data-tooltip]:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transition: none;
+  }
+
+  .tooltip[data-position="top"],
+  .tooltip[data-position="bottom"],
+  .tooltip[data-position="left"],
+  .tooltip[data-position="right"] {
+    transform: none;
+  }
+
+  .tooltip[data-position="top"][data-visible="true"],
+  .tooltip[data-position="bottom"][data-visible="true"],
+  .tooltip[data-position="left"][data-visible="true"],
+  .tooltip[data-position="right"][data-visible="true"] {
+    transform: none;
+  }
+}

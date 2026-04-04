@@ -54,6 +54,7 @@ final class ApiRouteRegistrationTest extends TestCase
         self::assertArrayHasKey('/api/auth/login', $routes['POST']);
         self::assertArrayHasKey('/api/dashboard/stats', $routes['GET']);
         self::assertArrayHasKey('/api/animals', $routes['GET']);
+        self::assertArrayHasKey('/api/animals/{id}/photos/reorder', $routes['PUT']);
         self::assertArrayHasKey('/api/billing/invoices', $routes['POST']);
         self::assertArrayHasKey('/api/inventory', $routes['GET']);
         self::assertArrayHasKey('/api/kennels', $routes['GET']);

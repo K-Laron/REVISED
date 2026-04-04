@@ -61,10 +61,17 @@
   display: none;
 }
 
-.photo-preview-grid,
-.animal-thumb-grid {
+.photo-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+
+.animal-thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(164px, 180px));
+  justify-content: start;
+  align-items: start;
   gap: var(--space-3);
 }
 
@@ -75,6 +82,116 @@
   object-fit: cover;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-default);
+}
+
+.animal-photo-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
+  cursor: grab;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
+}
+
+.animal-photo-card:hover {
+  border-color: var(--color-border-default);
+}
+
+.animal-photo-card.is-dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+.animal-photo-card.is-drop-target {
+  border-color: var(--color-border-focus);
+  background: color-mix(in srgb, var(--color-accent-primary) 10%, var(--color-bg-elevated));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 28%, transparent);
+}
+
+.animal-photo-card-meta {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  align-items: start;
+}
+
+.animal-photo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.animal-photo-badge.is-primary {
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
+}
+
+.animal-photo-drag-handle {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.animal-photo-library {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.animal-photo-library [hidden] {
+  display: none !important;
+}
+
+.animal-photo-library .animal-photo-empty {
+  min-height: 6.5rem;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-secondary) 76%, var(--color-bg-elevated));
+  text-align: center;
+}
+
+.animal-photo-card-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.animal-photo-action {
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.animal-photo-action:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-focus);
+}
+
+.animal-photo-action.is-danger {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border-default));
+  color: var(--color-danger);
+}
+
+.animal-photo-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .animal-table-wrap {

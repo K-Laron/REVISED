@@ -73,6 +73,32 @@ final class AnimalInputValidator
         return $validator;
     }
 
+    public function validatePhotoReorder(array $data): Validator
+    {
+        $validator = (new Validator($data))->rules([
+            'photo_ids' => 'required|array|min:1|max:5',
+        ]);
+
+        $photoIds = $data['photo_ids'] ?? null;
+        if (!is_array($photoIds)) {
+            return $validator;
+        }
+
+        foreach ($photoIds as $photoId) {
+            if (filter_var($photoId, FILTER_VALIDATE_INT) === false) {
+                $validator->addManualError('photo_ids', 'Each photo id must be an integer.');
+                return $validator;
+            }
+        }
+
+        $normalizedIds = array_map('intval', $photoIds);
+        if (count(array_unique($normalizedIds)) !== count($normalizedIds)) {
+            $validator->addManualError('photo_ids', 'Photo order must contain unique photo ids.');
+        }
+
+        return $validator;
+    }
+
     private function validatePhotos(Validator $validator, mixed $files): void
     {
         if ($files === null || !is_array($files) || !isset($files['name'])) {

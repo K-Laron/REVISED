@@ -83,6 +83,10 @@
     <?php foreach (($extraCss ?? []) as $stylesheet): ?>
         <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>">
     <?php endforeach; ?>
+    <link rel="stylesheet" href="/assets/css/loading-skeletons.css">
+    <link rel="stylesheet" href="/assets/css/empty-states.css">
+    <link rel="stylesheet" href="/assets/css/progress.css">
+    <link rel="stylesheet" href="/assets/css/tooltips.css">
     <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css">
 </head>
 <body>
@@ -119,6 +123,8 @@
                 aria-label="Open public navigation"
                 aria-expanded="false"
                 aria-controls="public-nav-panel"
+                data-tooltip="Open portal navigation"
+                data-tooltip-position="bottom"
                 data-public-nav-toggle
             >
                 <svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -137,6 +143,8 @@
                         class="icon-button public-nav-close"
                         type="button"
                         aria-label="Close public navigation"
+                        data-tooltip="Close portal navigation"
+                        data-tooltip-position="bottom"
                         data-public-nav-close
                     >
                         <svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -159,7 +167,7 @@
                         <a class="public-nav-link public-nav-link-accent<?= $requestPath === '/login' ? ' is-active' : '' ?>" href="/login" <?= $requestPath === '/login' ? 'aria-current="page"' : '' ?>>Sign In</a>
                     <?php endif; ?>
                 </nav>
-                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme" data-tooltip="Toggle color theme" data-tooltip-position="bottom">
                     <svg class="theme-icon theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"></circle>
                         <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
@@ -190,6 +198,7 @@
     <script src="/assets/js/core/app-shell.js" data-core-asset="js"></script>
     <script src="/assets/js/core/app-navigation.js" data-core-asset="js"></script>
     <script src="/assets/js/app.js" data-core-asset="js"></script>
+    <script src="/assets/js/tooltips.js" data-core-asset="js"></script>
     <script src="/assets/js/background-canvas.js" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>" data-page-asset="js"></script>

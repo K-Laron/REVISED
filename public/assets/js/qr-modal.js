@@ -8,6 +8,84 @@
  *   data-qr-download — Download URL (defaults to data-qr-src)
  */
 
+let focusTrapActive = false;
+let lastFocusedElement = null;
+
+function getMotionDuration() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220;
+}
+
+/**
+ * Focus Trap Implementation
+ * Traps keyboard focus within modal and cycles through focusable elements
+ */
+function getFocusableElements(container) {
+  const selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  return Array.from(container.querySelectorAll(selector));
+}
+
+function trapFocus(event, modal) {
+  if (event.key !== 'Tab' || !focusTrapActive) return;
+  
+  const focusableElements = getFocusableElements(modal);
+  if (focusableElements.length === 0) return;
+  
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements[focusableElements.length - 1];
+  
+  if (event.shiftKey) {
+    // Shift + Tab: moving backwards
+    if (document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    }
+  } else {
+    // Tab: moving forwards
+    if (document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  }
+}
+
+function openModal(modal) {
+  lastFocusedElement = document.activeElement;
+  
+  modal.hidden = false;
+  modal.removeAttribute('data-closing');
+  modal.setAttribute('aria-hidden', 'false');
+  
+  // Focus first focusable element
+  const focusableElements = getFocusableElements(modal);
+  if (focusableElements.length > 0) {
+    focusableElements[0].focus();
+  }
+  
+  focusTrapActive = true;
+}
+
+function closeModal(modal) {
+  focusTrapActive = false;
+  
+  // Add closing state for exit animation
+  modal.setAttribute('data-closing', 'true');
+  
+  // Wait for animation to complete
+  setTimeout(() => {
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    modal.removeAttribute('data-closing');
+    
+    const image = document.getElementById('qr-preview-image');
+    if (image) image.src = '';
+    
+    // Restore focus to trigger element
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+      lastFocusedElement.focus();
+    }
+  }, getMotionDuration());
+}
+
 document.addEventListener('click', (event) => {
   // Handle open trigger
   const trigger = event.target.closest('[data-qr-preview]');
@@ -42,8 +120,7 @@ document.addEventListener('click', (event) => {
         .catch(err => console.error('Error fetching QR data:', err));
     }
     
-    modal.hidden = false;
-    modal.setAttribute('aria-hidden', 'false');
+    openModal(modal);
     return;
   }
 
@@ -52,23 +129,29 @@ document.addEventListener('click', (event) => {
   if (closeBtn) {
     event.preventDefault();
     const modal = document.getElementById('qr-preview-modal');
-    if (modal) {
-      modal.hidden = true;
-      modal.setAttribute('aria-hidden', 'true');
-      const image = document.getElementById('qr-preview-image');
-      if (image) image.src = '';
+    if (modal && !modal.hidden) {
+      closeModal(modal);
+    }
+  }
+  
+  // Handle backdrop click (click outside)
+  if (event.target.classList.contains('qr-preview-backdrop')) {
+    const modal = document.getElementById('qr-preview-modal');
+    if (modal && !modal.hidden) {
+      closeModal(modal);
     }
   }
 });
 
 document.addEventListener('keydown', (event) => {
+  const modal = document.getElementById('qr-preview-modal');
+  if (!modal || modal.hidden) return;
+  
+  // Handle ESC key
   if (event.key === 'Escape') {
-    const modal = document.getElementById('qr-preview-modal');
-    if (modal && !modal.hidden) {
-      modal.hidden = true;
-      modal.setAttribute('aria-hidden', 'true');
-      const image = document.getElementById('qr-preview-image');
-      if (image) image.src = '';
-    }
+    closeModal(modal);
   }
+  
+  // Handle focus trap
+  trapFocus(event, modal);
 });

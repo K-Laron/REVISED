@@ -320,7 +320,7 @@
   width: min(420px, calc(100vw - 32px));
   padding: 0;
   overflow: hidden;
-  z-index: 20;
+  z-index: var(--z-dropdown);
 }
 
 .notification-panel-header {

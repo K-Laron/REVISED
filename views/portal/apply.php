@@ -208,7 +208,7 @@ foreach ($availableAnimals as $animal) {
                         </article>
                     <?php endforeach; ?>
                     <?php if ($myApplications === []): ?>
-                        <article class="portal-empty-card card">
+                        <article class="portal-empty-card card empty-state empty-state-compact">
                             <span class="portal-landing-eyebrow">No submissions yet</span>
                             <h3>No applications submitted yet.</h3>
                             <p class="text-muted">Complete the form on this page whenever you’re ready to start the shelter review process.</p>

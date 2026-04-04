@@ -62,10 +62,13 @@
   --space-4: 1rem;
   --space-5: 1.25rem;
   --space-6: 1.5rem;
+  --space-7: 1.75rem;
   --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
 
   --measure-reading: 68ch;
   --content-max-width: 1680px;
@@ -82,6 +85,23 @@
   --shadow-lg: 0 28px 64px rgba(20, 35, 59, 0.12);
   --shadow-xl: 0 36px 88px rgba(20, 35, 59, 0.16);
   --shadow-toast: 0 28px 64px rgba(20, 35, 59, 0.18);
+
+  /* Enhanced Shadows — Layered for depth */
+  --shadow-xs: 0 1px 2px rgba(20, 35, 59, 0.04);
+  --shadow-soft: 0 2px 8px rgba(20, 35, 59, 0.06), 0 1px 2px rgba(20, 35, 59, 0.04);
+  --shadow-medium: 0 4px 12px rgba(20, 35, 59, 0.08), 0 2px 4px rgba(20, 35, 59, 0.04);
+  --shadow-elevated: 0 8px 24px rgba(20, 35, 59, 0.12), 0 4px 8px rgba(20, 35, 59, 0.06);
+  --shadow-floating: 0 12px 32px rgba(20, 35, 59, 0.14), 0 6px 12px rgba(20, 35, 59, 0.08);
+
+  /* Interactive Shadow States */
+  --shadow-interactive: 0 0 0 3px rgba(29, 78, 137, 0.1);
+  --shadow-focus-ring: 0 0 0 2px var(--color-bg-primary), 0 0 0 4px var(--color-accent-primary);
+
+  /* Colored Shadows (for cards with accent) */
+  --shadow-primary: 0 4px 14px rgba(29, 78, 137, 0.15);
+  --shadow-success: 0 4px 14px rgba(46, 106, 81, 0.15);
+  --shadow-warning: 0 4px 14px rgba(163, 107, 36, 0.15);
+  --shadow-danger: 0 4px 14px rgba(156, 61, 53, 0.15);
 
   --focus-glow: 0 0 0 4px rgba(29, 78, 137, 0.18);
   --focus-glow-danger: 0 0 0 4px rgba(156, 61, 53, 0.18);
@@ -101,6 +121,31 @@
 
   --theme-transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
   --surface-backdrop-blur: 0px;
+
+  /* Motion & Animation — Easing Curves */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+  --ease-spring: cubic-bezier(0.5, 1.5, 0.8, 1);
+
+  /* Motion & Animation — Stagger Delays */
+  --stagger-1: 50ms;
+  --stagger-2: 100ms;
+  --stagger-3: 150ms;
+  --stagger-4: 200ms;
+
+  /* Motion & Animation — Durations (400ms cap) */
+  --duration-instant: 100ms;
+  --duration-quick: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 320ms;
+  --duration-deliberate: 400ms;
+
+  /* Skeleton Loading */
+  --skeleton-base: #e5e7eb;
+  --skeleton-highlight: #f3f4f6;
+  --skeleton-radius: var(--radius-md);
+  --skeleton-animation-duration: 1.5s;
 }
 
 /* Module accent overrides — light mode */
@@ -153,9 +198,30 @@
   --shadow-xl: 0 40px 96px rgba(7, 12, 22, 0.60);
   --shadow-toast: 0 30px 72px rgba(7, 12, 22, 0.62);
 
+  /* Enhanced Shadows — Layered for depth (dark mode) */
+  --shadow-xs: 0 1px 2px rgba(7, 12, 22, 0.08);
+  --shadow-soft: 0 2px 8px rgba(7, 12, 22, 0.12), 0 1px 2px rgba(7, 12, 22, 0.08);
+  --shadow-medium: 0 4px 12px rgba(7, 12, 22, 0.16), 0 2px 4px rgba(7, 12, 22, 0.10);
+  --shadow-elevated: 0 8px 24px rgba(7, 12, 22, 0.24), 0 4px 8px rgba(7, 12, 22, 0.14);
+  --shadow-floating: 0 12px 32px rgba(7, 12, 22, 0.30), 0 6px 12px rgba(7, 12, 22, 0.18);
+
+  /* Interactive Shadow States (dark mode) */
+  --shadow-interactive: 0 0 0 3px rgba(147, 197, 253, 0.14);
+  --shadow-focus-ring: 0 0 0 2px var(--color-bg-primary), 0 0 0 4px var(--color-accent-primary);
+
+  /* Colored Shadows (for cards with accent - dark mode) */
+  --shadow-primary: 0 4px 14px rgba(147, 197, 253, 0.20);
+  --shadow-success: 0 4px 14px rgba(117, 197, 160, 0.20);
+  --shadow-warning: 0 4px 14px rgba(231, 184, 113, 0.20);
+  --shadow-danger: 0 4px 14px rgba(242, 154, 141, 0.20);
+
   --focus-glow: 0 0 0 4px rgba(147, 197, 253, 0.22);
   --focus-glow-danger: 0 0 0 4px rgba(242, 154, 141, 0.22);
   --focus-glow-success: 0 0 0 4px rgba(117, 197, 160, 0.22);
+
+  /* Skeleton Loading — Dark Mode Overrides */
+  --skeleton-base: #374151;
+  --skeleton-highlight: #4b5563;
 }
 
 /* Module accent overrides — dark mode */
@@ -171,4 +237,36 @@
 [data-theme="dark"][data-module="inventory"]{ --color-accent-primary: #818CF8; --color-accent-primary-hover: #6366F1; --color-accent-info: #818CF8; --color-accent-info-bg: rgba(129,140,248,0.14); }
 [data-theme="dark"] [data-module="reports"],
 [data-theme="dark"][data-module="reports"]  { --color-accent-primary: #34D399; --color-accent-primary-hover: #10B981; --color-accent-info: #34D399; --color-accent-info-bg: rgba(52,211,153,0.14); }
+
+/* Reduced Motion — Accessibility Fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ease-out-expo: ease;
+    --ease-out-back: ease;
+    --ease-in-out-circ: ease;
+    --ease-spring: ease;
+    
+    --stagger-1: 0ms;
+    --stagger-2: 0ms;
+    --stagger-3: 0ms;
+    --stagger-4: 0ms;
+    
+    --duration-instant: 0ms;
+    --duration-quick: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --duration-deliberate: 0ms;
+    
+    --transition-fast: 0ms ease;
+    --transition-base: 0ms ease;
+    --transition-slow: 0ms ease;
+    --transition-spring: 0ms ease;
+  }
+}
+
+/* Skeleton Loading — Shimmer Animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 

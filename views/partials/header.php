@@ -10,7 +10,7 @@ $bellIcon = '<svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="cur
 ?>
 <header class="topbar">
     <div class="topbar-context">
-        <button class="icon-button mobile-menu-toggle" type="button" data-sidebar-toggle aria-label="Open navigation">
+        <button class="icon-button mobile-menu-toggle" type="button" data-sidebar-toggle aria-label="Open navigation" data-tooltip="Open navigation rail" data-tooltip-position="bottom">
             <?= $menuIcon ?>
         </button>
         <div class="topbar-heading">
@@ -27,7 +27,7 @@ $bellIcon = '<svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="cur
     <div class="topbar-actions">
         <span class="topbar-status-pill"><?= htmlspecialchars($authUser['role_display_name'] ?? 'Guest', ENT_QUOTES, 'UTF-8') ?></span>
         <div class="notification-shell">
-            <button class="icon-button notification-trigger" type="button" aria-label="Notifications" aria-haspopup="dialog" aria-controls="notification-panel" data-notification-trigger aria-expanded="false">
+            <button class="icon-button notification-trigger" type="button" aria-label="Notifications" aria-haspopup="dialog" aria-controls="notification-panel" data-notification-trigger aria-expanded="false" data-tooltip="View notifications" data-tooltip-position="bottom">
                 <?= $bellIcon ?>
                 <span class="notification-badge" data-notification-badge hidden>0</span>
             </button>
@@ -44,7 +44,7 @@ $bellIcon = '<svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="cur
                 </div>
             </div>
         </div>
-        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme" data-tooltip="Toggle color theme" data-tooltip-position="bottom">
             <svg class="theme-icon theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"></circle>
                 <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>

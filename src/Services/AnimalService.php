@@ -14,6 +14,7 @@ use App\Models\Breed;
 use App\Support\MediaPath;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
+use InvalidArgumentException;
 use RuntimeException;
 
 class AnimalService
@@ -197,8 +198,56 @@ class AnimalService
     {
         $animal = $this->get((string) $animalId);
         $this->storeUploadedPhotos($animalId, $photoInput, $userId);
+        $this->normalizePhotoOrdering($animalId);
         $updated = $this->get((string) $animalId);
         $this->audit->record($userId, 'update', 'animals', 'animal_photos', $animalId, ['photo_count' => count($animal['photos'])], ['photo_count' => count($updated['photos'])], $request);
+
+        return $updated['photos'];
+    }
+
+    public function reorderPhotos(int $animalId, array $photoIds, int $userId, Request $request): array
+    {
+        $animal = $this->get((string) $animalId);
+        $currentPhotoIds = array_map('intval', array_column($animal['photos'], 'id'));
+
+        if ($currentPhotoIds === []) {
+            throw new InvalidArgumentException('Animal has no photos to reorder.');
+        }
+
+        $normalizedPhotoIds = array_values(array_map('intval', $photoIds));
+        $expectedPhotoIds = $currentPhotoIds;
+        sort($expectedPhotoIds);
+        $sortedPhotoIds = $normalizedPhotoIds;
+        sort($sortedPhotoIds);
+
+        if ($sortedPhotoIds !== $expectedPhotoIds) {
+            throw new InvalidArgumentException('Photo order payload does not match the current animal photos.');
+        }
+
+        Database::beginTransaction();
+
+        try {
+            foreach ($normalizedPhotoIds as $index => $photoId) {
+                $this->photos->updateOrdering($animalId, $photoId, $index, $index === 0 ? 1 : 0);
+            }
+
+            Database::commit();
+        } catch (\Throwable $exception) {
+            Database::rollBack();
+            throw $exception;
+        }
+
+        $updated = $this->get((string) $animalId);
+        $this->audit->record(
+            $userId,
+            'update',
+            'animals',
+            'animal_photos',
+            $animalId,
+            ['photo_ids' => $currentPhotoIds],
+            ['photo_ids' => array_map('intval', array_column($updated['photos'], 'id'))],
+            $request
+        );
 
         return $updated['photos'];
     }
@@ -210,12 +259,22 @@ class AnimalService
             throw new RuntimeException('Photo not found.');
         }
 
-        $absolutePath = dirname(__DIR__, 2) . '/public/' . $photo['file_path'];
-        if (is_file($absolutePath)) {
-            unlink($absolutePath);
+        Database::beginTransaction();
+
+        try {
+            $absolutePath = dirname(__DIR__, 2) . '/public/' . $photo['file_path'];
+            if (is_file($absolutePath)) {
+                unlink($absolutePath);
+            }
+
+            $this->photos->delete($photoId);
+            $this->normalizePhotoOrdering($animalId);
+            Database::commit();
+        } catch (\Throwable $exception) {
+            Database::rollBack();
+            throw $exception;
         }
 
-        $this->photos->delete($photoId);
         $this->audit->record($userId, 'delete', 'animals', 'animal_photos', $photoId, $photo, [], $request);
     }
 
@@ -434,5 +493,14 @@ class AnimalService
         finfo_close($finfo);
 
         return $mimeType;
+    }
+
+    private function normalizePhotoOrdering(int $animalId): void
+    {
+        $photos = $this->photos->listByAnimal($animalId);
+
+        foreach ($photos as $index => $photo) {
+            $this->photos->updateOrdering($animalId, (int) $photo['id'], $index, $index === 0 ? 1 : 0);
+        }
     }
 }

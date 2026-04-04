@@ -96,6 +96,10 @@
     <?php foreach (($extraCss ?? []) as $stylesheet): ?>
         <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>" data-page-asset="css">
     <?php endforeach; ?>
+    <link rel="stylesheet" href="/assets/css/loading-skeletons.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/empty-states.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/progress.css?v=<?= time() ?>" data-core-asset="css">
+    <link rel="stylesheet" href="/assets/css/tooltips.css?v=<?= time() ?>" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/dark-mode-overrides.css?v=<?= time() ?>" data-core-asset="css">
     <link rel="stylesheet" href="/assets/css/background-canvas.css?v=<?= time() ?>" data-core-asset="css">
 </head>
@@ -136,6 +140,7 @@
     <script src="/assets/js/app.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/notifications.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/qr-modal.js?v=<?= time() ?>" data-core-asset="js"></script>
+    <script src="/assets/js/tooltips.js?v=<?= time() ?>" data-core-asset="js"></script>
     <script src="/assets/js/background-canvas.js?v=<?= time() ?>" data-core-asset="js"></script>
     <?php foreach (($extraJs ?? []) as $script): ?>
         <script src="<?= htmlspecialchars($script, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>" data-page-asset="js"></script>
