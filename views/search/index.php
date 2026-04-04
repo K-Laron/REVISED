@@ -2,6 +2,49 @@
     $selectedModules = array_values(array_filter((array) ($searchFilters['modules'] ?? [])));
     $selectedPerSection = (int) ($searchFilters['per_section'] ?? 5);
     $availableModulesCount = count((array) ($availableSearchModules ?? []));
+    $availableModuleKeys = array_map(static fn (array $module): string => (string) ($module['key'] ?? ''), (array) ($availableSearchModules ?? []));
+    $defaultSearchPresets = array_values(array_filter([
+        in_array('animals', $availableModuleKeys, true) ? [
+            'id' => 'animals-under-care',
+            'label' => 'Animals Under Care',
+            'query' => 'care',
+            'filters' => [
+                'modules' => ['animals'],
+                'per_section' => 5,
+                'animals_status' => 'Under Medical Care',
+            ],
+        ] : null,
+        in_array('inventory', $availableModuleKeys, true) ? [
+            'id' => 'inventory-low-stock',
+            'label' => 'Low Stock Inventory',
+            'query' => 'stock',
+            'filters' => [
+                'modules' => ['inventory'],
+                'per_section' => 5,
+                'inventory_status' => 'low_stock',
+            ],
+        ] : null,
+        in_array('billing', $availableModuleKeys, true) ? [
+            'id' => 'billing-overdue',
+            'label' => 'Overdue Billing',
+            'query' => 'invoice',
+            'filters' => [
+                'modules' => ['billing'],
+                'per_section' => 5,
+                'billing_status' => 'overdue',
+            ],
+        ] : null,
+        in_array('adoptions', $availableModuleKeys, true) ? [
+            'id' => 'adoptions-pending',
+            'label' => 'Pending Adoptions',
+            'query' => 'review',
+            'filters' => [
+                'modules' => ['adoptions'],
+                'per_section' => 5,
+                'adoption_status' => 'pending_review',
+            ],
+        ] : null,
+    ]));
 ?>
 
 <section class="search-command-shell page-title" id="search-page">
@@ -35,6 +78,17 @@
             </label>
             <div class="badge badge-info" id="search-total-badge">Ready</div>
         </div>
+
+        <section class="search-presets">
+            <div class="search-presets-header">
+                <div>
+                    <span class="field-label">Saved filters</span>
+                    <h4>Search Presets</h4>
+                </div>
+                <button class="btn-secondary" type="button" data-search-save-preset>Save current view</button>
+            </div>
+            <div class="search-preset-list" data-search-preset-list aria-live="polite"></div>
+        </section>
 
         <div class="search-filter-layout">
             <label class="field">
@@ -132,4 +186,5 @@
     'csrfToken' => $csrfToken,
     'initialQuery' => $searchQuery ?? '',
     'initialFilters' => $searchFilters ?? ['modules' => [], 'per_section' => 5],
+    'defaultPresets' => $defaultSearchPresets,
 ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES) ?></script>

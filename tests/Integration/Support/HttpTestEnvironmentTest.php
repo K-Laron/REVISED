@@ -43,7 +43,7 @@ final class HttpTestEnvironmentTest extends TestCase
 
     public function testHttpIntegrationTestCaseUsesSharedEnvironmentHelper(): void
     {
-        $source = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\tests\\Integration\\Http\\HttpIntegrationTestCase.php');
+        $source = (string) file_get_contents(dirname(__DIR__, 3) . '/tests/Integration/Http/HttpIntegrationTestCase.php');
 
         self::assertStringContainsString('HttpTestEnvironment', $source);
     }

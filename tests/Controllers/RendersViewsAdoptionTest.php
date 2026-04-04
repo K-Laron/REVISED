@@ -10,15 +10,16 @@ final class RendersViewsAdoptionTest extends TestCase
 {
     public function testBatchOneControllersRouteAppPagesThroughSharedRenderHelper(): void
     {
+        $root = dirname(__DIR__, 2);
         $controllerPaths = [
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\AnimalController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\AdoptionController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\BillingController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\DashboardController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\InventoryController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\MedicalController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\ReportController.php',
-            'C:\\Users\\TESS LARON\\Desktop\\REVISED\\src\\Controllers\\UserController.php',
+            $root . '/src/Controllers/AnimalController.php',
+            $root . '/src/Controllers/AdoptionController.php',
+            $root . '/src/Controllers/BillingController.php',
+            $root . '/src/Controllers/DashboardController.php',
+            $root . '/src/Controllers/InventoryController.php',
+            $root . '/src/Controllers/MedicalController.php',
+            $root . '/src/Controllers/ReportController.php',
+            $root . '/src/Controllers/UserController.php',
         ];
 
         foreach ($controllerPaths as $path) {

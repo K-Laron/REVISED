@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
+use App\Models\MedicalRecord;
 use App\Support\Cache\FileCacheStore;
 
 class DashboardService
@@ -48,6 +49,113 @@ class DashboardService
     public function medicalChart(): array
     {
         return $this->bootstrap()['charts']['medical'];
+    }
+
+    public function actionQueue(array $user): array
+    {
+        $items = [];
+
+        if ($this->canAccess($user, 'inventory.read')) {
+            $alerts = (new InventoryService())->alerts();
+            $lowStockCount = count($alerts['low_stock'] ?? []);
+            $expiringCount = count($alerts['expiring'] ?? []);
+
+            if ($lowStockCount > 0) {
+                $items[] = $this->queueItem(
+                    'inventory-low-stock',
+                    'Inventory',
+                    'Low stock needs review',
+                    $lowStockCount,
+                    'High',
+                    $lowStockCount . ' inventory item' . ($lowStockCount === 1 ? ' is' : 's are') . ' at or below reorder level.',
+                    '/inventory'
+                );
+            }
+
+            if ($expiringCount > 0) {
+                $items[] = $this->queueItem(
+                    'inventory-expiring',
+                    'Inventory',
+                    'Expiring inventory is approaching',
+                    $expiringCount,
+                    'Medium',
+                    $expiringCount . ' stocked item' . ($expiringCount === 1 ? ' is' : 's are') . ' due to expire within 30 days.',
+                    '/inventory'
+                );
+            }
+        }
+
+        if ($this->canAccess($user, 'medical.read')) {
+            $medicalRecords = new MedicalRecord();
+            $dueVaccinations = count($medicalRecords->dueVaccinations());
+            $dueDewormings = count($medicalRecords->dueDewormings());
+            $medicalDueCount = $dueVaccinations + $dueDewormings;
+
+            if ($medicalDueCount > 0) {
+                $items[] = $this->queueItem(
+                    'medical-due',
+                    'Medical',
+                    'Upcoming care follow-ups',
+                    $medicalDueCount,
+                    'High',
+                    $dueVaccinations . ' vaccination' . ($dueVaccinations === 1 ? '' : 's') . ' and '
+                        . $dueDewormings . ' deworming follow-up' . ($dueDewormings === 1 ? '' : 's')
+                        . ' are due soon.',
+                    '/medical'
+                );
+            }
+        }
+
+        if ($this->canAccess($user, 'adoptions.read')) {
+            $pipeline = (new AdoptionService())->pipelineStats();
+            $readyForCompletion = (int) ($pipeline['ready_for_completion'] ?? 0);
+            $upcomingReviews = (int) ($pipeline['upcoming_interviews'] ?? 0) + (int) ($pipeline['upcoming_seminars'] ?? 0);
+
+            if ($readyForCompletion > 0) {
+                $items[] = $this->queueItem(
+                    'adoptions-ready',
+                    'Adoptions',
+                    'Applications are ready to close out',
+                    $readyForCompletion,
+                    'High',
+                    $readyForCompletion . ' adoption application' . ($readyForCompletion === 1 ? ' is' : 's are') . ' at seminar-complete or payment-pending stages.',
+                    '/adoptions'
+                );
+            }
+
+            if ($upcomingReviews > 0) {
+                $items[] = $this->queueItem(
+                    'adoptions-upcoming',
+                    'Adoptions',
+                    'Interviews and seminars are coming up',
+                    $upcomingReviews,
+                    'Medium',
+                    $upcomingReviews . ' scheduled adoption review touchpoint' . ($upcomingReviews === 1 ? ' is' : 's are') . ' upcoming.',
+                    '/adoptions'
+                );
+            }
+        }
+
+        if ($this->canAccess($user, 'billing.read')) {
+            $billing = (new BillingService())->stats();
+            $overdueCount = (int) ($billing['overdue_count'] ?? 0);
+
+            if ($overdueCount > 0) {
+                $items[] = $this->queueItem(
+                    'billing-overdue',
+                    'Billing',
+                    'Overdue balances need follow-up',
+                    $overdueCount,
+                    'High',
+                    $overdueCount . ' invoice' . ($overdueCount === 1 ? ' is' : 's are') . ' already overdue.',
+                    '/billing'
+                );
+            }
+        }
+
+        usort($items, fn (array $left, array $right): int => $this->compareQueueItems($left, $right));
+
+        return $items;
     }
 
     private function buildBootstrapPayload(): array
@@ -212,5 +320,51 @@ class DashboardService
                 'data' => $values,
             ]],
         ];
+    }
+
+    private function canAccess(array $user, string $permission): bool
+    {
+        if (($user['role_name'] ?? '') === 'super_admin') {
+            return true;
+        }
+
+        return in_array($permission, $user['permissions'] ?? [], true);
+    }
+
+    private function queueItem(
+        string $key,
+        string $module,
+        string $label,
+        int $count,
+        string $urgency,
+        string $summary,
+        string $href
+    ): array {
+        return [
+            'key' => $key,
+            'module' => $module,
+            'label' => $label,
+            'count' => $count,
+            'urgency' => $urgency,
+            'summary' => $summary,
+            'href' => $href,
+        ];
+    }
+
+    private function compareQueueItems(array $left, array $right): int
+    {
+        $priority = ['High' => 0, 'Medium' => 1, 'Low' => 2];
+        $leftPriority = $priority[$left['urgency']] ?? 10;
+        $rightPriority = $priority[$right['urgency']] ?? 10;
+
+        if ($leftPriority !== $rightPriority) {
+            return $leftPriority <=> $rightPriority;
+        }
+
+        if ($left['count'] !== $right['count']) {
+            return $right['count'] <=> $left['count'];
+        }
+
+        return strcmp((string) $left['label'], (string) $right['label']);
     }
 }

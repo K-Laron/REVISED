@@ -69,4 +69,23 @@ final class DashboardViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('activity-digest', $script);
         self::assertStringContainsString('ACTIVITY_FEED_LIMIT', $script);
     }
+
+    public function testDashboardRendersActionQueueCardsWhenProvided(): void
+    {
+        $html = $this->renderApp('dashboard.index', [
+            'title' => 'Dashboard',
+            'csrfToken' => 'test-token',
+            'actionQueue' => [[
+                'label' => 'Low stock needs review',
+                'count' => 3,
+                'urgency' => 'High',
+                'summary' => 'Three inventory items are at or below reorder level.',
+                'href' => '/inventory',
+            ]],
+        ]);
+
+        self::assertStringContainsString('dashboard-action-queue', $html);
+        self::assertStringContainsString('Low stock needs review', $html);
+        self::assertStringContainsString('/inventory', $html);
+    }
 }

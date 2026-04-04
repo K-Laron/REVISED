@@ -23,8 +23,9 @@ final class PortalLandingViewTest extends ViewSmokeTestCase
 
     public function testPortalLandingStylesDeclareDarkThemeSurfaceOverrides(): void
     {
-        $variables = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\css\\variables.css');
-        $stylesheet = (string) file_get_contents('C:\\Users\\TESS LARON\\Desktop\\REVISED\\public\\assets\\css\\portal.css');
+        $root = dirname(__DIR__, 2);
+        $variables = (string) file_get_contents($root . '/public/assets/css/variables.css');
+        $stylesheet = (string) file_get_contents($root . '/public/assets/css/portal.css');
 
         self::assertStringContainsString('--color-bg-warm: rgba(', $variables);
         self::assertStringContainsString('[data-theme="dark"] .portal-proof-card,', $stylesheet);
