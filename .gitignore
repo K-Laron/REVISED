@@ -60,3 +60,17 @@ IMPLEMENTATION_GUIDE.md
 MANUSCRIPT LAYOUT.md
 PRD_Catarman_Dog_Pound.md
 VALIDATION_RULES.md
+
+# Local planning docs
+docs/superpowers/plans/2026-04-04-backend-domain-services-implementation.md
+docs/superpowers/plans/2026-04-04-canonical-domain-and-workflow-core-implementation.md
+docs/superpowers/plans/2026-04-04-desktop-command-center-implementation.md
+docs/superpowers/plans/2026-04-04-foundation-platform-implementation.md
+docs/superpowers/plans/2026-04-04-identity-tenancy-permissions-implementation.md
+docs/superpowers/plans/2026-04-04-migration-reconciliation-cutover-implementation.md
+docs/superpowers/plans/2026-04-04-mobile-first-welfare-platform-implementation.md
+docs/superpowers/plans/2026-04-04-offline-sync-and-mobile-runtime-implementation.md
+docs/superpowers/plans/2026-04-04-public-app-and-public-journeys-implementation.md
+docs/superpowers/plans/2026-04-04-search-events-notifications-integrations-implementation.md
+docs/superpowers/plans/2026-04-04-staff-mobile-implementation.md
+docs/superpowers/specs/2026-04-05-mobile-first-welfare-platform-prd.md
