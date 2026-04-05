@@ -37,7 +37,7 @@ final class AnimalPhotoManager
             mkdir($directory, 0775, true);
         }
 
-        $existingCount = count($this->photos->listByAnimal($animalId));
+        $existingCount = $this->photos->countByAnimal($animalId);
         $canOptimize = $this->imageManager !== null;
 
         foreach ($files as $index => $file) {

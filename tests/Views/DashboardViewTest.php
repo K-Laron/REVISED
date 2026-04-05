@@ -70,6 +70,15 @@ final class DashboardViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('ACTIVITY_FEED_LIMIT', $script);
     }
 
+    public function testDashboardScriptReusesLoadedPayloadForThemeRefresh(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/dashboard.js');
+
+        self::assertStringContainsString('let dashboardPayload = null;', $script);
+        self::assertStringContainsString('dashboardPayload = payload;', $script);
+        self::assertStringContainsString('renderDashboard(dashboardPayload);', $script);
+    }
+
     public function testDashboardRendersActionQueueCardsWhenProvided(): void
     {
         $html = $this->renderApp('dashboard.index', [

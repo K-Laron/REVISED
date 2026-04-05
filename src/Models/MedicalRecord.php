@@ -157,6 +157,34 @@ class MedicalRecord
         );
     }
 
+    public function dueSummary(): array
+    {
+        $row = Database::fetch(
+            "SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM vaccination_records vr
+                    INNER JOIN medical_records mr ON mr.id = vr.medical_record_id
+                    WHERE mr.is_deleted = 0
+                      AND vr.next_due_date IS NOT NULL
+                      AND vr.next_due_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                ) AS due_vaccinations,
+                (
+                    SELECT COUNT(*)
+                    FROM deworming_records dr
+                    INNER JOIN medical_records mr ON mr.id = dr.medical_record_id
+                    WHERE mr.is_deleted = 0
+                      AND dr.next_due_date IS NOT NULL
+                      AND dr.next_due_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                ) AS due_dewormings"
+        );
+
+        return [
+            'due_vaccinations' => (int) ($row['due_vaccinations'] ?? 0),
+            'due_dewormings' => (int) ($row['due_dewormings'] ?? 0),
+        ];
+    }
+
     private function buildFilters(array $filters): array
     {
         $clauses = ['mr.is_deleted = 0'];

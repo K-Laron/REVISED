@@ -16,6 +16,14 @@ class AnimalPhoto
         );
     }
 
+    public function countByAnimal(int $animalId): int
+    {
+        return (int) (Database::fetch(
+            'SELECT COUNT(*) AS aggregate FROM animal_photos WHERE animal_id = :animal_id',
+            ['animal_id' => $animalId]
+        )['aggregate'] ?? 0);
+    }
+
     public function create(array $data): int
     {
         Database::execute(

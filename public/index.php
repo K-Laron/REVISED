@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../bootstrap/autoload.php';
+use App\Support\Routing\RouteCatalog;
 
-$dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
-$dotenv->safeLoad();
-
-require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../bootstrap/app.php';
 
 $request = App\Core\Request::capture();
 
@@ -30,8 +27,6 @@ if (App\Core\ExceptionHandler::inMaintenanceMode()) {
 }
 
 $router = new App\Core\Router();
-
-require_once __DIR__ . '/../routes/web.php';
-require_once __DIR__ . '/../routes/api.php';
+(new RouteCatalog())->register($router);
 
 $router->dispatch($request);

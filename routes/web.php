@@ -17,12 +17,9 @@ use App\Controllers\ReportController;
 use App\Controllers\SearchController;
 use App\Controllers\SettingsController;
 use App\Controllers\UserController;
+use App\Controllers\WelcomeController;
 
-$router->get('/', static function () {
-    return Response::html(View::render('welcome', [
-        'appName' => $GLOBALS['app']['name'] ?? ($_ENV['APP_NAME'] ?? 'Catarman Animal Shelter'),
-    ]));
-});
+$router->get('/', WelcomeController::class . '@index');
 
 $router->get('/login', AuthController::class . '@showLogin', ['guest']);
 $router->get('/forgot-password', AuthController::class . '@showForgotPassword', ['guest']);

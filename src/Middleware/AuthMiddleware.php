@@ -26,7 +26,15 @@ class AuthMiddleware
 
         $request->setAttribute('auth_user', $user);
 
-        if ((int) ($user['force_password_change'] ?? 0) === 1 && !$this->isAllowedWhilePasswordChangeRequired($request)) {
+        if (
+            (int) ($user['force_password_change'] ?? 0) === 1
+            && !in_array($request->path(), [
+                '/force-password-change',
+                '/api/auth/change-password',
+                '/api/auth/logout',
+                '/api/auth/me',
+            ], true)
+        ) {
             if ($request->expectsJson()) {
                 return Response::error(403, 'FORCE_PASSWORD_CHANGE_REQUIRED', 'You must update your password before continuing.', [
                     'redirect' => '/force-password-change',
@@ -37,15 +45,5 @@ class AuthMiddleware
         }
 
         return $next($request);
-    }
-
-    private function isAllowedWhilePasswordChangeRequired(Request $request): bool
-    {
-        return in_array($request->path(), [
-            '/force-password-change',
-            '/api/auth/change-password',
-            '/api/auth/logout',
-            '/api/auth/me',
-        ], true);
     }
 }

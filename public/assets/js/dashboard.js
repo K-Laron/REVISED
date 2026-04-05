@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const charts = {};
+  let dashboardPayload = null;
   const ACTIVITY_FEED_LIMIT = 6;
   const OCCUPANCY_CHART_ID = 'occupancy-chart';
   const occupancyStatusPriority = {
@@ -458,10 +459,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  async function loadDashboard() {
-    const bootstrap = await getJson('/api/dashboard/bootstrap');
-    const payload = bootstrap.data;
-
+  function renderDashboard(payload) {
+    dashboardPayload = payload;
     renderStats(payload.stats);
     renderActivity(payload.activity);
 
@@ -472,6 +471,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     mountChart('medical-chart', 'bar', payload.charts.medical, colors);
   }
 
+  async function loadDashboard(forceRefresh = false) {
+    if (!forceRefresh && dashboardPayload !== null) {
+      renderDashboard(dashboardPayload);
+      return;
+    }
+
+    const bootstrap = await getJson('/api/dashboard/bootstrap');
+    renderDashboard(bootstrap.data);
+  }
+
   document.querySelectorAll('[data-quick-link]').forEach((button) => {
     button.addEventListener('click', () => {
       const href = button.getAttribute('data-quick-link');
@@ -480,6 +489,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   window.addEventListener('theme:changed', () => {
+    if (dashboardPayload !== null) {
+      renderDashboard(dashboardPayload);
+      return;
+    }
+
     loadDashboard().catch((error) => {
       console.error(error);
     });

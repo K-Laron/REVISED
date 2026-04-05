@@ -2,13 +2,7 @@
 
 declare(strict_types=1);
 
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
-
-if (file_exists(dirname(__DIR__, 2) . '/.env')) {
-    \Dotenv\Dotenv::createImmutable(dirname(__DIR__, 2))->safeLoad();
-}
-
-require dirname(__DIR__, 2) . '/config/app.php';
+require dirname(__DIR__, 2) . '/bootstrap/app.php';
 
 use App\Core\Database;
 use App\Core\Request;
@@ -17,6 +11,7 @@ use App\Core\Router;
 use App\Core\Session;
 use App\Models\User;
 use App\Support\Performance\PerformanceReportFormatter;
+use App\Support\Routing\RouteCatalog;
 
 $_ENV['APP_PERFORMANCE_DEBUG'] = '1';
 $heading = $argv[1] ?? 'Before Optimization';
@@ -62,6 +57,7 @@ $users->storeSession(
 $_SESSION['auth.session_token'] = $sessionToken;
 
 $records = [];
+$routeCatalog = new RouteCatalog();
 
 foreach ($cases as $case) {
     $query = $case['query'];
@@ -83,8 +79,7 @@ foreach ($cases as $case) {
 
     $request = new Request($_SERVER, $query, [], [], []);
     $router = new Router();
-    require dirname(__DIR__, 2) . '/routes/web.php';
-    require dirname(__DIR__, 2) . '/routes/api.php';
+    $routeCatalog->register($router);
 
     ob_start();
     $router->dispatch($request);

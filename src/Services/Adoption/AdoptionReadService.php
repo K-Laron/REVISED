@@ -57,28 +57,57 @@ class AdoptionReadService
 
     public function pipelineStats(): array
     {
-        $counts = $this->applications->buildPipelineStats();
+        $metrics = Database::fetchAll(
+            "SELECT metric_group, metric_key, metric_value
+             FROM (
+                 SELECT 'status' AS metric_group, status AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_applications
+                 WHERE is_deleted = 0
+                 GROUP BY status
+
+                 UNION ALL
+
+                 SELECT 'summary' AS metric_group, 'upcoming_interviews' AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_interviews
+                 WHERE status = 'scheduled'
+                   AND scheduled_date >= NOW()
+
+                 UNION ALL
+
+                 SELECT 'summary' AS metric_group, 'upcoming_seminars' AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_seminars
+                 WHERE status IN ('scheduled', 'in_progress')
+                   AND scheduled_date >= NOW()
+             ) AS pipeline_metrics"
+        );
+
+        $counts = [];
+        $summary = [];
+
+        foreach ($metrics as $row) {
+            $group = (string) ($row['metric_group'] ?? '');
+            $key = (string) ($row['metric_key'] ?? '');
+            $value = (int) ($row['metric_value'] ?? 0);
+
+            if ($key === '') {
+                continue;
+            }
+
+            if ($group === 'status') {
+                $counts[$key] = $value;
+                continue;
+            }
+
+            if ($group === 'summary') {
+                $summary[$key] = $value;
+            }
+        }
 
         return [
             'statuses' => $this->statusPolicy->buildPipelineStatuses($counts),
-            'upcoming_interviews' => (int) (Database::fetch(
-                "SELECT COUNT(*) AS aggregate
-                 FROM adoption_interviews
-                 WHERE status = 'scheduled'
-                   AND scheduled_date >= NOW()"
-            )['aggregate'] ?? 0),
-            'upcoming_seminars' => (int) (Database::fetch(
-                "SELECT COUNT(*) AS aggregate
-                 FROM adoption_seminars
-                 WHERE status IN ('scheduled', 'in_progress')
-                   AND scheduled_date >= NOW()"
-            )['aggregate'] ?? 0),
-            'ready_for_completion' => (int) (Database::fetch(
-                "SELECT COUNT(*) AS aggregate
-                 FROM adoption_applications
-                 WHERE is_deleted = 0
-                   AND status IN ('seminar_completed', 'pending_payment')"
-            )['aggregate'] ?? 0),
+            'upcoming_interviews' => (int) ($summary['upcoming_interviews'] ?? 0),
+            'upcoming_seminars' => (int) ($summary['upcoming_seminars'] ?? 0),
+            'ready_for_completion' => (int) ($counts['seminar_completed'] ?? 0) + (int) ($counts['pending_payment'] ?? 0),
         ];
     }
 

@@ -23,4 +23,18 @@ final class ApiDashboardHttpTest extends HttpIntegrationTestCase
         self::assertArrayHasKey('medical', $response['json']['data']['charts']);
         self::assertArrayHasKey('activity', $response['json']['data']);
     }
+
+    public function testMedicalChartUsesTheSharedMetricsBundle(): void
+    {
+        $user = $this->createUser('super_admin');
+        $this->authenticateUser($user);
+        $_ENV['APP_PERFORMANCE_DEBUG'] = '1';
+
+        $response = $this->dispatchJson('GET', '/api/dashboard/charts/medical');
+
+        self::assertSame(200, $response['status']);
+        self::assertArrayHasKey('labels', $response['json']['data']);
+        self::assertArrayHasKey('datasets', $response['json']['data']);
+        self::assertLessThanOrEqual(2, (int) ($response['headers']['X-App-Query-Count'] ?? PHP_INT_MAX));
+    }
 }

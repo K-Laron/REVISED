@@ -21,6 +21,12 @@ class SearchService
 
     private SearchFilterCatalog $filterCatalog;
 
+    /** @var array<string, list<array{key: string, label: string}>> */
+    private array $availableModulesCache = [];
+
+    /** @var array<string, array<string, array{key: string, module: string, label: string, options: array}>> */
+    private array $availableSecondaryFiltersCache = [];
+
     public function __construct(array $providers = [], ?SearchFilterCatalog $filterCatalog = null)
     {
         foreach ($providers !== [] ? $providers : $this->defaultProviders() as $provider) {
@@ -72,6 +78,11 @@ class SearchService
 
     public function availableModules(array $user): array
     {
+        $cacheKey = $this->userAccessCacheKey($user);
+        if (isset($this->availableModulesCache[$cacheKey])) {
+            return $this->availableModulesCache[$cacheKey];
+        }
+
         $modules = [];
 
         foreach ($this->providers as $provider) {
@@ -85,12 +96,22 @@ class SearchService
             ];
         }
 
+        $this->availableModulesCache[$cacheKey] = $modules;
+
         return $modules;
     }
 
     public function availableSecondaryFilters(array $user): array
     {
-        return $this->filterCatalog->availableSecondaryFilters(array_column($this->availableModules($user), 'key'));
+        $cacheKey = $this->userAccessCacheKey($user);
+        if (isset($this->availableSecondaryFiltersCache[$cacheKey])) {
+            return $this->availableSecondaryFiltersCache[$cacheKey];
+        }
+
+        $filters = $this->filterCatalog->availableSecondaryFilters(array_column($this->availableModules($user), 'key'));
+        $this->availableSecondaryFiltersCache[$cacheKey] = $filters;
+
+        return $filters;
     }
 
     private function canAccess(array $user, string $permission): bool
@@ -110,6 +131,22 @@ class SearchService
         $selected = array_values(array_intersect($availableKeys, $requested));
 
         return $selected !== [] ? $selected : $availableKeys;
+    }
+
+    private function userAccessCacheKey(array $user): string
+    {
+        $roleName = trim((string) ($user['role_name'] ?? ''));
+        if ($roleName === 'super_admin') {
+            return 'super_admin';
+        }
+
+        $permissions = array_values(array_unique(array_map(
+            static fn (mixed $permission): string => trim((string) $permission),
+            is_array($user['permissions'] ?? null) ? $user['permissions'] : []
+        )));
+        sort($permissions);
+
+        return $roleName . '|' . implode(',', $permissions);
     }
 
     /**

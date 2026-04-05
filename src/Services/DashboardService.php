@@ -10,6 +10,8 @@ use App\Support\Cache\FileCacheStore;
 
 class DashboardService
 {
+    private const CACHE_TTL_SECONDS = 15;
+
     private FileCacheStore $cache;
 
     public function __construct(?FileCacheStore $cache = null)
@@ -19,46 +21,49 @@ class DashboardService
 
     public function bootstrap(): array
     {
-        return $this->cache->remember(
-            'dashboard.bootstrap.v1',
-            15,
-            fn (): array => $this->buildBootstrapPayload()
-        );
+        return $this->buildBootstrapPayload();
     }
 
     public function stats(): array
     {
-        return $this->bootstrap()['stats'];
+        return $this->formatStats($this->dashboardMetrics());
     }
 
     public function intakeChart(): array
     {
-        return $this->bootstrap()['charts']['intake'];
+        return $this->trendCharts()['intake'];
     }
 
     public function adoptionChart(): array
     {
-        return $this->bootstrap()['charts']['adoptions'];
+        return $this->trendCharts()['adoptions'];
     }
 
     public function occupancyChart(): array
     {
-        return $this->bootstrap()['charts']['occupancy'];
+        return $this->formatOccupancyChart($this->dashboardMetrics()['occupancy'] ?? []);
     }
 
     public function medicalChart(): array
     {
-        return $this->bootstrap()['charts']['medical'];
+        return $this->formatMedicalChart($this->dashboardMetrics()['medical'] ?? []);
     }
 
     public function actionQueue(array $user): array
     {
+        $key = 'dashboard.action_queue.v1.' . $this->accessProfileCacheKey($user);
+
+        return $this->remember($key, fn (): array => $this->buildActionQueue($user));
+    }
+
+    private function buildActionQueue(array $user): array
+    {
         $items = [];
 
         if ($this->canAccess($user, 'inventory.read')) {
-            $alerts = (new InventoryService())->alerts();
-            $lowStockCount = count($alerts['low_stock'] ?? []);
-            $expiringCount = count($alerts['expiring'] ?? []);
+            $alerts = (new InventoryService())->alertCounts();
+            $lowStockCount = (int) ($alerts['low_stock_count'] ?? 0);
+            $expiringCount = (int) ($alerts['expiring_count'] ?? 0);
 
             if ($lowStockCount > 0) {
                 $items[] = $this->queueItem(
@@ -87,8 +92,9 @@ class DashboardService
 
         if ($this->canAccess($user, 'medical.read')) {
             $medicalRecords = new MedicalRecord();
-            $dueVaccinations = count($medicalRecords->dueVaccinations());
-            $dueDewormings = count($medicalRecords->dueDewormings());
+            $dueSummary = $medicalRecords->dueSummary();
+            $dueVaccinations = (int) ($dueSummary['due_vaccinations'] ?? 0);
+            $dueDewormings = (int) ($dueSummary['due_dewormings'] ?? 0);
             $medicalDueCount = $dueVaccinations + $dueDewormings;
 
             if ($medicalDueCount > 0) {
@@ -160,120 +166,67 @@ class DashboardService
 
     private function buildBootstrapPayload(): array
     {
+        $metrics = $this->dashboardMetrics();
+
         return [
-            'stats' => $this->buildStats(),
+            'stats' => $this->formatStats($metrics),
             'charts' => [
-                'intake' => $this->buildIntakeChart(),
-                'adoptions' => $this->buildAdoptionChart(),
-                'occupancy' => $this->buildOccupancyChart(),
-                'medical' => $this->buildMedicalChart(),
+                'intake' => $this->intakeChart(),
+                'adoptions' => $this->adoptionChart(),
+                'occupancy' => $this->formatOccupancyChart($metrics['occupancy'] ?? []),
+                'medical' => $this->formatMedicalChart($metrics['medical'] ?? []),
             ],
-            'activity' => $this->buildRecentActivity(),
+            'activity' => $this->recentActivity(10),
         ];
     }
 
-    private function buildStats(): array
+    private function buildTrendCharts(): array
     {
-        $animals = (int) ($this->scalar('SELECT COUNT(*) FROM animals WHERE is_deleted = 0') ?? 0);
-        $medical = (int) ($this->scalar("SELECT COUNT(*) FROM animals WHERE is_deleted = 0 AND status = 'Under Medical Care'") ?? 0);
-        $adoptions = (int) ($this->scalar("SELECT COUNT(*) FROM adoption_applications WHERE is_deleted = 0 AND status NOT IN ('completed', 'rejected', 'withdrawn')") ?? 0);
-        $occupied = (int) ($this->scalar("SELECT COUNT(*) FROM kennels WHERE is_deleted = 0 AND status = 'Occupied'") ?? 0);
-        $totalKennels = max(1, (int) ($this->scalar('SELECT COUNT(*) FROM kennels WHERE is_deleted = 0') ?? 1));
+        $rows = Database::fetchAll(
+            "SELECT source, month_key, total
+             FROM (
+                 SELECT 'intake' AS source, DATE_FORMAT(intake_date, '%Y-%m') AS month_key, COUNT(*) AS total
+                 FROM animals
+                 WHERE intake_date >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
+                   AND is_deleted = 0
+                 GROUP BY month_key
+
+                 UNION ALL
+
+                 SELECT 'adoptions' AS source, DATE_FORMAT(created_at, '%Y-%m') AS month_key, COUNT(*) AS total
+                 FROM adoption_applications
+                 WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
+                   AND is_deleted = 0
+                 GROUP BY month_key
+             ) AS trend_counts"
+        );
+
+        $intakeRows = [];
+        $adoptionRows = [];
+
+        foreach ($rows as $row) {
+            $source = (string) ($row['source'] ?? '');
+
+            if ($source === 'intake') {
+                $intakeRows[] = $row;
+                continue;
+            }
+
+            if ($source === 'adoptions') {
+                $adoptionRows[] = $row;
+            }
+        }
 
         return [
-            [
-                'label' => 'Total Animals',
-                'value' => $animals,
-                'meta' => 'In shelter records',
-            ],
-            [
-                'label' => 'Under Care',
-                'value' => $medical,
-                'meta' => 'Medical status',
-            ],
-            [
-                'label' => 'Adoption Pipeline',
-                'value' => $adoptions,
-                'meta' => 'Open applications',
-            ],
-            [
-                'label' => 'Kennel Occupancy',
-                'value' => round(($occupied / $totalKennels) * 100) . '%',
-                'meta' => $occupied . ' of ' . $totalKennels . ' occupied',
-            ],
-        ];
-    }
-
-    private function buildIntakeChart(): array
-    {
-        $rows = Database::fetchAll(
-            "SELECT DATE_FORMAT(intake_date, '%Y-%m') AS month_key, COUNT(*) AS total
-             FROM animals
-             WHERE intake_date >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
-               AND is_deleted = 0
-             GROUP BY month_key
-             ORDER BY month_key"
-        );
-
-        return $this->fillMonthlySeries($rows, 'total');
-    }
-
-    private function buildAdoptionChart(): array
-    {
-        $rows = Database::fetchAll(
-            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key, COUNT(*) AS total
-             FROM adoption_applications
-             WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
-               AND is_deleted = 0
-             GROUP BY month_key
-             ORDER BY month_key"
-        );
-
-        return $this->fillMonthlySeries($rows, 'total');
-    }
-
-    private function buildOccupancyChart(): array
-    {
-        $rows = Database::fetchAll(
-            "SELECT status, COUNT(*) AS total
-             FROM kennels
-             WHERE is_deleted = 0
-             GROUP BY status
-             ORDER BY status"
-        );
-
-        return [
-            'labels' => array_column($rows, 'status'),
-            'datasets' => [[
-                'label' => 'Kennels',
-                'data' => array_map('intval', array_column($rows, 'total')),
-            ]],
-        ];
-    }
-
-    private function buildMedicalChart(): array
-    {
-        $rows = Database::fetchAll(
-            "SELECT procedure_type, COUNT(*) AS total
-             FROM medical_records
-             WHERE is_deleted = 0
-             GROUP BY procedure_type
-             ORDER BY procedure_type"
-        );
-
-        return [
-            'labels' => array_column($rows, 'procedure_type'),
-            'datasets' => [[
-                'label' => 'Procedures',
-                'data' => array_map('intval', array_column($rows, 'total')),
-            ]],
+            'intake' => $this->fillMonthlySeries($intakeRows, 'total'),
+            'adoptions' => $this->fillMonthlySeries($adoptionRows, 'total'),
         ];
     }
 
     public function recentActivity(int $limit = 18): array
     {
         return $limit === 10
-            ? $this->bootstrap()['activity']
+            ? $this->remember('dashboard.activity.v1', fn (): array => $this->buildRecentActivity())
             : $this->buildRecentActivity($limit);
     }
 
@@ -285,17 +238,6 @@ class DashboardService
              ORDER BY created_at DESC
              LIMIT ' . max(1, (int) $limit)
         );
-    }
-
-    private function scalar(string $sql): mixed
-    {
-        $row = Database::fetch($sql);
-
-        if ($row === false) {
-            return null;
-        }
-
-        return array_values($row)[0] ?? null;
     }
 
     private function fillMonthlySeries(array $rows, string $valueKey): array
@@ -366,5 +308,214 @@ class DashboardService
         }
 
         return strcmp((string) $left['label'], (string) $right['label']);
+    }
+
+    private function accessProfileCacheKey(array $user): string
+    {
+        $permissions = $user['permissions'] ?? [];
+        $permissions = is_array($permissions) ? array_values(array_unique(array_map('strval', $permissions))) : [];
+        sort($permissions);
+
+        return sha1(json_encode([
+            'role' => (string) ($user['role_name'] ?? ''),
+            'permissions' => $permissions,
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    private function remember(string $key, callable $resolver): array
+    {
+        $value = $this->cache->remember($key, self::CACHE_TTL_SECONDS, $resolver);
+
+        return is_array($value) ? $value : [];
+    }
+
+    private function trendCharts(): array
+    {
+        $charts = $this->remember('dashboard.charts.trends.v1', fn (): array => $this->buildTrendCharts());
+
+        return [
+            'intake' => is_array($charts['intake'] ?? null) ? $charts['intake'] : $this->fillMonthlySeries([], 'total'),
+            'adoptions' => is_array($charts['adoptions'] ?? null) ? $charts['adoptions'] : $this->fillMonthlySeries([], 'total'),
+        ];
+    }
+
+    private function dashboardMetrics(): array
+    {
+        $metrics = $this->remember('dashboard.metrics.v1', fn (): array => $this->buildDashboardMetrics());
+
+        return [
+            'stats' => is_array($metrics['stats'] ?? null) ? $metrics['stats'] : [],
+            'occupancy' => is_array($metrics['occupancy'] ?? null) ? $metrics['occupancy'] : [],
+            'medical' => is_array($metrics['medical'] ?? null) ? $metrics['medical'] : [],
+        ];
+    }
+
+    private function buildDashboardMetrics(): array
+    {
+        $rows = Database::fetchAll(
+            "SELECT metric_group, metric_key, metric_value
+             FROM (
+                 SELECT 'stats' AS metric_group, 'animals_total' AS metric_key, COUNT(*) AS metric_value
+                 FROM animals
+                 WHERE is_deleted = 0
+
+                 UNION ALL
+
+                 SELECT 'stats' AS metric_group, 'animals_under_care' AS metric_key, COUNT(*) AS metric_value
+                 FROM animals
+                 WHERE is_deleted = 0 AND status = 'Under Medical Care'
+
+                 UNION ALL
+
+                 SELECT 'stats' AS metric_group, 'adoption_pipeline' AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_applications
+                 WHERE is_deleted = 0 AND status NOT IN ('completed', 'rejected', 'withdrawn')
+
+                 UNION ALL
+
+                 SELECT 'occupancy' AS metric_group, COALESCE(status, 'Unknown') AS metric_key, COUNT(*) AS metric_value
+                 FROM kennels
+                 WHERE is_deleted = 0
+                 GROUP BY status
+
+                 UNION ALL
+
+                 SELECT 'medical' AS metric_group, COALESCE(procedure_type, 'Unknown') AS metric_key, COUNT(*) AS metric_value
+                 FROM medical_records
+                 WHERE is_deleted = 0
+                 GROUP BY procedure_type
+             ) AS dashboard_metrics"
+        );
+
+        $stats = [];
+        $occupancy = [];
+        $medical = [];
+
+        foreach ($rows as $row) {
+            $group = (string) ($row['metric_group'] ?? '');
+            $key = trim((string) ($row['metric_key'] ?? ''));
+            $value = (int) ($row['metric_value'] ?? 0);
+
+            if ($key === '') {
+                continue;
+            }
+
+            if ($group === 'stats') {
+                $stats[$key] = $value;
+                continue;
+            }
+
+            if ($group === 'occupancy') {
+                $occupancy[] = [
+                    'status' => $key,
+                    'total' => $value,
+                ];
+                continue;
+            }
+
+            if ($group === 'medical') {
+                $medical[] = [
+                    'procedure_type' => $key,
+                    'total' => $value,
+                ];
+            }
+        }
+
+        usort(
+            $occupancy,
+            static fn (array $left, array $right): int => strcmp(
+                (string) ($left['status'] ?? ''),
+                (string) ($right['status'] ?? '')
+            )
+        );
+
+        usort(
+            $medical,
+            static fn (array $left, array $right): int => strcmp(
+                (string) ($left['procedure_type'] ?? ''),
+                (string) ($right['procedure_type'] ?? '')
+            )
+        );
+
+        return [
+            'stats' => $stats,
+            'occupancy' => $occupancy,
+            'medical' => $medical,
+        ];
+    }
+
+    private function formatStats(array $metrics): array
+    {
+        $stats = is_array($metrics['stats'] ?? null) ? $metrics['stats'] : [];
+        $occupancyRows = is_array($metrics['occupancy'] ?? null) ? $metrics['occupancy'] : [];
+
+        $animals = (int) ($stats['animals_total'] ?? 0);
+        $medical = (int) ($stats['animals_under_care'] ?? 0);
+        $adoptions = (int) ($stats['adoption_pipeline'] ?? 0);
+        $occupied = 0;
+        $totalKennels = 0;
+
+        foreach ($occupancyRows as $row) {
+            $status = (string) ($row['status'] ?? '');
+            $count = (int) ($row['total'] ?? 0);
+            $totalKennels += $count;
+
+            if ($status === 'Occupied') {
+                $occupied = $count;
+            }
+        }
+
+        $totalKennels = max(1, $totalKennels);
+
+        return [
+            [
+                'label' => 'Total Animals',
+                'value' => $animals,
+                'meta' => 'In shelter records',
+            ],
+            [
+                'label' => 'Under Care',
+                'value' => $medical,
+                'meta' => 'Medical status',
+            ],
+            [
+                'label' => 'Adoption Pipeline',
+                'value' => $adoptions,
+                'meta' => 'Open applications',
+            ],
+            [
+                'label' => 'Kennel Occupancy',
+                'value' => round(($occupied / $totalKennels) * 100) . '%',
+                'meta' => $occupied . ' of ' . $totalKennels . ' occupied',
+            ],
+        ];
+    }
+
+    private function formatOccupancyChart(array $rows): array
+    {
+        return [
+            'labels' => array_map(
+                static fn (array $row): string => (string) ($row['status'] ?? ''),
+                $rows
+            ),
+            'datasets' => [[
+                'label' => 'Kennels',
+                'data' => array_map(
+                    static fn (array $row): int => (int) ($row['total'] ?? 0),
+                    $rows
+                ),
+            ]],
+        ];
+    }
+
+    private function formatMedicalChart(array $rows): array
+    {
+        return [
+            'labels' => array_column($rows, 'procedure_type'),
+            'datasets' => [[
+                'label' => 'Procedures',
+                'data' => array_map('intval', array_column($rows, 'total')),
+            ]],
+        ];
     }
 }

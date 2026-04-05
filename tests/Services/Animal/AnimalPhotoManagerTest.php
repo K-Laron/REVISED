@@ -106,6 +106,49 @@ final class AnimalPhotoManagerTest extends TestCase
         self::assertFileDoesNotExist($absolutePath);
     }
 
+    public function testUploadUsesPhotoCountWithoutLoadingFullExistingList(): void
+    {
+        $repository = new class extends AnimalPhoto {
+            public array $records = [];
+
+            public function countByAnimal(int $animalId): int
+            {
+                return 2;
+            }
+
+            public function listByAnimal(int $animalId): array
+            {
+                throw new \RuntimeException('Full photo list should not be loaded.');
+            }
+
+            public function create(array $data): int
+            {
+                $data['id'] = count($this->records) + 1;
+                $this->records[] = $data;
+
+                return $data['id'];
+            }
+        };
+
+        $source = tempnam(sys_get_temp_dir(), 'animal-photo-');
+        file_put_contents($source, 'fake-image');
+
+        $manager = new AnimalPhotoManager($repository, $this->publicRoot, null);
+        $manager->upload(42, [
+            'name' => 'example.png',
+            'type' => 'image/png',
+            'tmp_name' => $source,
+            'error' => UPLOAD_ERR_OK,
+            'size' => filesize($source),
+        ], 9);
+
+        self::assertCount(1, $repository->records);
+        self::assertSame(0, $repository->records[0]['is_primary']);
+        self::assertSame(2, $repository->records[0]['sort_order']);
+
+        unlink($source);
+    }
+
     private function removeDirectory(string $path): void
     {
         if (!is_dir($path)) {

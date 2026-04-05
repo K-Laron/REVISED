@@ -22,14 +22,9 @@ class GuestMiddleware
                 return Response::error(403, 'FORBIDDEN', 'You are already authenticated.');
             }
 
-            return Response::redirect($this->redirectPathForUser($user));
+            return Response::redirect(LandingPage::forUser($user));
         }
 
         return $next($request);
-    }
-
-    private function redirectPathForUser(array $user): string
-    {
-        return LandingPage::forUser($user);
     }
 }

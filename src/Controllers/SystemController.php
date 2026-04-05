@@ -26,6 +26,29 @@ class SystemController
         $this->settings = new SystemSettingsService();
     }
 
+    public function ping(Request $request): Response
+    {
+        return Response::success([
+            'timestamp' => date(DATE_ATOM),
+            'status' => 'ok',
+        ], 'API is reachable.');
+    }
+
+    public function validateTest(Request $request): Response
+    {
+        $validator = new Validator($request->body());
+        $validator->rules([
+            'email' => 'required|email|max:255',
+            'name' => 'required|string|min:2|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return Response::error(422, 'VALIDATION_ERROR', 'The given data was invalid.', $validator->errors());
+        }
+
+        return Response::success($request->body(), 'Validation passed.');
+    }
+
     public function health(Request $request): Response
     {
         return Response::success($this->backups->health(), 'System health retrieved successfully.');

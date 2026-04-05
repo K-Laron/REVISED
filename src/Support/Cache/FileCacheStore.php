@@ -8,6 +8,10 @@ use RuntimeException;
 
 final class FileCacheStore
 {
+    private ?array $loadedCache = null;
+
+    private array $dirtyEntries = [];
+
     public function __construct(
         private readonly string $path = __DIR__ . '/../../../storage/cache/app_cache.json'
     ) {
@@ -15,24 +19,61 @@ final class FileCacheStore
 
     public function remember(string $key, int $ttlSeconds, callable $resolver): mixed
     {
+        $cache = $this->loadCache();
+        $entry = $cache[$key] ?? null;
+
+        if (is_array($entry) && (int) ($entry['expires_at'] ?? 0) >= time()) {
+            return $entry['value'] ?? null;
+        }
+
+        $value = $resolver();
+        $entry = [
+            'expires_at' => time() + $ttlSeconds,
+            'value' => $value,
+        ];
+
+        $this->loadedCache[$key] = $entry;
+        $this->dirtyEntries[$key] = $entry;
+        $this->persistDirtyEntries();
+
+        return $value;
+    }
+
+    private function loadCache(): array
+    {
+        if ($this->loadedCache !== null) {
+            return $this->loadedCache;
+        }
+
+        $handle = $this->openHandle();
+
+        try {
+            $this->loadedCache = $this->readCache($handle);
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+
+        return $this->loadedCache;
+    }
+
+    private function persistDirtyEntries(): void
+    {
+        if ($this->dirtyEntries === []) {
+            return;
+        }
+
         $handle = $this->openHandle();
 
         try {
             $cache = $this->readCache($handle);
-            $entry = $cache[$key] ?? null;
-
-            if (is_array($entry) && (int) ($entry['expires_at'] ?? 0) >= time()) {
-                return $entry['value'] ?? null;
+            foreach ($this->dirtyEntries as $key => $entry) {
+                $cache[$key] = $entry;
             }
 
-            $value = $resolver();
-            $cache[$key] = [
-                'expires_at' => time() + $ttlSeconds,
-                'value' => $value,
-            ];
             $this->writeCache($handle, $cache);
-
-            return $value;
+            $this->loadedCache = $cache;
+            $this->dirtyEntries = [];
         } finally {
             flock($handle, LOCK_UN);
             fclose($handle);

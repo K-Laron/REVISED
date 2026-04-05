@@ -202,6 +202,22 @@ class InventoryService
         ];
     }
 
+    public function alertCounts(): array
+    {
+        $row = Database::fetch(
+            "SELECT
+                COALESCE(SUM(CASE WHEN quantity_on_hand <= reorder_level THEN 1 ELSE 0 END), 0) AS low_stock_count,
+                COALESCE(SUM(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS expiring_count
+             FROM inventory_items
+             WHERE is_deleted = 0"
+        );
+
+        return [
+            'low_stock_count' => (int) ($row['low_stock_count'] ?? 0),
+            'expiring_count' => (int) ($row['expiring_count'] ?? 0),
+        ];
+    }
+
     public function stats(): array
     {
         $row = Database::fetch(

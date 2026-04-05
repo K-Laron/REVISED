@@ -177,6 +177,50 @@ final class SearchServiceTest extends TestCase
         ], $service->availableSecondaryFilters($user));
     }
 
+    public function testAvailableSecondaryFiltersReuseAccessibleModuleMetadataWithinTheSameService(): void
+    {
+        if (!interface_exists(SearchProviderInterface::class)) {
+            self::fail('Expected SearchProviderInterface to exist.');
+        }
+
+        $animals = $this->provider('animals', 'Animals', 'animals.read', [
+            'key' => 'animals',
+            'label' => 'Animals',
+            'href' => '/animals',
+            'count' => 0,
+            'items' => [],
+        ], [
+            'animal_lifecycle' => [
+                'label' => 'Lifecycle',
+                'options' => [
+                    ['value' => 'Available', 'label' => 'Available'],
+                ],
+            ],
+        ]);
+        $users = $this->provider('users', 'Users', 'users.read', [
+            'key' => 'users',
+            'label' => 'Users',
+            'href' => '/users',
+            'count' => 0,
+            'items' => [],
+        ]);
+
+        $service = new SearchService([$animals, $users]);
+        $user = [
+            'role_name' => 'staff',
+            'permissions' => ['animals.read'],
+        ];
+
+        $service->availableModules($user);
+        $service->availableSecondaryFilters($user);
+        $service->availableSecondaryFilters($user);
+
+        self::assertSame(1, $animals->permissionCalls);
+        self::assertSame(1, $users->permissionCalls);
+        self::assertSame(1, $animals->labelCalls);
+        self::assertSame(1, $animals->secondaryFilterCalls);
+    }
+
     private function provider(
         string $key,
         string $label,
@@ -189,6 +233,9 @@ final class SearchServiceTest extends TestCase
         return new class ($key, $label, $permission, $section, $secondaryFilters, $legacyStatusAliases) extends AbstractSearchProvider {
             /** @var array<int, array{term: string, limit: int, filters: array}> */
             public array $calls = [];
+            public int $labelCalls = 0;
+            public int $permissionCalls = 0;
+            public int $secondaryFilterCalls = 0;
 
             public function __construct(
                 private readonly string $key,
@@ -207,11 +254,13 @@ final class SearchServiceTest extends TestCase
 
             public function label(): string
             {
+                $this->labelCalls++;
                 return $this->label;
             }
 
             public function permission(): string
             {
+                $this->permissionCalls++;
                 return $this->permission;
             }
 
@@ -228,6 +277,7 @@ final class SearchServiceTest extends TestCase
 
             public function secondaryFilters(): array
             {
+                $this->secondaryFilterCalls++;
                 return $this->secondaryFilters;
             }
 

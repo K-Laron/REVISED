@@ -6,7 +6,6 @@ namespace App\Middleware;
 
 use App\Core\ExceptionHandler;
 use App\Core\Request;
-use App\Core\Response;
 use Closure;
 
 class PermissionMiddleware
