@@ -238,32 +238,55 @@ class Validator
             return;
         }
 
-        if (!is_array($value) || !isset($value['tmp_name'])) {
-            $this->addError($field, sprintf('%s must be a file upload.', ucfirst(str_replace('_', ' ', $field))));
+        $files = isset($value[0]) && is_array($value[0]) ? $value : [$value];
+        foreach ($files as $file) {
+            if (!is_array($file) || !isset($file['tmp_name'])) {
+                $this->addError($field, sprintf('%s must be a file upload.', ucfirst(str_replace('_', ' ', $field))));
+                return;
+            }
         }
     }
 
     private function validateFileMax(string $field, mixed $value, array $parameters): void
     {
-        if (!is_array($value) || !isset($value['size'])) {
+        if ($value === null) {
             return;
         }
 
+        $files = isset($value[0]) && is_array($value[0]) ? $value : [$value];
         $maxBytes = ((int) ($parameters[0] ?? 0)) * 1024;
-        if ((int) $value['size'] > $maxBytes) {
-            $this->addError($field, sprintf('%s exceeds the maximum file size.', ucfirst(str_replace('_', ' ', $field))));
+
+        foreach ($files as $file) {
+            if (!is_array($file) || !isset($file['size'])) {
+                continue;
+            }
+
+            if ((int) $file['size'] > $maxBytes) {
+                $this->addError($field, sprintf('%s exceeds the maximum file size.', ucfirst(str_replace('_', ' ', $field))));
+                return;
+            }
         }
     }
 
     private function validateFileTypes(string $field, mixed $value, array $parameters): void
     {
-        if (!is_array($value) || !isset($value['name'])) {
+        if ($value === null) {
             return;
         }
 
-        $extension = strtolower(pathinfo((string) $value['name'], PATHINFO_EXTENSION));
-        if (!in_array($extension, array_map('strtolower', $parameters), true)) {
-            $this->addError($field, sprintf('%s has an invalid file type.', ucfirst(str_replace('_', ' ', $field))));
+        $files = isset($value[0]) && is_array($value[0]) ? $value : [$value];
+        $allowed = array_map('strtolower', $parameters);
+
+        foreach ($files as $file) {
+            if (!is_array($file) || !isset($file['name'])) {
+                continue;
+            }
+
+            $extension = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+            if (!in_array($extension, $allowed, true)) {
+                $this->addError($field, sprintf('%s has an invalid file type.', ucfirst(str_replace('_', ' ', $field))));
+                return;
+            }
         }
     }
 

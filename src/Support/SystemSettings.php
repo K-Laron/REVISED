@@ -4,123 +4,133 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Core\App;
 use App\Core\Database;
 use RuntimeException;
 use Throwable;
 
 class SystemSettings
 {
-    private static ?array $cache = null;
-    private static ?bool $databaseStoreAvailable = null;
+    private ?array $cache = null;
+    private ?bool $databaseStoreAvailable = null;
 
-    public static function bootstrap(): array
+    public function __construct(private readonly Database $db)
     {
-        if (self::$cache !== null) {
-            return self::$cache;
-        }
-
-        $settings = self::defaults();
-        $runtimeSettings = self::readFromCache();
-        if ($runtimeSettings !== []) {
-            self::$cache = array_replace($settings, $runtimeSettings);
-
-            return self::$cache;
-        }
-
-        $legacySettings = self::readFromFile();
-        if ($legacySettings !== []) {
-            self::$cache = array_replace($settings, $legacySettings);
-
-            return self::$cache;
-        }
-
-        self::$cache = $settings;
-
-        return self::$cache;
     }
 
-    public static function all(): array
+    public function bootstrap(): array
     {
-        if (self::$cache !== null) {
-            return self::$cache;
+        if ($this->cache !== null) {
+            return $this->cache;
         }
 
-        $settings = self::bootstrap();
+        $settings = $this->defaults();
+        $runtimeSettings = $this->readFromCache();
+        if ($runtimeSettings !== []) {
+            $this->cache = array_replace($settings, $runtimeSettings);
+
+            return $this->cache;
+        }
+
+        $legacySettings = $this->readFromFile();
+        if ($legacySettings !== []) {
+            $this->cache = array_replace($settings, $legacySettings);
+
+            return $this->cache;
+        }
+
+        $this->cache = $settings;
+
+        return $this->cache;
+    }
+
+    public function all(): array
+    {
+        if ($this->cache !== null) {
+            return $this->cache;
+        }
+
+        $settings = $this->bootstrap();
 
         try {
-            if (self::databaseStoreAvailable()) {
-                $databaseSettings = self::readFromDatabase();
+            if ($this->databaseStoreAvailable()) {
+                $databaseSettings = $this->readFromDatabase();
                 if ($databaseSettings !== []) {
-                    self::$cache = array_replace($settings, $databaseSettings);
-                    self::writeToCache(self::$cache);
+                    $this->cache = array_replace($settings, $databaseSettings);
+                    $this->writeToCache($this->cache);
 
-                    return self::$cache;
+                    return $this->cache;
                 }
             }
         } catch (Throwable) {
-            self::$databaseStoreAvailable = false;
+            $this->databaseStoreAvailable = false;
         }
 
-        return self::$cache;
+        return $this->cache;
+    }
+
+    public function instanceGet(string $key, mixed $default = null): mixed
+    {
+        return $this->all()[$key] ?? $default;
     }
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        return self::all()[$key] ?? $default;
+        return self::instance()->instanceGet($key, $default);
     }
 
-    public static function save(array $settings): array
+    public function save(array $settings): array
     {
-        $merged = array_replace(self::defaults(), $settings);
+        $merged = array_replace($this->defaults(), $settings);
 
-        if (self::databaseStoreAvailable()) {
-            self::writeToDatabase($merged);
+        if ($this->databaseStoreAvailable()) {
+            $this->writeToDatabase($merged);
         } else {
-            self::writeToFile($merged);
+            $this->writeToFile($merged);
         }
 
-        self::writeToCache($merged);
+        $this->writeToCache($merged);
 
-        self::$cache = $merged;
+        $this->cache = $merged;
 
         return $merged;
     }
 
-    public static function migrateLegacyFileToDatabase(): bool
+    public function migrateLegacyFileToDatabase(): bool
     {
-        if (!self::databaseStoreAvailable()) {
+        if (!$this->databaseStoreAvailable()) {
             return false;
         }
 
-        $legacySettings = self::readFromFile();
+        $legacySettings = $this->readFromFile();
         if ($legacySettings === []) {
             return false;
         }
 
-        $merged = array_replace(self::defaults(), $legacySettings);
-        self::writeToDatabase($merged);
-        self::writeToCache($merged);
-        self::$cache = $merged;
+        $merged = array_replace($this->defaults(), $legacySettings);
+        $this->writeToDatabase($merged);
+        $this->writeToCache($merged);
+        $this->cache = $merged;
 
         return true;
     }
 
-    public static function storageDriver(): string
+    public function storageDriver(): string
     {
-        return self::databaseStoreAvailable() ? 'database' : 'file';
+        return $this->databaseStoreAvailable() ? 'database' : 'file';
     }
 
-    public static function path(): string
+    public function path(): string
     {
         return dirname(__DIR__, 2) . '/storage/config/system_settings.json';
     }
 
-    public static function cachePath(): string
+    public function cachePath(): string
     {
         return dirname(__DIR__, 2) . '/storage/cache/system_settings.json';
     }
 
-    public static function defaults(): array
+    public function defaults(): array
     {
         return [
             'app_name' => $_ENV['APP_NAME'] ?? 'Catarman Animal Shelter',
@@ -135,25 +145,25 @@ class SystemSettings
         ];
     }
 
-    private static function databaseStoreAvailable(): bool
+    private function databaseStoreAvailable(): bool
     {
-        if (self::$databaseStoreAvailable !== null) {
-            return self::$databaseStoreAvailable;
+        if ($this->databaseStoreAvailable !== null) {
+            return $this->databaseStoreAvailable;
         }
 
         try {
-            $row = Database::fetch("SHOW TABLES LIKE 'system_settings'");
-            self::$databaseStoreAvailable = $row !== false;
+            $row = $this->db->fetch("SHOW TABLES LIKE 'system_settings'");
+            $this->databaseStoreAvailable = $row !== false;
         } catch (Throwable) {
-            self::$databaseStoreAvailable = false;
+            $this->databaseStoreAvailable = false;
         }
 
-        return self::$databaseStoreAvailable;
+        return $this->databaseStoreAvailable;
     }
 
-    private static function readFromDatabase(): array
+    private function readFromDatabase(): array
     {
-        $rows = Database::fetchAll('SELECT setting_key, setting_value FROM system_settings');
+        $rows = $this->db->fetchAll('SELECT setting_key, setting_value FROM system_settings');
         $settings = [];
 
         foreach ($rows as $row) {
@@ -169,7 +179,7 @@ class SystemSettings
         return $settings;
     }
 
-    private static function writeToDatabase(array $settings): void
+    private function writeToDatabase(array $settings): void
     {
         foreach ($settings as $key => $value) {
             $encoded = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -177,7 +187,7 @@ class SystemSettings
                 throw new RuntimeException('Failed to encode setting [' . $key . '].');
             }
 
-            Database::execute(
+            $this->db->execute(
                 'INSERT INTO system_settings (setting_key, setting_value)
                  VALUES (:setting_key, CAST(:setting_value AS JSON))
                  ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURRENT_TIMESTAMP',
@@ -189,27 +199,27 @@ class SystemSettings
         }
     }
 
-    private static function readFromFile(): array
+    private function readFromFile(): array
     {
-        return self::readJsonFile(self::path());
+        return $this->readJsonFile($this->path());
     }
 
-    private static function readFromCache(): array
+    private function readFromCache(): array
     {
-        return self::readJsonFile(self::cachePath());
+        return $this->readJsonFile($this->cachePath());
     }
 
-    private static function writeToFile(array $settings): void
+    private function writeToFile(array $settings): void
     {
-        self::writeJsonFile(self::path(), $settings);
+        $this->writeJsonFile($this->path(), $settings);
     }
 
-    private static function writeToCache(array $settings): void
+    private function writeToCache(array $settings): void
     {
-        self::writeJsonFile(self::cachePath(), $settings);
+        $this->writeJsonFile($this->cachePath(), $settings);
     }
 
-    private static function readJsonFile(string $path): array
+    private function readJsonFile(string $path): array
     {
         if (!is_file($path)) {
             return [];
@@ -220,7 +230,7 @@ class SystemSettings
         return is_array($decoded) ? $decoded : [];
     }
 
-    private static function writeJsonFile(string $path, array $settings): void
+    private function writeJsonFile(string $path, array $settings): void
     {
         $directory = dirname($path);
         if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
@@ -231,5 +241,33 @@ class SystemSettings
         if ($encoded === false || file_put_contents($path, $encoded) === false) {
             throw new RuntimeException('Failed to persist system settings.');
         }
+    }
+
+    /**
+     * Static bridge for legacy support.
+     * @deprecated Use DI to inject SystemSettings instance.
+     */
+    public static function instance(): self
+    {
+        return App::make(self::class);
+    }
+
+    /** @deprecated */
+    public static function getStatic(string $key, mixed $default = null): mixed
+    {
+        return self::instance()->instanceGet($key, $default);
+    }
+
+    /**
+     * @deprecated Proxy for legacy code calling SystemSettings::get()
+     */
+    public static function __callStatic(string $name, array $arguments)
+    {
+        $instance = self::instance();
+        if (method_exists($instance, $name)) {
+            return $instance->$name(...$arguments);
+        }
+
+        throw new RuntimeException("Method $name does not exist on SystemSettings.");
     }
 }

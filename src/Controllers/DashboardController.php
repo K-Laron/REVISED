@@ -14,11 +14,9 @@ class DashboardController
 {
     use RendersViews;
 
-    private DashboardService $dashboard;
-
-    public function __construct()
-    {
-        $this->dashboard = new DashboardService();
+    public function __construct(
+        private readonly DashboardService $dashboard
+    ) {
     }
 
     public function index(Request $request): Response

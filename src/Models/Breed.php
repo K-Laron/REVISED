@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class Breed
+class Breed extends BaseModel
 {
+    protected static string $table = 'breeds';
+    protected static bool $useSoftDeletes = false; // Static reference data
+
     public function list(?string $species = null): array
     {
         $sql = 'SELECT id, species, name FROM breeds';
@@ -20,6 +21,6 @@ class Breed
 
         $sql .= ' ORDER BY species, name';
 
-        return Database::fetchAll($sql, $bindings);
+        return $this->db->fetchAll($sql, $bindings);
     }
 }

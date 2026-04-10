@@ -257,6 +257,50 @@ $canComplete = in_array($currentStatus, ['seminar_completed', 'pending_payment']
     </article>
 
     <article class="card stack">
+        <h3>Verification Documents</h3>
+        <p class="text-muted">Identity verification documents provided by the adopter.</p>
+        <div class="adoption-document-grid">
+            <?php 
+            $idPaths = [];
+            $rawPath = (string) ($application['valid_id_path'] ?? '');
+            if ($rawPath !== '') {
+                $decoded = json_decode($rawPath, true);
+                $idPaths = (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [$rawPath];
+            }
+            ?>
+            <?php foreach ($idPaths as $idx => $path): ?>
+                <?php 
+                $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+                $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp']);
+                ?>
+                <a href="/<?= htmlspecialchars($path, ENT_QUOTES, 'UTF-8') ?>" target="_blank" class="adoption-document-card">
+                    <?php if ($isImage): ?>
+                        <img src="/<?= htmlspecialchars($path, ENT_QUOTES, 'UTF-8') ?>" alt="ID Document">
+                    <?php else: ?>
+                        <div class="adoption-document-placeholder">
+                            <svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <span><?= strtoupper($ext) ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <div class="adoption-document-meta">
+                        <strong>Document <?= $idx + 1 ?></strong>
+                        <small>Click to view</small>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+            <?php if ($idPaths === []): ?>
+                <div class="adoption-empty-state adoption-form-span-2">No verification documents uploaded.</div>
+            <?php endif; ?>
+        </div>
+    </article>
+
+    <article class="card stack">
         <h3>Seminar Workflow</h3>
         <?php require __DIR__ . '/seminars.php'; ?>
     </article>

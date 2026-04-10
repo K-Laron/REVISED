@@ -4,32 +4,19 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class InventoryCategory
+class InventoryCategory extends BaseModel
 {
+    protected static string $table = 'inventory_categories';
+    protected static bool $useSoftDeletes = false; // Categories are typically small and don't use soft deletes here
+
     public function list(): array
     {
-        return Database::fetchAll('SELECT * FROM inventory_categories ORDER BY name ASC');
-    }
-
-    public function create(string $name, ?string $description): int
-    {
-        Database::execute(
-            'INSERT INTO inventory_categories (name, description)
-             VALUES (:name, :description)',
-            [
-                'name' => $name,
-                'description' => $description,
-            ]
-        );
-
-        return (int) Database::lastInsertId();
+        return $this->db->fetchAll('SELECT * FROM inventory_categories ORDER BY name ASC');
     }
 
     public function existsByName(string $name): bool
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT id FROM inventory_categories WHERE name = :name LIMIT 1',
             ['name' => $name]
         ) !== false;

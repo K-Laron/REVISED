@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
 use App\Core\Request;
 use App\Helpers\IdGenerator;
 use App\Helpers\Sanitizer;
@@ -20,37 +19,16 @@ use RuntimeException;
 
 class BillingService
 {
-    private Invoice $invoices;
-    private InvoiceLineItem $lineItems;
-    private Payment $payments;
-    private FeeSchedule $fees;
-    private PdfService $pdfs;
-    private AuditService $audit;
-    private InvoiceComputation $computation;
-    private BillingDocumentManager $documents;
-    private BillingNotificationDispatcher $notifications;
-
     public function __construct(
-        ?Invoice $invoices = null,
-        ?InvoiceLineItem $lineItems = null,
-        ?Payment $payments = null,
-        ?FeeSchedule $fees = null,
-        ?PdfService $pdfs = null,
-        ?AuditService $audit = null,
-        ?InvoiceComputation $computation = null,
-        ?BillingDocumentManager $documents = null,
-        ?BillingNotificationDispatcher $notifications = null
-    )
-    {
-        $this->invoices = $invoices ?? new Invoice();
-        $this->lineItems = $lineItems ?? new InvoiceLineItem();
-        $this->payments = $payments ?? new Payment();
-        $this->fees = $fees ?? new FeeSchedule();
-        $this->pdfs = $pdfs ?? new PdfService();
-        $this->audit = $audit ?? new AuditService();
-        $this->computation = $computation ?? new InvoiceComputation();
-        $this->documents = $documents ?? new BillingDocumentManager($this->invoices, $this->payments, $this->pdfs);
-        $this->notifications = $notifications ?? new BillingNotificationDispatcher(new NotificationService());
+        private readonly Invoice $invoices,
+        private readonly InvoiceLineItem $lineItems,
+        private readonly Payment $payments,
+        private readonly FeeSchedule $fees,
+        private readonly AuditService $audit,
+        private readonly InvoiceComputation $computation,
+        private readonly BillingDocumentManager $documents,
+        private readonly BillingNotificationDispatcher $notifications
+    ) {
     }
 
     public function listInvoices(array $filters, int $page, int $perPage): array
@@ -70,18 +48,7 @@ class BillingService
 
     public function stats(): array
     {
-        $row = Database::fetch(
-            "SELECT
-                COALESCE(SUM(CASE WHEN i.payment_status = 'paid' AND YEAR(i.issue_date) = YEAR(CURDATE()) AND MONTH(i.issue_date) = MONTH(CURDATE()) THEN i.total_amount ELSE 0 END), 0) AS total_revenue_month,
-                COALESCE(SUM(CASE WHEN i.payment_status IN ('unpaid', 'partial') THEN i.balance_due ELSE 0 END), 0) AS outstanding_balance,
-                COALESCE(SUM(CASE WHEN DATE(p.payment_date) = CURDATE() THEN p.amount ELSE 0 END), 0) AS paid_today,
-                COALESCE(SUM(CASE WHEN i.payment_status IN ('unpaid', 'partial') AND i.due_date < CURDATE() THEN i.balance_due ELSE 0 END), 0) AS overdue_balance,
-                COALESCE(SUM(CASE WHEN i.payment_status IN ('unpaid', 'partial') THEN 1 ELSE 0 END), 0) AS outstanding_count,
-                COALESCE(SUM(CASE WHEN i.payment_status IN ('unpaid', 'partial') AND i.due_date < CURDATE() THEN 1 ELSE 0 END), 0) AS overdue_count
-             FROM invoices i
-             LEFT JOIN payments p ON p.invoice_id = i.id
-             WHERE i.is_deleted = 0"
-        );
+        $row = $this->invoices->getSummaryStats();
 
         return [
             'total_revenue_month' => (float) ($row['total_revenue_month'] ?? 0),
@@ -103,7 +70,7 @@ class BillingService
         $totals = $this->computation->computeTotals($lineItems);
         $invoiceNumber = IdGenerator::next('invoice_number');
 
-        Database::beginTransaction();
+        $this->invoices->db->beginTransaction();
 
         try {
             $invoiceId = $this->invoices->create([
@@ -130,9 +97,9 @@ class BillingService
             ]);
 
             $this->lineItems->createMany($invoiceId, $lineItems);
-            Database::commit();
+            $this->invoices->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->invoices->db->rollBack();
             throw $exception;
         }
 
@@ -162,7 +129,7 @@ class BillingService
         $amountPaid = (float) $current['amount_paid'];
         $paymentStatus = $this->computation->resolvePaymentStatus($amountPaid, $totals['total_amount']);
 
-        Database::beginTransaction();
+        $this->invoices->db->beginTransaction();
 
         try {
             $this->invoices->update($invoiceId, [
@@ -185,9 +152,9 @@ class BillingService
             ]);
             $this->lineItems->deleteByInvoice($invoiceId);
             $this->lineItems->createMany($invoiceId, $lineItems);
-            Database::commit();
+            $this->invoices->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->invoices->db->rollBack();
             throw $exception;
         }
 
@@ -247,7 +214,7 @@ class BillingService
         $paymentNumber = IdGenerator::next('payment_number');
         $receiptNumber = 'OR-' . substr($paymentNumber, 4);
 
-        Database::beginTransaction();
+        $this->invoices->db->beginTransaction();
 
         try {
             $paymentId = $this->payments->create([
@@ -268,9 +235,9 @@ class BillingService
             $newAmountPaid = round((float) $invoice['amount_paid'] + $amount, 2);
             $status = $this->computation->resolvePaymentStatus($newAmountPaid, (float) $invoice['total_amount']);
             $this->invoices->updateAmounts($invoiceId, $newAmountPaid, $status, $userId);
-            Database::commit();
+            $this->invoices->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->invoices->db->rollBack();
             throw $exception;
         }
 
@@ -354,5 +321,4 @@ class BillingService
 
         return $fee;
     }
-
 }

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class InventoryItem
+class InventoryItem extends BaseModel
 {
+    protected static string $table = 'inventory_items';
+
     public function paginate(array $filters, int $page, int $perPage): array
     {
         [$whereSql, $bindings] = $this->buildFilters($filters);
         $offset = ($page - 1) * $perPage;
 
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT ii.*, ic.name AS category_name
              FROM inventory_items ii
              INNER JOIN inventory_categories ic ON ic.id = ii.category_id
@@ -23,7 +23,7 @@ class InventoryItem
             $bindings
         );
 
-        $count = Database::fetch(
+        $count = $this->db->fetch(
             "SELECT COUNT(*) AS aggregate
              FROM inventory_items ii
              {$whereSql}",
@@ -36,99 +36,40 @@ class InventoryItem
         ];
     }
 
-    public function find(int $id): array|false
+    public function find(int|string $id, bool $includeDeleted = false): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT ii.*, ic.name AS category_name
              FROM inventory_items ii
              INNER JOIN inventory_categories ic ON ic.id = ii.category_id
              WHERE ii.id = :id
-               AND ii.is_deleted = 0
+               AND (ii.is_deleted = 0 OR :include_deleted = 1)
              LIMIT 1',
-            ['id' => $id]
-        );
-    }
-
-    public function create(array $data): int
-    {
-        Database::execute(
-            'INSERT INTO inventory_items (
-                sku, name, category_id, unit_of_measure, cost_per_unit, supplier_name, supplier_contact,
-                reorder_level, quantity_on_hand, storage_location, expiry_date, is_active, created_by, updated_by
-             ) VALUES (
-                :sku, :name, :category_id, :unit_of_measure, :cost_per_unit, :supplier_name, :supplier_contact,
-                :reorder_level, :quantity_on_hand, :storage_location, :expiry_date, :is_active, :created_by, :updated_by
-             )',
-            $data
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
-    public function update(int $id, array $data): void
-    {
-        $data['id'] = $id;
-
-        Database::execute(
-            'UPDATE inventory_items SET
-                sku = :sku,
-                name = :name,
-                category_id = :category_id,
-                unit_of_measure = :unit_of_measure,
-                cost_per_unit = :cost_per_unit,
-                supplier_name = :supplier_name,
-                supplier_contact = :supplier_contact,
-                reorder_level = :reorder_level,
-                storage_location = :storage_location,
-                expiry_date = :expiry_date,
-                is_active = :is_active,
-                updated_by = :updated_by
-             WHERE id = :id',
-            $data
+            ['id' => $id, 'include_deleted' => $includeDeleted ? 1 : 0]
         );
     }
 
     public function updateQuantity(int $id, int $quantityOnHand, ?int $updatedBy): void
     {
-        Database::execute(
-            'UPDATE inventory_items
-             SET quantity_on_hand = :quantity_on_hand,
-                 updated_by = :updated_by
-             WHERE id = :id',
-            [
-                'id' => $id,
-                'quantity_on_hand' => $quantityOnHand,
-                'updated_by' => $updatedBy,
-            ]
-        );
-    }
-
-    public function setDeleted(int $id, bool $deleted): void
-    {
-        Database::execute(
-            'UPDATE inventory_items
-             SET is_deleted = :is_deleted,
-                 deleted_at = :deleted_at
-             WHERE id = :id',
-            [
-                'id' => $id,
-                'is_deleted' => $deleted ? 1 : 0,
-                'deleted_at' => $deleted ? date('Y-m-d H:i:s') : null,
-            ]
-        );
+        $this->update($id, [
+            'quantity_on_hand' => $quantityOnHand,
+            'updated_by' => $updatedBy,
+        ]);
     }
 
     public function skuExists(string $sku, ?int $ignoreId = null): bool
     {
-        $sql = 'SELECT id FROM inventory_items WHERE sku = :sku LIMIT 1';
+        $sql = 'SELECT id FROM inventory_items WHERE sku = :sku';
         $bindings = ['sku' => $sku];
 
         if ($ignoreId !== null) {
-            $sql = 'SELECT id FROM inventory_items WHERE sku = :sku AND id <> :id LIMIT 1';
+            $sql .= ' AND id <> :id';
             $bindings['id'] = $ignoreId;
         }
 
-        return Database::fetch($sql, $bindings) !== false;
+        $sql .= ' LIMIT 1';
+
+        return $this->db->fetch($sql, $bindings) !== false;
     }
 
     private function buildFilters(array $filters): array
@@ -155,5 +96,82 @@ class InventoryItem
         }
 
         return ['WHERE ' . implode(' AND ', $clauses), $bindings];
+    }
+
+    public function getAlerts(): array
+    {
+        $lowStock = $this->db->fetchAll(
+            'SELECT ii.*, ic.name AS category_name
+             FROM inventory_items ii
+             INNER JOIN inventory_categories ic ON ic.id = ii.category_id
+             WHERE ii.is_deleted = 0
+               AND ii.quantity_on_hand <= ii.reorder_level
+             ORDER BY ii.quantity_on_hand ASC, ii.name ASC'
+        );
+
+        $expiring = $this->db->fetchAll(
+            'SELECT ii.*, ic.name AS category_name
+             FROM inventory_items ii
+             INNER JOIN inventory_categories ic ON ic.id = ii.category_id
+             WHERE ii.is_deleted = 0
+               AND ii.expiry_date IS NOT NULL
+               AND ii.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+             ORDER BY ii.expiry_date ASC, ii.name ASC'
+        );
+
+        return [
+            'low_stock' => $lowStock,
+            'expiring' => $expiring,
+        ];
+    }
+
+    public function getAlertSummary(): array
+    {
+        $row = $this->db->fetch(
+            "SELECT
+                COALESCE(SUM(CASE WHEN quantity_on_hand <= reorder_level THEN 1 ELSE 0 END), 0) AS low_stock_count,
+                COALESCE(SUM(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS expiring_count
+             FROM inventory_items
+             WHERE is_deleted = 0"
+        );
+
+        return [
+            'low_stock_count' => (int) ($row['low_stock_count'] ?? 0),
+            'expiring_count' => (int) ($row['expiring_count'] ?? 0),
+        ];
+    }
+
+    public function getStats(): array
+    {
+        $row = $this->db->fetch(
+            "SELECT
+                COUNT(*) AS total_items,
+                COALESCE(SUM(quantity_on_hand), 0) AS total_units,
+                COALESCE(SUM(CASE WHEN quantity_on_hand <= reorder_level THEN 1 ELSE 0 END), 0) AS low_stock_count,
+                COALESCE(SUM(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS expiring_count,
+                COALESCE(SUM(quantity_on_hand * COALESCE(cost_per_unit, 0)), 0) AS estimated_value
+             FROM inventory_items
+             WHERE is_deleted = 0"
+        );
+
+        return [
+            'total_items' => (int) ($row['total_items'] ?? 0),
+            'total_units' => (int) ($row['total_units'] ?? 0),
+            'low_stock_count' => (int) ($row['low_stock_count'] ?? 0),
+            'expiring_count' => (int) ($row['expiring_count'] ?? 0),
+            'estimated_value' => (float) ($row['estimated_value'] ?? 0),
+        ];
+    }
+
+    public function listForProcedures(): array
+    {
+        return $this->db->fetchAll(
+            'SELECT ii.id, ii.sku, ii.name, ii.quantity_on_hand, ii.unit_of_measure, ic.name AS category_name
+             FROM inventory_items ii
+             INNER JOIN inventory_categories ic ON ic.id = ii.category_id
+             WHERE ii.is_deleted = 0
+               AND ii.is_active = 1
+             ORDER BY ic.name ASC, ii.name ASC'
+        );
     }
 }

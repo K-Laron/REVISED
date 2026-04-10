@@ -14,11 +14,9 @@ class NotificationController
 {
     use InteractsWithApi;
 
-    private NotificationService $notifications;
-
-    public function __construct()
-    {
-        $this->notifications = new NotificationService();
+    public function __construct(
+        private readonly NotificationService $notifications
+    ) {
     }
 
     public function list(Request $request): Response

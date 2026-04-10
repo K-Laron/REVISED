@@ -17,13 +17,10 @@ class SystemController
 {
     use InteractsWithApi;
 
-    private BackupService $backups;
-    private SystemSettingsService $settings;
-
-    public function __construct()
-    {
-        $this->backups = new BackupService();
-        $this->settings = new SystemSettingsService();
+    public function __construct(
+        private readonly BackupService $backups,
+        private readonly SystemSettingsService $settings
+    ) {
     }
 
     public function ping(Request $request): Response

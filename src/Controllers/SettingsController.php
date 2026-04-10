@@ -17,18 +17,17 @@ class SettingsController
     use InteractsWithApi;
     use RendersViews;
 
-    private SystemSettingsService $settings;
-
-    public function __construct()
-    {
-        $this->settings = new SystemSettingsService();
+    public function __construct(
+        private readonly SystemSettingsService $settingsService,
+        private readonly SystemSettings $systemSettings
+    ) {
     }
 
     public function index(Request $request): Response
     {
         $authUser = $this->currentUser($request);
         $isSuperAdmin = (($authUser['role_name'] ?? null) === 'super_admin');
-        $settings = $this->settings->settings();
+        $settings = $this->settingsService->settings();
 
         return $this->renderAppView('settings.index', [
             'title' => 'Settings',
@@ -38,7 +37,7 @@ class SettingsController
             'currentUser' => $authUser,
             'canManageSystem' => $isSuperAdmin,
             'settingsMeta' => $settings + [
-                'settings_storage_driver' => SystemSettings::storageDriver(),
+                'settings_storage_driver' => $this->systemSettings->storageDriver(),
                 'app_env' => $_ENV['APP_ENV'] ?? 'production',
                 'app_url' => $_ENV['APP_URL'] ?? '',
                 'app_timezone' => $_ENV['APP_TIMEZONE'] ?? 'Asia/Manila',

@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Services\Search\Providers\AdoptionsSearchProvider;
-use App\Services\Search\Providers\AnimalsSearchProvider;
-use App\Services\Search\Providers\BillingSearchProvider;
-use App\Services\Search\Providers\InventorySearchProvider;
-use App\Services\Search\Providers\MedicalSearchProvider;
-use App\Services\Search\Providers\UsersSearchProvider;
 use App\Services\Search\SearchFilterCatalog;
 use App\Services\Search\SearchModuleCatalog;
 use App\Services\Search\SearchProviderInterface;
@@ -19,23 +13,19 @@ class SearchService
     /** @var array<string, SearchProviderInterface> */
     private array $providers = [];
 
-    private SearchFilterCatalog $filterCatalog;
-
     /** @var array<string, list<array{key: string, label: string}>> */
     private array $availableModulesCache = [];
 
     /** @var array<string, array<string, array{key: string, module: string, label: string, options: array}>> */
     private array $availableSecondaryFiltersCache = [];
 
-    public function __construct(array $providers = [], ?SearchFilterCatalog $filterCatalog = null)
-    {
-        foreach ($providers !== [] ? $providers : $this->defaultProviders() as $provider) {
+    public function __construct(
+        array $providers,
+        private readonly SearchFilterCatalog $filterCatalog
+    ) {
+        foreach ($providers as $provider) {
             $this->providers[$provider->key()] = $provider;
         }
-
-        $this->filterCatalog = $filterCatalog ?? new SearchFilterCatalog(
-            new SearchModuleCatalog(array_values($this->providers))
-        );
     }
 
     public function search(string $query, array $user, array $filters = []): array
@@ -147,20 +137,5 @@ class SearchService
         sort($permissions);
 
         return $roleName . '|' . implode(',', $permissions);
-    }
-
-    /**
-     * @return list<SearchProviderInterface>
-     */
-    private function defaultProviders(): array
-    {
-        return [
-            new AnimalsSearchProvider(),
-            new MedicalSearchProvider(),
-            new AdoptionsSearchProvider(),
-            new BillingSearchProvider(),
-            new InventorySearchProvider(),
-            new UsersSearchProvider(),
-        ];
     }
 }

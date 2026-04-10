@@ -241,8 +241,8 @@ final class AdoptionWorkflowServiceIntegrationTest extends DatabaseIntegrationTe
             new AdoptionStatusPolicy(),
             new AdoptionBillingSummary(),
             new PdfService(),
-            new AuditService(),
-            new NotificationService()
+            new AuditService(new \App\Models\AuditLog(), new \App\Core\Logger()),
+            new NotificationService(new \App\Models\Notification(), new \App\Models\User())
         );
     }
 
@@ -254,7 +254,8 @@ final class AdoptionWorkflowServiceIntegrationTest extends DatabaseIntegrationTe
             new AdoptionSeminar(),
             new AdoptionCompletion(),
             new AdoptionStatusPolicy(),
-            new AdoptionBillingSummary()
+            new AdoptionBillingSummary(),
+            new \App\Models\User()
         );
     }
 }

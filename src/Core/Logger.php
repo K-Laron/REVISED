@@ -11,14 +11,10 @@ use Monolog\Logger as MonologLogger;
 
 class Logger
 {
-    private static ?MonologLogger $instance = null;
+    private MonologLogger $logger;
 
-    public static function instance(): MonologLogger
+    public function __construct(?string $name = 'app')
     {
-        if (self::$instance instanceof MonologLogger) {
-            return self::$instance;
-        }
-
         $logDirectory = dirname(__DIR__, 2) . '/' . ($_ENV['LOG_PATH'] ?? 'storage/logs');
         if (!is_dir($logDirectory)) {
             mkdir($logDirectory, 0775, true);
@@ -30,29 +26,43 @@ class Logger
         $handler = new StreamHandler($logFile, $level);
         $handler->setFormatter(new JsonFormatter());
 
-        self::$instance = new MonologLogger('app');
-        self::$instance->pushHandler($handler);
-
-        return self::$instance;
+        $this->logger = new MonologLogger($name ?? 'app');
+        $this->logger->pushHandler($handler);
     }
 
-    public static function debug(string $message, array $context = []): void
+    public function debug(string $message, array $context = []): void
     {
-        self::instance()->debug($message, $context);
+        $this->logger->debug($message, $context);
     }
 
-    public static function info(string $message, array $context = []): void
+    public function info(string $message, array $context = []): void
     {
-        self::instance()->info($message, $context);
+        $this->logger->info($message, $context);
     }
 
-    public static function warning(string $message, array $context = []): void
+    public function warning(string $message, array $context = []): void
     {
-        self::instance()->warning($message, $context);
+        $this->logger->warning($message, $context);
     }
 
-    public static function error(string $message, array $context = []): void
+    public function error(string $message, array $context = []): void
     {
-        self::instance()->error($message, $context);
+        $this->logger->error($message, $context);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Static Bridge (Backward Compatibility)
+    |--------------------------------------------------------------------------
+    */
+
+    private static function getInstance(): self
+    {
+        return App::container()->get(self::class);
+    }
+
+    public static function __callStatic($name, $arguments)
+    {
+        return self::getInstance()->$name(...$arguments);
     }
 }

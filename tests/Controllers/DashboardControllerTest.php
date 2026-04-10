@@ -7,22 +7,20 @@ namespace Tests\Controllers;
 use App\Controllers\DashboardController;
 use App\Core\Request;
 use App\Core\Response;
-use PHPUnit\Framework\TestCase;
+use App\Services\DashboardService;
+use App\Core\Session;
+use Tests\TestCase;
 use ReflectionClass;
 
 final class DashboardControllerTest extends TestCase
 {
     public function testDashboardPageLoadsLocalChartAssetInsteadOfJsDelivr(): void
     {
-        $_SERVER['REQUEST_URI'] = '/dashboard';
-        $_SESSION = [];
-        $GLOBALS['app'] = [
-            'name' => 'Catarman Animal Shelter',
-            'settings' => [
-                'app_name' => 'Catarman Animal Shelter',
-                'organization_name' => 'Catarman Dog Pound',
-            ],
-        ];
+        // Mock session token for CSRF
+        $this->container->get(Session::class)
+            ->method('instanceGet')
+            ->with('_csrf_token', '')
+            ->willReturn('mock_csrf_token');
 
         $request = new Request(
             [
@@ -44,7 +42,10 @@ final class DashboardControllerTest extends TestCase
             'permissions' => [],
         ]);
 
-        $response = (new DashboardController())->index($request);
+        $dashboardService = $this->createMock(DashboardService::class);
+        $dashboardService->method('actionQueue')->willReturn([]);
+
+        $response = (new DashboardController($dashboardService))->index($request);
         $content = $this->responseProperty($response, 'content');
 
         self::assertIsString($content);

@@ -12,10 +12,14 @@ use Closure;
 
 class GuestMiddleware
 {
+    public function __construct(
+        private readonly AuthService $authService
+    ) {
+    }
+
     public function handle(Request $request, Closure $next, ?string $parameter = null): mixed
     {
-        $authService = new AuthService();
-        $user = $authService->userFromRequest($request);
+        $user = $this->authService->userFromRequest($request);
 
         if ($user !== null) {
             if ($request->expectsJson()) {

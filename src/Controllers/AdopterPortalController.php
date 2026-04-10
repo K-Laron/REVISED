@@ -21,13 +21,10 @@ class AdopterPortalController
     use InteractsWithApi;
     use RendersViews;
 
-    private AdoptionService $adoptions;
-    private AuthService $auth;
-
-    public function __construct()
-    {
-        $this->adoptions = new AdoptionService();
-        $this->auth = new AuthService();
+    public function __construct(
+        private readonly AdoptionService $adoptions,
+        private readonly AuthService $auth
+    ) {
     }
 
     public function landing(Request $request): Response

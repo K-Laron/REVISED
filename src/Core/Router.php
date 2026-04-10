@@ -122,7 +122,7 @@ class Router
                         return $next($request);
                     }
 
-                    $middlewareInstance = new $middlewareClass();
+                    $middlewareInstance = App::make($middlewareClass);
 
                     if (!method_exists($middlewareInstance, 'handle')) {
                         throw new RuntimeException(sprintf('Middleware [%s] must implement handle().', $middlewareClass));
@@ -160,7 +160,7 @@ class Router
         }
 
         [$controllerClass, $method] = explode('@', $handler);
-        $controller = new $controllerClass();
+        $controller = App::make($controllerClass);
 
         return $controller->{$method}($request, ...array_values($params));
     }

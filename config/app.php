@@ -26,6 +26,47 @@ $appConfig = [
     ],
 ];
 
+// 1. Initialize Registry & Container
+$container = App\Core\App::container();
+
+// 2. Register Singletons
+$container->singleton(App\Core\Logger::class, function() {
+    return new App\Core\Logger();
+});
+$container->singleton(App\Core\Database::class, function() {
+    return new App\Core\Database();
+});
+$container->singleton(App\Core\Session::class, function() {
+    return new App\Core\Session();
+});
+$container->singleton(Intervention\Image\ImageManager::class, function() {
+    return new Intervention\Image\ImageManager(new Intervention\Image\Drivers\Gd\Driver());
+});
+$container->singleton(App\Services\Search\SearchModuleCatalog::class, function(App\Core\Container $c) {
+    return new App\Services\Search\SearchModuleCatalog([
+        $c->get(App\Services\Search\Providers\AnimalsSearchProvider::class),
+        $c->get(App\Services\Search\Providers\AdoptionsSearchProvider::class),
+        $c->get(App\Services\Search\Providers\MedicalSearchProvider::class),
+        $c->get(App\Services\Search\Providers\BillingSearchProvider::class),
+        $c->get(App\Services\Search\Providers\InventorySearchProvider::class),
+        $c->get(App\Services\Search\Providers\UsersSearchProvider::class),
+    ]);
+});
+$container->singleton(App\Services\SearchService::class, function(App\Core\Container $c) {
+    return new App\Services\SearchService(
+        [
+            $c->get(App\Services\Search\Providers\AnimalsSearchProvider::class),
+            $c->get(App\Services\Search\Providers\AdoptionsSearchProvider::class),
+            $c->get(App\Services\Search\Providers\MedicalSearchProvider::class),
+            $c->get(App\Services\Search\Providers\BillingSearchProvider::class),
+            $c->get(App\Services\Search\Providers\InventorySearchProvider::class),
+            $c->get(App\Services\Search\Providers\UsersSearchProvider::class),
+        ],
+        $c->get(App\Services\Search\SearchFilterCatalog::class)
+    );
+});
+
+// 3. Configure PHP Environment
 date_default_timezone_set($appConfig['timezone']);
 
 if ($appConfig['debug']) {
@@ -38,9 +79,10 @@ if ($appConfig['debug']) {
 
 $GLOBALS['app'] = $appConfig;
 
-Session::start();
-Logger::instance();
-ExceptionHandler::bootTimestamp();
-ExceptionHandler::register($appConfig);
+// 4. Start Services
+$container->get(App\Core\Session::class)->start();
+$container->get(App\Core\Logger::class); // Trigger initialization
+App\Core\ExceptionHandler::bootTimestamp();
+App\Core\ExceptionHandler::register($appConfig);
 
 return $appConfig;

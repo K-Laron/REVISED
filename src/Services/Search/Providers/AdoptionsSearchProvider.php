@@ -52,7 +52,7 @@ final class AdoptionsSearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 6);
         $filterClause = $this->standardFilterClause((string) ($filters['adoption_status'] ?? ''), $filters, 'aa.status', 'aa.created_at', 'adoptions');
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT aa.id, aa.application_number, aa.status,
                     CONCAT(u.first_name, ' ', u.last_name) AS adopter_name,
                     a.animal_id AS animal_code, a.name AS animal_name
@@ -76,7 +76,7 @@ final class AdoptionsSearchProvider extends AbstractSearchProvider
         $preview = $this->previewResult(
             $rows,
             $limit,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM adoption_applications aa
                  INNER JOIN users u ON u.id = aa.adopter_id

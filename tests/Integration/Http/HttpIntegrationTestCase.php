@@ -53,8 +53,12 @@ abstract class HttpIntegrationTestCase extends DatabaseIntegrationTestCase
         require dirname(__DIR__, 3) . '/routes/api.php';
 
         ob_start();
-        $router->dispatch($request);
-        $content = ob_get_clean() ?: '';
+        $content = '';
+        try {
+            $router->dispatch($request);
+        } finally {
+            $content = ob_get_clean() ?: '';
+        }
         $headers = $this->environment()->capturedHeaders();
 
         return [

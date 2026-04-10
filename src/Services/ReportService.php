@@ -4,28 +4,33 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
+use App\Models\AdoptionApplication;
+use App\Models\Animal;
 use App\Models\AuditLog;
+use App\Models\Invoice;
+use App\Models\Kennel;
+use App\Models\MedicalRecord;
+use App\Models\Payment;
 use App\Models\ReportTemplate;
+use App\Models\StockTransaction;
 use App\Services\Reports\AnimalDossierService;
 use App\Services\Reports\ReportRange;
 use RuntimeException;
 
 class ReportService
 {
-    private AuditLog $auditLogs;
-    private ReportTemplate $templates;
-    private AnimalDossierService $dossiers;
-
     public function __construct(
-        ?AuditLog $auditLogs = null,
-        ?ReportTemplate $templates = null,
-        ?AnimalDossierService $dossiers = null
-    )
-    {
-        $this->auditLogs = $auditLogs ?? new AuditLog();
-        $this->templates = $templates ?? new ReportTemplate();
-        $this->dossiers = $dossiers ?? new AnimalDossierService(new AnimalService());
+        private readonly AuditLog $auditLogs,
+        private readonly ReportTemplate $templates,
+        private readonly AnimalDossierService $dossiers,
+        private readonly Animal $animals,
+        private readonly MedicalRecord $medical,
+        private readonly AdoptionApplication $adoptions,
+        private readonly Invoice $invoices,
+        private readonly Payment $payments,
+        private readonly StockTransaction $stock,
+        private readonly Kennel $kennels
+    ) {
     }
 
     public function generate(string $reportType, array $filters): array
@@ -72,15 +77,14 @@ class ReportService
 
     private function intakeReport(array $filters): array
     {
-        $rows = $this->groupedRows(
-            'animals',
+        $rows = $this->animals->getGroupedReportData(
             'intake_date',
             $filters,
             'COUNT(*) AS total_animals',
             ['SUM(species = "Dog") AS dogs', 'SUM(species = "Cat") AS cats'],
             'is_deleted = 0'
         );
-        $summary = Database::fetch(
+        $summary = $this->animals->getReportSummary(
             'SELECT COUNT(*) AS total_animals,
                     SUM(species = "Dog") AS dogs,
                     SUM(species = "Cat") AS cats,
@@ -89,16 +93,15 @@ class ReportService
              FROM animals
              WHERE intake_date BETWEEN :start AND :end
                AND is_deleted = 0',
-            $this->rangeBindings($filters)
-        ) ?: [];
+            $filters
+        );
 
         return $this->formatReport('intake', 'Animal Intake Report', $filters, $summary, $rows, ['period', 'total_animals', 'dogs', 'cats']);
     }
 
     private function medicalReport(array $filters): array
     {
-        $rows = $this->groupedRows(
-            'medical_records',
+        $rows = $this->medical->getGroupedReportData(
             'record_date',
             $filters,
             'COUNT(*) AS total_records',
@@ -110,7 +113,7 @@ class ReportService
             ],
             'is_deleted = 0'
         );
-        $summary = Database::fetch(
+        $summary = $this->medical->getReportSummary(
             'SELECT COUNT(*) AS total_records,
                     SUM(procedure_type = "vaccination") AS vaccinations,
                     SUM(procedure_type = "deworming") AS dewormings,
@@ -119,16 +122,15 @@ class ReportService
              FROM medical_records
              WHERE record_date BETWEEN :start AND :end
                AND is_deleted = 0',
-            $this->rangeBindings($filters)
-        ) ?: [];
+            $filters
+        );
 
         return $this->formatReport('medical', 'Medical Activity Report', $filters, $summary, $rows, ['period', 'total_records', 'vaccinations', 'dewormings', 'treatments', 'surgeries']);
     }
 
     private function adoptionsReport(array $filters): array
     {
-        $rows = $this->groupedRows(
-            'adoption_applications',
+        $rows = $this->adoptions->getGroupedReportData(
             'created_at',
             $filters,
             'COUNT(*) AS applications',
@@ -139,7 +141,7 @@ class ReportService
             ],
             'is_deleted = 0'
         );
-        $summary = Database::fetch(
+        $summary = $this->adoptions->getReportSummary(
             'SELECT COUNT(*) AS applications,
                     SUM(status = "completed") AS completed,
                     SUM(status = "rejected") AS rejected,
@@ -147,48 +149,43 @@ class ReportService
              FROM adoption_applications
              WHERE created_at BETWEEN :start AND :end
                AND is_deleted = 0',
-            $this->rangeBindings($filters)
-        ) ?: [];
+            $filters
+        );
 
         return $this->formatReport('adoptions', 'Adoption Pipeline Report', $filters, $summary, $rows, ['period', 'applications', 'completed', 'rejected', 'pending_review']);
     }
 
     private function billingReport(array $filters): array
     {
-        $rows = $this->groupedRows(
-            'payments',
+        $rows = $this->payments->getGroupedReportData(
             'payment_date',
             $filters,
             'COUNT(*) AS payments_count',
             ['COALESCE(SUM(amount), 0) AS amount_collected']
         );
-        $summary = Database::fetch(
+        $summary = $this->payments->getReportSummary(
             'SELECT COUNT(*) AS payments_count,
                     COALESCE(SUM(amount), 0) AS amount_collected
              FROM payments
              WHERE payment_date BETWEEN :start AND :end',
-            $this->rangeBindings($filters)
-        ) ?: [];
-        $invoiceSummary = Database::fetch(
+            $filters
+        );
+        $invoiceSummary = $this->invoices->getReportSummary(
             'SELECT COUNT(*) AS invoices_count,
                     COALESCE(SUM(total_amount), 0) AS billed_total,
                     COALESCE(SUM(balance_due), 0) AS outstanding_balance
              FROM invoices
-             WHERE issue_date BETWEEN :start_date AND :end_date
+             WHERE issue_date BETWEEN :start AND :end
                AND is_deleted = 0',
-            [
-                'start_date' => $filters['start_date'],
-                'end_date' => $filters['end_date'],
-            ]
-        ) ?: [];
+            $filters
+        );
 
         return $this->formatReport('billing', 'Billing Collections Report', $filters, $summary + $invoiceSummary, $rows, ['period', 'payments_count', 'amount_collected']);
     }
 
     private function inventoryReport(array $filters): array
     {
-        $rows = $this->groupedRows(
-            'stock_transactions',
+        $rows = $this->stock->getGroupedReportData(
             'transacted_at',
             $filters,
             'COUNT(*) AS transactions_count',
@@ -199,7 +196,7 @@ class ReportService
                 'SUM(transaction_type = "adjustment") AS adjustment_count',
             ]
         );
-        $summary = Database::fetch(
+        $summary = $this->stock->getReportSummary(
             'SELECT COUNT(*) AS transactions_count,
                     COALESCE(SUM(quantity), 0) AS total_units,
                     SUM(transaction_type = "stock_in") AS stock_in_count,
@@ -207,8 +204,8 @@ class ReportService
                     SUM(transaction_type = "adjustment") AS adjustment_count
              FROM stock_transactions
              WHERE transacted_at BETWEEN :start AND :end',
-            $this->rangeBindings($filters)
-        ) ?: [];
+            $filters
+        );
 
         return $this->formatReport(
             'inventory',
@@ -222,35 +219,15 @@ class ReportService
 
     private function censusReport(array $filters): array
     {
-        $rows = Database::fetchAll(
-            'SELECT status,
-                    species,
-                    COUNT(*) AS total_animals
-             FROM animals
-             WHERE is_deleted = 0
-             GROUP BY status, species
-             ORDER BY status ASC, species ASC'
-        );
-        $summary = Database::fetch(
-            'SELECT COUNT(*) AS total_animals,
-                    SUM(status = "Available") AS available,
-                    SUM(status = "Adopted") AS adopted,
-                    SUM(status = "Under Treatment") AS under_treatment,
-                    SUM(status = "Quarantine") AS quarantine
-             FROM animals
-             WHERE is_deleted = 0'
-        ) ?: [];
-        $occupancy = Database::fetch(
-            'SELECT COUNT(*) AS occupied_kennels
-             FROM kennel_assignments
-             WHERE released_at IS NULL'
-        ) ?: [];
+        $rows = $this->animals->getCensusDetails();
+        $summary = $this->animals->getCensusSummary();
+        $occupancyCount = $this->kennels->getOccupancyCount();
 
         return [
             'type' => 'census',
             'title' => 'Animal Census Report',
             'filters' => $filters,
-            'summary' => $summary + $occupancy,
+            'summary' => array_merge($summary, ['occupied_kennels' => $occupancyCount]),
             'rows' => $rows,
             'columns' => ['status', 'species', 'total_animals'],
             'chart' => [
@@ -258,49 +235,6 @@ class ReportService
                 'values' => array_map(static fn (array $row) => (int) $row['total_animals'], $rows),
             ],
             'generated_at' => date(DATE_ATOM),
-        ];
-    }
-
-    private function groupedRows(
-        string $table,
-        string $dateColumn,
-        array $filters,
-        string $aggregateSql,
-        array $extraAggregates = [],
-        string $extraWhere = '1 = 1'
-    ): array {
-        $periodSql = $this->periodSql($dateColumn, $filters['group_by']);
-        $selects = implode(",\n                    ", array_merge([$aggregateSql], $extraAggregates));
-
-        return Database::fetchAll(
-            'SELECT ' . $periodSql . ' AS period,
-                    ' . $selects . '
-             FROM ' . $table . '
-             WHERE ' . $extraWhere . '
-               AND ' . $dateColumn . ' BETWEEN :start AND :end
-             GROUP BY period
-             ORDER BY MIN(' . $dateColumn . ') ASC',
-            $this->rangeBindings($filters)
-        );
-    }
-
-    private function periodSql(string $column, string $groupBy): string
-    {
-        return match ($groupBy) {
-            'day' => 'DATE_FORMAT(' . $column . ', "%Y-%m-%d")',
-            'week' => 'DATE_FORMAT(DATE_SUB(' . $column . ', INTERVAL WEEKDAY(' . $column . ') DAY), "%Y-%m-%d")',
-            'month' => 'DATE_FORMAT(' . $column . ', "%Y-%m")',
-            'quarter' => 'CONCAT(YEAR(' . $column . '), "-Q", QUARTER(' . $column . '))',
-            'year' => 'DATE_FORMAT(' . $column . ', "%Y")',
-            default => 'DATE_FORMAT(' . $column . ', "%Y-%m")',
-        };
-    }
-
-    private function rangeBindings(array $filters): array
-    {
-        return [
-            'start' => $filters['start_date'] . ' 00:00:00',
-            'end' => $filters['end_date'] . ' 23:59:59',
         ];
     }
 

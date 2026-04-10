@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Adoption;
 
-use App\Core\Database;
 use App\Models\AdoptionApplication;
 use App\Models\AdoptionCompletion;
 use App\Models\AdoptionInterview;
 use App\Models\AdoptionSeminar;
+use App\Models\User;
 use App\Support\InputNormalizer;
 use RuntimeException;
 
@@ -20,7 +20,8 @@ class AdoptionReadService
         private readonly AdoptionSeminar $seminars,
         private readonly AdoptionCompletion $completions,
         private readonly AdoptionStatusPolicy $statusPolicy,
-        private readonly AdoptionBillingSummary $billingSummary
+        private readonly AdoptionBillingSummary $billingSummary,
+        private readonly User $users
     ) {
     }
 
@@ -57,29 +58,7 @@ class AdoptionReadService
 
     public function pipelineStats(): array
     {
-        $metrics = Database::fetchAll(
-            "SELECT metric_group, metric_key, metric_value
-             FROM (
-                 SELECT 'status' AS metric_group, status AS metric_key, COUNT(*) AS metric_value
-                 FROM adoption_applications
-                 WHERE is_deleted = 0
-                 GROUP BY status
-
-                 UNION ALL
-
-                 SELECT 'summary' AS metric_group, 'upcoming_interviews' AS metric_key, COUNT(*) AS metric_value
-                 FROM adoption_interviews
-                 WHERE status = 'scheduled'
-                   AND scheduled_date >= NOW()
-
-                 UNION ALL
-
-                 SELECT 'summary' AS metric_group, 'upcoming_seminars' AS metric_key, COUNT(*) AS metric_value
-                 FROM adoption_seminars
-                 WHERE status IN ('scheduled', 'in_progress')
-                   AND scheduled_date >= NOW()
-             ) AS pipeline_metrics"
-        );
+        $metrics = $this->applications->pipelineMetrics();
 
         $counts = [];
         $summary = [];
@@ -124,17 +103,7 @@ class AdoptionReadService
 
     public function staffOptions(): array
     {
-        return Database::fetchAll(
-            'SELECT u.id,
-                    CONCAT(u.first_name, " ", u.last_name) AS full_name,
-                    u.email,
-                    r.display_name AS role_display_name
-             FROM users u
-             INNER JOIN roles r ON r.id = u.role_id
-             WHERE u.is_deleted = 0
-               AND u.is_active = 1
-             ORDER BY u.first_name ASC, u.last_name ASC'
-        );
+        return $this->users->getStaffOptions();
     }
 
     public function statusLabels(): array

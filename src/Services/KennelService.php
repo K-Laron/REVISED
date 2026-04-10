@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
 use App\Core\Request;
 use App\Models\Animal;
 use App\Models\Kennel;
@@ -15,25 +14,13 @@ use RuntimeException;
 
 class KennelService
 {
-    private Kennel $kennels;
-    private KennelAssignment $assignments;
-    private KennelMaintenanceLog $maintenance;
-    private Animal $animals;
-    private AuditService $audit;
-
     public function __construct(
-        ?Kennel $kennels = null,
-        ?KennelAssignment $assignments = null,
-        ?KennelMaintenanceLog $maintenance = null,
-        ?Animal $animals = null,
-        ?AuditService $audit = null
-    )
-    {
-        $this->kennels = $kennels ?? new Kennel();
-        $this->assignments = $assignments ?? new KennelAssignment();
-        $this->maintenance = $maintenance ?? new KennelMaintenanceLog();
-        $this->animals = $animals ?? new Animal();
-        $this->audit = $audit ?? new AuditService();
+        private readonly Kennel $kennels,
+        private readonly KennelAssignment $assignments,
+        private readonly KennelMaintenanceLog $maintenance,
+        private readonly Animal $animals,
+        private readonly AuditService $audit
+    ) {
     }
 
     public function list(array $filters = []): array
@@ -58,24 +45,7 @@ class KennelService
 
     public function stats(): array
     {
-        $rows = Database::fetchAll(
-            "SELECT status, COUNT(*) AS aggregate
-             FROM kennels
-             WHERE is_deleted = 0
-             GROUP BY status"
-        );
-
-        $statusCounts = [
-            'Available' => 0,
-            'Occupied' => 0,
-            'Maintenance' => 0,
-            'Quarantine' => 0,
-        ];
-
-        foreach ($rows as $row) {
-            $statusCounts[$row['status']] = (int) $row['aggregate'];
-        }
-
+        $statusCounts = $this->kennels->getStats();
         $total = array_sum($statusCounts);
 
         return [
@@ -105,70 +75,22 @@ class KennelService
 
     public function assignableAnimals(): array
     {
-        return Database::fetchAll(
-            "SELECT a.id, a.animal_id, a.name, a.species, a.size, a.status, k.kennel_code AS current_kennel_code
-             FROM animals a
-             LEFT JOIN kennel_assignments ka ON ka.animal_id = a.id AND ka.released_at IS NULL
-             LEFT JOIN kennels k ON k.id = ka.kennel_id
-             WHERE a.is_deleted = 0
-               AND a.status NOT IN ('Adopted', 'Deceased', 'Transferred')
-             ORDER BY a.created_at DESC"
-        );
+        return $this->animals->listAssignable();
     }
 
     public function existingKennelCodes(): array
     {
-        $rows = Database::fetchAll('SELECT kennel_code FROM kennels ORDER BY kennel_code ASC');
-
-        return array_values(array_filter(array_map(
-            static fn (array $row): string => (string) ($row['kennel_code'] ?? ''),
-            $rows
-        )));
+        return $this->kennels->existingCodes();
     }
 
     public function zones(): array
     {
-        $rows = Database::fetchAll(
-            'SELECT DISTINCT `zone`
-             FROM `kennels`
-             WHERE `is_deleted` = 0
-             ORDER BY `zone` ASC'
-        );
-
-        return array_values(array_filter(array_map(
-            static fn (array $row): string => trim((string) ($row['zone'] ?? '')),
-            $rows
-        )));
+        return $this->kennels->listZones();
     }
 
     public function generateKennelCode(array $data, ?int $ignoreId = null): string
     {
-        $zoneToken = $this->extractZoneToken((string) ($data['zone'] ?? ''));
-        if ($zoneToken === '') {
-            return '';
-        }
-
-        $sql = 'SELECT kennel_code FROM kennels WHERE kennel_code LIKE :prefix';
-        $bindings = ['prefix' => 'K-' . $zoneToken . '%'];
-
-        if ($ignoreId !== null) {
-            $sql .= ' AND id <> :id';
-            $bindings['id'] = $ignoreId;
-        }
-
-        $rows = Database::fetchAll($sql, $bindings);
-        $nextSequence = 1;
-
-        foreach ($rows as $row) {
-            $code = (string) ($row['kennel_code'] ?? '');
-            if (!preg_match('/^K-' . preg_quote($zoneToken, '/') . '(\d+)$/', $code, $matches)) {
-                continue;
-            }
-
-            $nextSequence = max($nextSequence, ((int) $matches[1]) + 1);
-        }
-
-        return sprintf('K-%s%02d', $zoneToken, $nextSequence);
+        return $this->kennels->nextCodeForZone((string) ($data['zone'] ?? ''), $ignoreId);
     }
 
     public function create(array $data, int $userId, Request $request): array
@@ -241,7 +163,7 @@ class KennelService
             throw new RuntimeException('Animal size does not match this kennel.');
         }
 
-        Database::beginTransaction();
+        $this->kennels->db->beginTransaction();
 
         try {
             $previousAssignment = $this->assignments->currentByAnimal($animalId);
@@ -252,10 +174,10 @@ class KennelService
 
             $this->assignments->create($kennelId, $animalId, $userId);
             $this->kennels->setStatus($kennelId, 'Occupied', $userId);
-            Database::execute('UPDATE animals SET updated_by = :updated_by WHERE id = :id', ['updated_by' => $userId, 'id' => $animalId]);
-            Database::commit();
+            $this->animals->update($animalId, ['updated_by' => $userId]);
+            $this->kennels->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->kennels->db->rollBack();
             throw $exception;
         }
 
@@ -281,14 +203,14 @@ class KennelService
             throw new RuntimeException('Kennel does not have an active occupant.');
         }
 
-        Database::beginTransaction();
+        $this->kennels->db->beginTransaction();
 
         try {
             $this->assignments->releaseByKennel($kennelId, $userId, $reason ?: 'Released from kennel');
             $this->kennels->setStatus($kennelId, 'Available', $userId);
-            Database::commit();
+            $this->kennels->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->kennels->db->rollBack();
             throw $exception;
         }
 
@@ -372,27 +294,6 @@ class KennelService
             'created_by' => $creating ? $userId : null,
             'updated_by' => $userId,
         ];
-    }
-
-    private function extractZoneToken(string $zone): string
-    {
-        $zone = strtoupper(trim($zone));
-        if ($zone === '') {
-            return '';
-        }
-
-        preg_match_all('/[A-Z0-9]+/', $zone, $matches);
-        $parts = $matches[0] ?? [];
-        if ($parts === []) {
-            return '';
-        }
-
-        $token = (string) end($parts);
-        if (strlen($token) <= 3) {
-            return $token;
-        }
-
-        return substr($token, 0, 3);
     }
 
     private function formatOccupant(array $occupant): array

@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class EuthanasiaRecord
+class EuthanasiaRecord extends BaseModel
 {
+    protected static string $table = 'euthanasia_records';
+    protected static bool $useSoftDeletes = false; // Linked to medical_records soft delete
+
     public function findByMedicalRecord(int $medicalRecordId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT er.*, CONCAT_WS(" ", u.first_name, u.last_name) AS authorized_by_name
              FROM euthanasia_records er
              INNER JOIN users u ON u.id = er.authorized_by
@@ -20,25 +21,11 @@ class EuthanasiaRecord
         );
     }
 
-    public function create(array $data): void
-    {
-        Database::execute(
-            'INSERT INTO euthanasia_records (
-                medical_record_id, reason_category, reason_details, authorized_by, method,
-                drug_used, drug_dosage, time_of_death, death_confirmed, disposal_method
-             ) VALUES (
-                :medical_record_id, :reason_category, :reason_details, :authorized_by, :method,
-                :drug_used, :drug_dosage, :time_of_death, :death_confirmed, :disposal_method
-             )',
-            $data
-        );
-    }
-
     public function updateByMedicalRecord(int $medicalRecordId, array $data): void
     {
         $data['medical_record_id'] = $medicalRecordId;
 
-        Database::execute(
+        $this->db->execute(
             'UPDATE euthanasia_records
              SET reason_category = :reason_category,
                  reason_details = :reason_details,

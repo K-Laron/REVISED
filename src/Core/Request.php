@@ -97,7 +97,28 @@ class Request
             return $this->files;
         }
 
-        return $this->files[$key] ?? null;
+        $file = $this->files[$key] ?? null;
+        if ($file === null) {
+            return null;
+        }
+
+        // Handle multiple files in PHP's non-standard $_FILES format
+        if (isset($file['name']) && is_array($file['name'])) {
+            $files = [];
+            foreach ($file['name'] as $idx => $name) {
+                if ($name === '') continue; // Skip empty slots
+                $files[] = [
+                    'name' => $name,
+                    'type' => $file['type'][$idx] ?? null,
+                    'tmp_name' => $file['tmp_name'][$idx] ?? null,
+                    'error' => $file['error'][$idx] ?? null,
+                    'size' => $file['size'][$idx] ?? null,
+                ];
+            }
+            return $files;
+        }
+
+        return $file;
     }
 
     public function header(string $key, mixed $default = null): mixed

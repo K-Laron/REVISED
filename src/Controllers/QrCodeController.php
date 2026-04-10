@@ -13,11 +13,9 @@ class QrCodeController
 {
     use InteractsWithApi;
 
-    private QrCodeService $qrCodes;
-
-    public function __construct()
-    {
-        $this->qrCodes = new QrCodeService();
+    public function __construct(
+        private readonly QrCodeService $qrCodes
+    ) {
     }
 
     public function generate(Request $request, string $id): Response

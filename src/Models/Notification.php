@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class Notification
+class Notification extends BaseModel
 {
+    protected static string $table = 'notifications';
+    protected static bool $useSoftDeletes = false; // System notifications don't typically use soft deletes here
+
     public function paginateForUser(int $userId, int $page, int $perPage): array
     {
         $offset = ($page - 1) * $perPage;
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             'SELECT *
              FROM notifications
              WHERE user_id = :user_id
@@ -21,7 +22,7 @@ class Notification
         );
 
         foreach ($rows as &$row) {
-            $row['is_read'] = (int) $row['is_read'] === 1;
+            $row['is_read'] = (int) ($row['is_read'] ?? 0) === 1;
         }
 
         return $rows;
@@ -29,7 +30,7 @@ class Notification
 
     public function countForUser(int $userId): int
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             'SELECT COUNT(*) AS aggregate FROM notifications WHERE user_id = :user_id',
             ['user_id' => $userId]
         );
@@ -39,7 +40,7 @@ class Notification
 
     public function unreadCount(int $userId): int
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             'SELECT COUNT(*) AS aggregate
              FROM notifications
              WHERE user_id = :user_id
@@ -52,7 +53,7 @@ class Notification
 
     public function findForUser(int $notificationId, int $userId): array|false
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             'SELECT *
              FROM notifications
              WHERE id = :id
@@ -62,34 +63,15 @@ class Notification
         );
 
         if ($row !== false) {
-            $row['is_read'] = (int) $row['is_read'] === 1;
+            $row['is_read'] = (int) ($row['is_read'] ?? 0) === 1;
         }
 
         return $row;
     }
 
-    public function create(array $data): int
-    {
-        Database::execute(
-            'INSERT INTO notifications (user_id, type, title, message, link, is_read, read_at)
-             VALUES (:user_id, :type, :title, :message, :link, :is_read, :read_at)',
-            [
-                'user_id' => $data['user_id'],
-                'type' => $data['type'],
-                'title' => $data['title'],
-                'message' => $data['message'],
-                'link' => $data['link'] ?? null,
-                'is_read' => $data['is_read'] ?? 0,
-                'read_at' => $data['read_at'] ?? null,
-            ]
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
     public function markRead(int $notificationId, int $userId): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE notifications
              SET is_read = 1,
                  read_at = COALESCE(read_at, NOW())
@@ -101,7 +83,7 @@ class Notification
 
     public function markAllRead(int $userId): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE notifications
              SET is_read = 1,
                  read_at = COALESCE(read_at, NOW())

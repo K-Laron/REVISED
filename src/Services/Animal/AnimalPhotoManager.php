@@ -5,24 +5,19 @@ declare(strict_types=1);
 namespace App\Services\Animal;
 
 use App\Models\AnimalPhoto;
-use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use RuntimeException;
 
 final class AnimalPhotoManager
 {
-    private AnimalPhoto $photos;
-    private string $publicRoot;
-    private ?ImageManager $imageManager;
+    private readonly string $publicRoot;
 
     public function __construct(
-        ?AnimalPhoto $photos = null,
-        ?string $publicRoot = null,
-        ?ImageManager $imageManager = null
+        private readonly AnimalPhoto $photos,
+        private readonly ?ImageManager $imageManager = null,
+        ?string $publicRoot = null
     ) {
-        $this->photos = $photos ?? new AnimalPhoto();
         $this->publicRoot = rtrim($publicRoot ?? dirname(__DIR__, 3) . '/public', '/\\');
-        $this->imageManager = $imageManager ?? (extension_loaded('gd') ? new ImageManager(new Driver()) : null);
     }
 
     public function upload(int $animalId, mixed $photoInput, int $userId): void
@@ -82,7 +77,7 @@ final class AnimalPhotoManager
 
     public function delete(int $animalId, int $photoId): void
     {
-        $photo = $this->photos->find($animalId, $photoId);
+        $photo = $this->photos->findByAnimal($animalId, $photoId);
         if ($photo === false) {
             throw new RuntimeException('Photo not found.');
         }

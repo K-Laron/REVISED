@@ -53,7 +53,7 @@ final class BillingSearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 2);
         $filterClause = $this->standardFilterClause((string) ($filters['billing_status'] ?? ''), $filters, 'i.payment_status', 'i.issue_date', 'billing');
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT i.id, i.invoice_number, i.payor_name, i.payment_status, i.total_amount
              FROM invoices i
              WHERE i.is_deleted = 0
@@ -66,7 +66,7 @@ final class BillingSearchProvider extends AbstractSearchProvider
         $preview = $this->previewResult(
             $rows,
             $limit,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM invoices i
                  WHERE i.is_deleted = 0

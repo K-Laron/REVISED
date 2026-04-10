@@ -49,7 +49,7 @@ final class UsersSearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 4);
         $filterClause = $this->userFilterClause((string) ($filters['users_status'] ?? ''), $filters);
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT u.id, u.username, u.email, u.phone, CONCAT(u.first_name, ' ', u.last_name) AS full_name, r.display_name AS role_display_name
              FROM users u
              INNER JOIN roles r ON r.id = u.role_id
@@ -68,7 +68,7 @@ final class UsersSearchProvider extends AbstractSearchProvider
         $preview = $this->previewResult(
             $rows,
             $limit,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM users u
                  INNER JOIN roles r ON r.id = u.role_id

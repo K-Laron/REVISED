@@ -4,29 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class SurgeryRecord
+class SurgeryRecord extends BaseModel
 {
+    protected static string $table = 'surgery_records';
+    protected static bool $useSoftDeletes = false; // Linked to medical_records soft delete
+
     public function findByMedicalRecord(int $medicalRecordId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT * FROM surgery_records WHERE medical_record_id = :medical_record_id LIMIT 1',
             ['medical_record_id' => $medicalRecordId]
-        );
-    }
-
-    public function create(array $data): void
-    {
-        Database::execute(
-            'INSERT INTO surgery_records (
-                medical_record_id, surgery_type, pre_op_weight_kg, anesthesia_type, anesthesia_drug,
-                anesthesia_dosage, duration_minutes, surgical_notes, complications, post_op_instructions, follow_up_date
-             ) VALUES (
-                :medical_record_id, :surgery_type, :pre_op_weight_kg, :anesthesia_type, :anesthesia_drug,
-                :anesthesia_dosage, :duration_minutes, :surgical_notes, :complications, :post_op_instructions, :follow_up_date
-             )',
-            $data
         );
     }
 
@@ -34,7 +21,7 @@ class SurgeryRecord
     {
         $data['medical_record_id'] = $medicalRecordId;
 
-        Database::execute(
+        $this->db->execute(
             'UPDATE surgery_records
              SET surgery_type = :surgery_type,
                  pre_op_weight_kg = :pre_op_weight_kg,

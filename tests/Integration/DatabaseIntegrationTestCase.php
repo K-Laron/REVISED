@@ -8,7 +8,7 @@ require_once __DIR__ . '/Support/DatabaseFixtureFactory.php';
 
 use App\Core\Database;
 use App\Core\Request;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 use Tests\Integration\Support\DatabaseFixtureFactory;
 use Throwable;
 
@@ -22,23 +22,26 @@ abstract class DatabaseIntegrationTestCase extends TestCase
 
     private ?DatabaseFixtureFactory $fixtures = null;
 
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-
-        try {
-            Database::fetch('SELECT 1 AS ok');
-            self::$databaseReady = true;
-            self::$databaseError = null;
-        } catch (Throwable $exception) {
-            self::$databaseReady = false;
-            self::$databaseError = $exception->getMessage();
-        }
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
+
+        // For integration tests, we want a REAL database connection, not a mock.
+        // We re-bind the REAL Database service into the container.
+        $this->container->singleton(Database::class, function () {
+            return new Database();
+        });
+
+        if (!self::$databaseReady) {
+            try {
+                Database::fetch('SELECT 1 AS ok');
+                self::$databaseReady = true;
+                self::$databaseError = null;
+            } catch (Throwable $exception) {
+                self::$databaseReady = false;
+                self::$databaseError = $exception->getMessage();
+            }
+        }
 
         if (!self::$databaseReady) {
             self::markTestSkipped('Database integration test skipped: ' . (self::$databaseError ?? 'Database unavailable.'));

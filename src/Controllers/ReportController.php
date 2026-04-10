@@ -20,13 +20,10 @@ class ReportController
     use InteractsWithApi;
     use RendersViews;
 
-    private ReportService $reports;
-    private ExportService $exports;
-
-    public function __construct()
-    {
-        $this->reports = new ReportService();
-        $this->exports = new ExportService();
+    public function __construct(
+        private readonly ReportService $reports,
+        private readonly ExportService $exports
+    ) {
     }
 
     public function index(Request $request): Response

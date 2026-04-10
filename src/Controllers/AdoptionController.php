@@ -20,11 +20,9 @@ class AdoptionController
     use InteractsWithApi;
     use RendersViews;
 
-    private AdoptionService $adoptions;
-
-    public function __construct()
-    {
-        $this->adoptions = new AdoptionService();
+    public function __construct(
+        private readonly AdoptionService $adoptions
+    ) {
     }
 
     public function index(Request $request): Response

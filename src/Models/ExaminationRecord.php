@@ -4,33 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class ExaminationRecord
+class ExaminationRecord extends BaseModel
 {
+    protected static string $table = 'examination_records';
+    protected static bool $useSoftDeletes = false; // Linked to medical_records soft delete
+
     public function findByMedicalRecord(int $medicalRecordId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT * FROM examination_records WHERE medical_record_id = :medical_record_id LIMIT 1',
             ['medical_record_id' => $medicalRecordId]
-        );
-    }
-
-    public function create(array $data): void
-    {
-        Database::execute(
-            'INSERT INTO examination_records (
-                medical_record_id, weight_kg, temperature_celsius, heart_rate_bpm, respiratory_rate,
-                body_condition_score, eyes_status, eyes_notes, ears_status, ears_notes, teeth_gums_status,
-                teeth_gums_notes, skin_coat_status, skin_coat_notes, musculoskeletal_status,
-                musculoskeletal_notes, overall_assessment, recommendations
-             ) VALUES (
-                :medical_record_id, :weight_kg, :temperature_celsius, :heart_rate_bpm, :respiratory_rate,
-                :body_condition_score, :eyes_status, :eyes_notes, :ears_status, :ears_notes, :teeth_gums_status,
-                :teeth_gums_notes, :skin_coat_status, :skin_coat_notes, :musculoskeletal_status,
-                :musculoskeletal_notes, :overall_assessment, :recommendations
-             )',
-            $data
         );
     }
 
@@ -38,7 +21,7 @@ class ExaminationRecord
     {
         $data['medical_record_id'] = $medicalRecordId;
 
-        Database::execute(
+        $this->db->execute(
             'UPDATE examination_records
              SET weight_kg = :weight_kg,
                  temperature_celsius = :temperature_celsius,

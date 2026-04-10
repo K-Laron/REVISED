@@ -8,11 +8,9 @@ use App\Support\InputNormalizer;
 
 final class SearchFilterCatalog
 {
-    private SearchModuleCatalog $moduleCatalog;
-
-    public function __construct(?SearchModuleCatalog $moduleCatalog = null)
-    {
-        $this->moduleCatalog = $moduleCatalog ?? new SearchModuleCatalog([]);
+    public function __construct(
+        private readonly SearchModuleCatalog $moduleCatalog
+    ) {
     }
 
     public function normalize(array $filters): array

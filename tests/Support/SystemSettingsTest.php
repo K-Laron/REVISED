@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Core\Database;
 use App\Support\SystemSettings;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -12,16 +13,20 @@ final class SystemSettingsTest extends TestCase
 {
     private ?string $originalSettingsFile = null;
     private ?string $originalCacheFile = null;
+    private SystemSettings $settings;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->originalSettingsFile = $this->readFileIfPresent(SystemSettings::path());
-        $this->originalCacheFile = $this->readFileIfPresent(SystemSettings::cachePath());
+        $db = $this->createMock(Database::class);
+        $this->settings = new SystemSettings($db);
 
-        $this->deleteIfPresent(SystemSettings::path());
-        $this->deleteIfPresent(SystemSettings::cachePath());
+        $this->originalSettingsFile = $this->readFileIfPresent($this->settings->path());
+        $this->originalCacheFile = $this->readFileIfPresent($this->settings->cachePath());
+
+        $this->deleteIfPresent($this->settings->path());
+        $this->deleteIfPresent($this->settings->cachePath());
         $this->resetSystemSettingsState();
         $_ENV['APP_NAME'] = 'Env Shelter';
         $_ENV['MAIL_FROM_ADDRESS'] = 'env@example.test';
@@ -29,8 +34,8 @@ final class SystemSettingsTest extends TestCase
 
     protected function tearDown(): void
     {
-        $this->restoreFile(SystemSettings::path(), $this->originalSettingsFile);
-        $this->restoreFile(SystemSettings::cachePath(), $this->originalCacheFile);
+        $this->restoreFile($this->settings->path(), $this->originalSettingsFile);
+        $this->restoreFile($this->settings->cachePath(), $this->originalCacheFile);
         $this->resetSystemSettingsState();
 
         parent::tearDown();
@@ -38,37 +43,37 @@ final class SystemSettingsTest extends TestCase
 
     public function testBootstrapReadsRuntimeCacheWithoutTouchingDatabaseDetection(): void
     {
-        $this->writeJson(SystemSettings::cachePath(), [
+        $this->writeJson($this->settings->cachePath(), [
             'app_name' => 'Cached Shelter',
             'maintenance_mode_enabled' => true,
         ]);
 
-        $settings = SystemSettings::bootstrap();
+        $result = $this->settings->bootstrap();
 
-        self::assertSame('Cached Shelter', $settings['app_name']);
-        self::assertTrue($settings['maintenance_mode_enabled']);
-        self::assertSame('env@example.test', $settings['contact_email']);
+        self::assertSame('Cached Shelter', $result['app_name']);
+        self::assertTrue($result['maintenance_mode_enabled']);
+        self::assertSame('env@example.test', $result['contact_email']);
         self::assertNull($this->systemSettingsProperty('databaseStoreAvailable'));
     }
 
     public function testAllFallsBackToBootstrapCacheWhenDatabaseStoreIsUnavailable(): void
     {
-        $this->writeJson(SystemSettings::cachePath(), [
+        $this->writeJson($this->settings->cachePath(), [
             'app_name' => 'Cached Shelter',
         ]);
         $this->setSystemSettingsProperty('databaseStoreAvailable', false);
 
-        $settings = SystemSettings::all();
+        $result = $this->settings->all();
 
-        self::assertSame('Cached Shelter', $settings['app_name']);
-        self::assertSame('env@example.test', $settings['contact_email']);
+        self::assertSame('Cached Shelter', $result['app_name']);
+        self::assertSame('env@example.test', $result['contact_email']);
     }
 
     public function testSaveRefreshesRuntimeCacheWhenUsingLegacyFileStorage(): void
     {
         $this->setSystemSettingsProperty('databaseStoreAvailable', false);
 
-        $saved = SystemSettings::save([
+        $saved = $this->settings->save([
             'app_name' => 'Saved Shelter',
             'maintenance_mode_enabled' => true,
         ]);
@@ -76,15 +81,15 @@ final class SystemSettingsTest extends TestCase
         self::assertSame('Saved Shelter', $saved['app_name']);
         self::assertTrue($saved['maintenance_mode_enabled']);
 
-        $cacheFile = json_decode((string) file_get_contents(SystemSettings::cachePath()), true, 512, JSON_THROW_ON_ERROR);
-        $settingsFile = json_decode((string) file_get_contents(SystemSettings::path()), true, 512, JSON_THROW_ON_ERROR);
+        $cacheFile = json_decode((string) file_get_contents($this->settings->cachePath()), true, 512, JSON_THROW_ON_ERROR);
+        $settingsFile = json_decode((string) file_get_contents($this->settings->path()), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame('Saved Shelter', $cacheFile['app_name']);
         self::assertSame('Saved Shelter', $settingsFile['app_name']);
 
         $this->setSystemSettingsProperty('cache', null);
 
-        self::assertSame('Saved Shelter', SystemSettings::bootstrap()['app_name']);
+        self::assertSame('Saved Shelter', $this->settings->bootstrap()['app_name']);
     }
 
     private function resetSystemSettingsState(): void
@@ -95,19 +100,19 @@ final class SystemSettingsTest extends TestCase
 
     private function systemSettingsProperty(string $property): mixed
     {
-        $reflection = new ReflectionClass(SystemSettings::class);
+        $reflection = new ReflectionClass($this->settings);
         $propertyReflection = $reflection->getProperty($property);
         $propertyReflection->setAccessible(true);
 
-        return $propertyReflection->getValue();
+        return $propertyReflection->getValue($this->settings);
     }
 
     private function setSystemSettingsProperty(string $property, mixed $value): void
     {
-        $reflection = new ReflectionClass(SystemSettings::class);
+        $reflection = new ReflectionClass($this->settings);
         $propertyReflection = $reflection->getProperty($property);
         $propertyReflection->setAccessible(true);
-        $propertyReflection->setValue($value);
+        $propertyReflection->setValue($this->settings, $value);
     }
 
     private function readFileIfPresent(string $path): ?string

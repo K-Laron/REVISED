@@ -36,7 +36,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
     public function testBootstrapCacheDropsTheSecondQueryCount(): void
     {
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
 
         PerformanceProbe::forceEnabled(true);
         PerformanceProbe::startRequest('CLI', 'dashboard-bootstrap-first');
@@ -54,7 +55,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
     public function testStatsColdPathDoesNotNeedTheFullBootstrapQueryBundle(): void
     {
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
 
         PerformanceProbe::forceEnabled(true);
         PerformanceProbe::startRequest('CLI', 'dashboard-bootstrap-cold');
@@ -66,7 +68,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
         }
 
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
 
         PerformanceProbe::startRequest('CLI', 'dashboard-stats-cold');
         $service->stats();
@@ -78,7 +81,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
     public function testBootstrapColdPathUsesThreeQueriesOrLess(): void
     {
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
 
         PerformanceProbe::forceEnabled(true);
         PerformanceProbe::startRequest('CLI', 'dashboard-bootstrap-cold-optimized');
@@ -91,7 +95,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
     public function testBootstrapPayloadPreservesChartAndActivityOrdering(): void
     {
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
 
         $bootstrap = $service->bootstrap();
         $occupancyLabels = $bootstrap['charts']['occupancy']['labels'] ?? [];
@@ -120,7 +125,7 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
 
     public function testActionQueueUsesSummaryQueriesAcrossModules(): void
     {
-        $service = new DashboardService();
+        $service = $this->container->get(DashboardService::class);
 
         PerformanceProbe::forceEnabled(true);
         PerformanceProbe::startRequest('CLI', 'dashboard-action-queue-optimized');
@@ -136,7 +141,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
     public function testActionQueueCacheDropsTheSecondQueryCount(): void
     {
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
         $user = [
             'role_name' => 'super_admin',
             'permissions' => [],
@@ -158,7 +164,8 @@ final class DashboardServiceCacheTest extends DatabaseIntegrationTestCase
     public function testActionQueueCacheIsScopedToTheUserAccessProfile(): void
     {
         $store = new FileCacheStore($this->cachePath);
-        $service = new DashboardService($store);
+        $this->container->singleton(FileCacheStore::class, $store);
+        $service = $this->container->get(DashboardService::class);
 
         $adminItems = $service->actionQueue([
             'role_name' => 'super_admin',

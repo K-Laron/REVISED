@@ -20,13 +20,10 @@ class AnimalController
     use InteractsWithApi;
     use RendersViews;
 
-    private AnimalService $animals;
-    private AnimalInputValidator $validator;
-
-    public function __construct()
-    {
-        $this->animals = new AnimalService();
-        $this->validator = new AnimalInputValidator();
+    public function __construct(
+        private readonly AnimalService $animals,
+        private readonly AnimalInputValidator $validator
+    ) {
     }
 
     public function index(Request $request): Response

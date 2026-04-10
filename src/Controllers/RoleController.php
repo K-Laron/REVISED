@@ -15,11 +15,9 @@ class RoleController
 {
     use InteractsWithApi;
 
-    private UserService $users;
-
-    public function __construct()
-    {
-        $this->users = new UserService();
+    public function __construct(
+        private readonly UserService $users
+    ) {
     }
 
     public function list(Request $request): Response

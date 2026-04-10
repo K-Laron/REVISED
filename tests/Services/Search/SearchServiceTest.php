@@ -5,12 +5,22 @@ declare(strict_types=1);
 namespace Tests\Services\Search;
 
 use App\Services\Search\AbstractSearchProvider;
+use App\Services\Search\SearchFilterCatalog;
+use App\Services\Search\SearchModuleCatalog;
 use App\Services\Search\SearchProviderInterface;
 use App\Services\SearchService;
 use PHPUnit\Framework\TestCase;
 
 final class SearchServiceTest extends TestCase
 {
+    private function buildService(array $providers): SearchService
+    {
+        return new SearchService(
+            $providers,
+            new SearchFilterCatalog(new SearchModuleCatalog($providers))
+        );
+    }
+
     public function testSearchDelegatesOnlyToAccessibleSelectedProvidersAndAggregatesResults(): void
     {
         if (!interface_exists(SearchProviderInterface::class)) {
@@ -47,7 +57,7 @@ final class SearchServiceTest extends TestCase
             ]
         );
 
-        $service = new SearchService([$animals, $billing]);
+        $service = $this->buildService([$animals, $billing]);
 
         $result = $service->search('Buddy', [
             'role_name' => 'shelter_staff',
@@ -99,7 +109,7 @@ final class SearchServiceTest extends TestCase
             ]
         );
 
-        $service = new SearchService([$animals]);
+        $service = $this->buildService([$animals]);
 
         $result = $service->search('Buddy', [
             'role_name' => 'super_admin',
@@ -125,7 +135,7 @@ final class SearchServiceTest extends TestCase
             self::fail('Expected SearchProviderInterface to exist.');
         }
 
-        $service = new SearchService([
+        $service = $this->buildService([
             $this->provider('animals', 'Animals', 'animals.read', [
                 'key' => 'animals',
                 'label' => 'Animals',
@@ -205,7 +215,7 @@ final class SearchServiceTest extends TestCase
             'items' => [],
         ]);
 
-        $service = new SearchService([$animals, $users]);
+        $service = $this->buildService([$animals, $users]);
         $user = [
             'role_name' => 'staff',
             'permissions' => ['animals.read'],
@@ -228,8 +238,7 @@ final class SearchServiceTest extends TestCase
         array $section,
         array $secondaryFilters = [],
         array $legacyStatusAliases = []
-    ): object
-    {
+    ): object {
         return new class ($key, $label, $permission, $section, $secondaryFilters, $legacyStatusAliases) extends AbstractSearchProvider {
             /** @var array<int, array{term: string, limit: int, filters: array}> */
             public array $calls = [];

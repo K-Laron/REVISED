@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class AdoptionSeminar
+class AdoptionSeminar extends BaseModel
 {
+    protected static string $table = 'adoption_seminars';
+    protected static bool $useSoftDeletes = false; // Currently not using is_deleted in this table
+
     public function list(array $filters = []): array
     {
         $clauses = ['1 = 1'];
@@ -18,7 +19,7 @@ class AdoptionSeminar
             $bindings['status'] = $filters['status'];
         }
 
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             "SELECT s.*,
                     CONCAT(u.first_name, ' ', u.last_name) AS facilitator_name,
                     COUNT(sa.id) AS attendee_count
@@ -32,9 +33,9 @@ class AdoptionSeminar
         );
     }
 
-    public function find(int $id): array|false
+    public function find(int|string $id, bool $includeDeleted = false): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             "SELECT s.*,
                     CONCAT(u.first_name, ' ', u.last_name) AS facilitator_name,
                     COUNT(sa.id) AS attendee_count
@@ -48,28 +49,14 @@ class AdoptionSeminar
         );
     }
 
-    public function create(array $data): int
-    {
-        Database::execute(
-            'INSERT INTO adoption_seminars (
-                title, scheduled_date, end_time, location, capacity, facilitator_id, description, status, created_by
-             ) VALUES (
-                :title, :scheduled_date, :end_time, :location, :capacity, :facilitator_id, :description, :status, :created_by
-             )',
-            $data
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
     public function attendees(int $seminarId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT sa.*,
                     aa.application_number,
                     aa.status AS application_status,
                     CONCAT(u.first_name, " ", u.last_name) AS adopter_name,
-                    a.animal_id AS animal_code,
+                    a.animal_code AS animal_code,
                     a.name AS animal_name
              FROM seminar_attendees sa
              INNER JOIN adoption_applications aa ON aa.id = sa.application_id
@@ -83,7 +70,7 @@ class AdoptionSeminar
 
     public function listByApplication(int $applicationId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT s.*,
                     sa.id AS attendee_id,
                     sa.attendance_status,
@@ -101,7 +88,7 @@ class AdoptionSeminar
 
     public function attendee(int $seminarId, int $applicationId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT *
              FROM seminar_attendees
              WHERE seminar_id = :seminar_id
@@ -116,7 +103,7 @@ class AdoptionSeminar
 
     public function addAttendee(int $seminarId, int $applicationId): int
     {
-        Database::execute(
+        return (int) $this->db->execute(
             'INSERT INTO seminar_attendees (seminar_id, application_id, attendance_status)
              VALUES (:seminar_id, :application_id, :attendance_status)',
             [
@@ -125,13 +112,11 @@ class AdoptionSeminar
                 'attendance_status' => 'registered',
             ]
         );
-
-        return (int) Database::lastInsertId();
     }
 
     public function updateAttendance(int $seminarId, int $applicationId, string $attendanceStatus, ?int $markedBy): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE seminar_attendees
              SET attendance_status = :attendance_status,
                  marked_by = :marked_by,

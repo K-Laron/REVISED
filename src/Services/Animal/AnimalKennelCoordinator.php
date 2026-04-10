@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Animal;
 
-use App\Core\Database;
 use App\Models\Animal;
+use App\Models\Kennel;
 use RuntimeException;
 
 final class AnimalKennelCoordinator
@@ -13,13 +13,13 @@ final class AnimalKennelCoordinator
     /** @var callable(int): void */
     private $availabilityChecker;
 
-    public function __construct(?Animal $animals = null, ?callable $availabilityChecker = null)
-    {
-        $this->animals = $animals ?? new Animal();
+    public function __construct(
+        private readonly Animal $animals,
+        private readonly Kennel $kennels,
+        ?callable $availabilityChecker = null
+    ) {
         $this->availabilityChecker = $availabilityChecker ?? [$this, 'assertKennelAvailable'];
     }
-
-    private Animal $animals;
 
     public function syncAssignment(int $animalId, mixed $currentKennelId, mixed $newKennelId, int $userId): void
     {
@@ -42,17 +42,8 @@ final class AnimalKennelCoordinator
 
     private function assertKennelAvailable(int $kennelId): void
     {
-        $kennel = Database::fetch(
-            'SELECT id, status FROM kennels WHERE id = :id AND is_deleted = 0 LIMIT 1',
-            ['id' => $kennelId]
-        );
-
-        if ($kennel === false) {
-            throw new RuntimeException('Selected kennel was not found.');
-        }
-
-        if (($kennel['status'] ?? '') !== 'Available') {
-            throw new RuntimeException('Selected kennel is not available.');
+        if (!$this->kennels->isAvailable($kennelId)) {
+            throw new RuntimeException('Selected kennel is not available or does not exist.');
         }
     }
 }

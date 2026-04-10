@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class KennelAssignment
+class KennelAssignment extends BaseModel
 {
+    protected static string $table = 'kennel_assignments';
+    protected static bool $useSoftDeletes = false; // Assignment table uses released_at instead of is_deleted
+
     public function currentByKennel(int $kennelId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT ka.*, a.animal_id AS animal_code, a.name AS animal_name, a.species, a.size, a.status AS animal_status,
                     a.intake_date, ap.file_path AS primary_photo_path
              FROM kennel_assignments ka
@@ -39,7 +40,7 @@ class KennelAssignment
             $bindings[$key] = $kennelId;
         }
 
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT ka.*, a.animal_id AS animal_code, a.name AS animal_name, a.species, a.size, a.status AS animal_status,
                     a.intake_date, ap.file_path AS primary_photo_path
              FROM kennel_assignments ka
@@ -55,7 +56,7 @@ class KennelAssignment
 
     public function currentByAnimal(int $animalId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT ka.*, k.kennel_code, k.zone, k.status AS kennel_status
              FROM kennel_assignments ka
              INNER JOIN kennels k ON k.id = ka.kennel_id
@@ -69,7 +70,7 @@ class KennelAssignment
 
     public function history(int $kennelId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT ka.*, a.animal_id AS animal_code, a.name AS animal_name, a.species, a.status AS animal_status
              FROM kennel_assignments ka
              INNER JOIN animals a ON a.id = ka.animal_id
@@ -81,7 +82,7 @@ class KennelAssignment
 
     public function activeCount(int $kennelId): int
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             'SELECT COUNT(*) AS aggregate
              FROM kennel_assignments
              WHERE kennel_id = :kennel_id
@@ -92,24 +93,9 @@ class KennelAssignment
         return (int) ($row['aggregate'] ?? 0);
     }
 
-    public function create(int $kennelId, int $animalId, ?int $assignedBy): int
-    {
-        Database::execute(
-            'INSERT INTO kennel_assignments (kennel_id, animal_id, assigned_by)
-             VALUES (:kennel_id, :animal_id, :assigned_by)',
-            [
-                'kennel_id' => $kennelId,
-                'animal_id' => $animalId,
-                'assigned_by' => $assignedBy,
-            ]
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
     public function releaseByKennel(int $kennelId, ?int $releasedBy, ?string $reason): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE kennel_assignments
              SET released_at = NOW(),
                  released_by = :released_by,
@@ -126,7 +112,7 @@ class KennelAssignment
 
     public function releaseByAnimal(int $animalId, ?int $releasedBy, ?string $reason): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE kennel_assignments
              SET released_at = NOW(),
                  released_by = :released_by,

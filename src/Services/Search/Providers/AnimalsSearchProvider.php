@@ -53,7 +53,7 @@ final class AnimalsSearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 2);
         $filterClause = $this->standardFilterClause((string) ($filters['animals_status'] ?? ''), $filters, 'a.status', 'a.intake_date', 'animals');
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT a.id, a.animal_id, a.name, a.species, a.status
              FROM animals a
              WHERE a.is_deleted = 0
@@ -66,7 +66,7 @@ final class AnimalsSearchProvider extends AbstractSearchProvider
         $preview = $this->previewResult(
             $rows,
             $limit,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM animals a
                  WHERE a.is_deleted = 0

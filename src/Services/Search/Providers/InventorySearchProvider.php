@@ -53,7 +53,7 @@ final class InventorySearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 2);
         $filterClause = $this->inventoryFilterClause((string) ($filters['inventory_status'] ?? ''), $filters);
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT ii.id, ii.sku, ii.name, ii.quantity_on_hand, ii.reorder_level, ii.expiry_date, ii.is_active, ic.name AS category_name
              FROM inventory_items ii
              INNER JOIN inventory_categories ic ON ic.id = ii.category_id
@@ -67,7 +67,7 @@ final class InventorySearchProvider extends AbstractSearchProvider
         $preview = $this->previewResult(
             $rows,
             $limit,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM inventory_items ii
                  INNER JOIN inventory_categories ic ON ic.id = ii.category_id

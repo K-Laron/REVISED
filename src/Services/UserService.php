@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
 use App\Core\Request;
 use App\Helpers\Sanitizer;
 use App\Models\Permission;
@@ -16,97 +15,32 @@ use RuntimeException;
 
 class UserService
 {
-    private User $users;
-    private Role $roles;
-    private Permission $permissions;
-    private AuditService $audit;
-    private NotificationService $notifications;
-
     public function __construct(
-        ?User $users = null,
-        ?Role $roles = null,
-        ?Permission $permissions = null,
-        ?AuditService $audit = null,
-        ?NotificationService $notifications = null
-    )
-    {
-        $this->users = $users ?? new User();
-        $this->roles = $roles ?? new Role();
-        $this->permissions = $permissions ?? new Permission();
-        $this->audit = $audit ?? new AuditService();
-        $this->notifications = $notifications ?? new NotificationService();
+        private readonly User $users,
+        private readonly Role $roles,
+        private readonly Permission $permissions,
+        private readonly AuditService $audit,
+        private readonly NotificationService $notifications
+    ) {
     }
 
     public function list(array $filters, int $page, int $perPage): array
     {
-        $offset = ($page - 1) * $perPage;
-        $conditions = [];
-        $bindings = [];
+        $result = $this->users->paginateUsers($filters, $page, $perPage);
 
-        $showDeleted = ($filters['tab'] ?? 'active') === 'deleted';
-        $conditions[] = 'u.is_deleted = :is_deleted';
-        $bindings['is_deleted'] = $showDeleted ? 1 : 0;
-
-        if (($filters['search'] ?? '') !== '') {
-            $conditions[] = '(u.username LIKE :search OR u.email LIKE :search OR u.first_name LIKE :search OR u.last_name LIKE :search)';
-            $bindings['search'] = '%' . trim((string) $filters['search']) . '%';
-        }
-
-        if (($filters['role_id'] ?? '') !== '') {
-            $conditions[] = 'u.role_id = :role_id';
-            $bindings['role_id'] = (int) $filters['role_id'];
-        }
-
-        if (($filters['status'] ?? '') !== '') {
-            if ($filters['status'] === 'active') {
-                $conditions[] = 'u.is_active = 1';
-            } elseif ($filters['status'] === 'inactive') {
-                $conditions[] = 'u.is_active = 0';
-            }
-        }
-
-        $where = 'WHERE ' . implode(' AND ', $conditions);
         $window = PaginatedWindow::resolve(
-            Database::fetchAll(
-            'SELECT u.*, r.name AS role_name, r.display_name AS role_display_name,
-                    CONCAT(cb.first_name, " ", cb.last_name) AS created_by_name
-             FROM users u
-             INNER JOIN roles r ON r.id = u.role_id
-             LEFT JOIN users cb ON cb.id = u.created_by
-             ' . $where . '
-             ORDER BY u.created_at DESC, u.id DESC
-             LIMIT ' . (int) ($perPage + 1) . ' OFFSET ' . (int) $offset,
-            $bindings
-        ),
+            $result['items'],
             $page,
             $perPage,
-            static fn (): int => (int) (Database::fetch(
-                'SELECT COUNT(*) AS aggregate
-                 FROM users u
-                 ' . $where,
-                $bindings
-            )['aggregate'] ?? 0)
+            $result['total_callback']
         );
-        $items = $window['items'];
 
-        foreach ($items as &$item) {
-            unset($item['password_hash']);
-        }
-
-        return ['items' => $items, 'total' => $window['total']];
+        return ['items' => $window['items'], 'total' => $window['total']];
     }
 
     public function get(int $userId, bool $includeDeleted = true): array
     {
-        $conditions = $includeDeleted ? '' : ' AND u.is_deleted = 0';
-        $user = Database::fetch(
-            'SELECT u.*, r.name AS role_name, r.display_name AS role_display_name
-             FROM users u
-             INNER JOIN roles r ON r.id = u.role_id
-             WHERE u.id = :id' . $conditions . '
-             LIMIT 1',
-            ['id' => $userId]
-        );
+        $user = $this->users->find($userId, $includeDeleted);
 
         if ($user === false) {
             throw new RuntimeException('User not found.');
@@ -121,25 +55,12 @@ class UserService
 
     public function roles(): array
     {
-        return Database::fetchAll(
-            'SELECT r.*, COUNT(u.id) AS user_count
-             FROM roles r
-             LEFT JOIN users u ON u.role_id = r.id AND u.is_deleted = 0
-             GROUP BY r.id
-             ORDER BY r.display_name ASC'
-        );
+        return $this->roles->listWithUserCounts();
     }
 
     public function permissionCatalog(): array
     {
-        $rows = Database::fetchAll('SELECT * FROM permissions ORDER BY module ASC, display_name ASC, name ASC');
-        $grouped = [];
-
-        foreach ($rows as $row) {
-            $grouped[$row['module']][] = $row;
-        }
-
-        return $grouped;
+        return $this->permissions->getCatalog();
     }
 
     public function rolePermissions(int $roleId): array
@@ -190,7 +111,7 @@ class UserService
             'message' => 'A shelter account has been created for you. Your username is ' . ($user['username'] ?? '') . '. Sign in using your assigned password.',
             'link' => '/login',
         ]);
-        
+
         $this->notifications->notifyRole('super_admin', [
             'type' => 'info',
             'title' => 'New User Account Created',
@@ -218,43 +139,23 @@ class UserService
             throw new RuntimeException('You cannot deactivate your own account.');
         }
 
-        Database::execute(
-            'UPDATE users
-             SET role_id = :role_id,
-                 email = :email,
-                 first_name = :first_name,
-                 last_name = :last_name,
-                 middle_name = :middle_name,
-                 phone = :phone,
-                 address_line1 = :address_line1,
-                 address_line2 = :address_line2,
-                 city = :city,
-                 province = :province,
-                 zip_code = :zip_code,
-                 is_active = :is_active,
-                 email_verified_at = :email_verified_at,
-                 force_password_change = :force_password_change,
-                 updated_by = :updated_by
-             WHERE id = :id',
-            [
-                'id' => $userId,
-                'role_id' => (int) $data['role_id'],
-                'email' => $email,
-                'first_name' => trim((string) $data['first_name']),
-                'last_name' => trim((string) $data['last_name']),
-                'middle_name' => InputNormalizer::nullIfBlank($data['middle_name'] ?? null),
-                'phone' => Sanitizer::phone($data['phone'] ?? null),
-                'address_line1' => InputNormalizer::nullIfBlank($data['address_line1'] ?? null),
-                'address_line2' => InputNormalizer::nullIfBlank($data['address_line2'] ?? null),
-                'city' => InputNormalizer::nullIfBlank($data['city'] ?? null),
-                'province' => InputNormalizer::nullIfBlank($data['province'] ?? null),
-                'zip_code' => InputNormalizer::nullIfBlank($data['zip_code'] ?? null),
-                'is_active' => InputNormalizer::bool($data['is_active'] ?? true) ? 1 : 0,
-                'email_verified_at' => InputNormalizer::bool($data['email_verified'] ?? false) ? ($current['email_verified_at'] ?: date('Y-m-d H:i:s')) : null,
-                'force_password_change' => InputNormalizer::bool($data['force_password_change'] ?? false) ? 1 : 0,
-                'updated_by' => $actorId,
-            ]
-        );
+        $this->users->update($userId, [
+            'role_id' => (int) $data['role_id'],
+            'email' => $email,
+            'first_name' => trim((string) $data['first_name']),
+            'last_name' => trim((string) $data['last_name']),
+            'middle_name' => InputNormalizer::nullIfBlank($data['middle_name'] ?? null),
+            'phone' => Sanitizer::phone($data['phone'] ?? null),
+            'address_line1' => InputNormalizer::nullIfBlank($data['address_line1'] ?? null),
+            'address_line2' => InputNormalizer::nullIfBlank($data['address_line2'] ?? null),
+            'city' => InputNormalizer::nullIfBlank($data['city'] ?? null),
+            'province' => InputNormalizer::nullIfBlank($data['province'] ?? null),
+            'zip_code' => InputNormalizer::nullIfBlank($data['zip_code'] ?? null),
+            'is_active' => InputNormalizer::bool($data['is_active'] ?? true) ? 1 : 0,
+            'email_verified_at' => InputNormalizer::bool($data['email_verified'] ?? false) ? ($current['email_verified_at'] ?: date('Y-m-d H:i:s')) : null,
+            'force_password_change' => InputNormalizer::bool($data['force_password_change'] ?? false) ? 1 : 0,
+            'updated_by' => $actorId,
+        ]);
 
         if ((int) $current['role_id'] !== (int) $data['role_id']) {
             $this->users->assignGeneratedUsername($userId);
@@ -274,32 +175,26 @@ class UserService
         }
 
         $current = $this->get($userId);
-        Database::execute(
-            'UPDATE users
-             SET is_deleted = 1,
-                 is_active = 0,
-                 deleted_at = NOW(),
-                 deleted_by = :deleted_by,
-                 updated_by = :updated_by
-             WHERE id = :id',
-            ['id' => $userId, 'deleted_by' => $actorId, 'updated_by' => $actorId]
-        );
+        $this->users->update($userId, [
+            'is_deleted' => 1,
+            'is_active' => 0,
+            'deleted_at' => date('Y-m-d H:i:s'),
+            'deleted_by' => $actorId,
+            'updated_by' => $actorId
+        ]);
         $this->users->invalidateSessions($userId);
         $this->audit->record($actorId, 'delete', 'users', 'users', $userId, $current, ['is_deleted' => true], $request);
     }
 
     public function restore(int $userId, int $actorId, Request $request): array
     {
-        Database::execute(
-            'UPDATE users
-             SET is_deleted = 0,
-                 is_active = 1,
-                 deleted_at = NULL,
-                 deleted_by = NULL,
-                 updated_by = :updated_by
-             WHERE id = :id',
-            ['id' => $userId, 'updated_by' => $actorId]
-        );
+        $this->users->update($userId, [
+            'is_deleted' => 0,
+            'is_active' => 1,
+            'deleted_at' => null,
+            'deleted_by' => null,
+            'updated_by' => $actorId
+        ]);
 
         $user = $this->get($userId);
         $this->audit->record($actorId, 'restore', 'users', 'users', $userId, ['is_deleted' => true], $user, $request);
@@ -316,10 +211,7 @@ class UserService
 
         $current = $this->get($userId);
 
-        Database::execute(
-            'UPDATE users SET role_id = :role_id, updated_by = :updated_by WHERE id = :id',
-            ['id' => $userId, 'role_id' => $roleId, 'updated_by' => $actorId]
-        );
+        $this->users->update($userId, ['role_id' => $roleId, 'updated_by' => $actorId]);
         $this->users->assignGeneratedUsername($userId);
         $this->users->invalidateSessions($userId);
 
@@ -362,30 +254,18 @@ class UserService
 
     public function sessions(int $userId): array
     {
-        return Database::fetchAll(
-            'SELECT id, ip_address, user_agent, expires_at, last_activity_at, created_at
-             FROM user_sessions
-             WHERE user_id = :user_id
-             ORDER BY last_activity_at DESC, id DESC',
-            ['user_id' => $userId]
-        );
+        return $this->users->getSessions($userId);
     }
 
     public function destroySession(int $userId, int $sessionId, int $actorId, Request $request): void
     {
-        $session = Database::fetch(
-            'SELECT id, user_id, ip_address, user_agent, expires_at
-             FROM user_sessions
-             WHERE id = :id AND user_id = :user_id
-             LIMIT 1',
-            ['id' => $sessionId, 'user_id' => $userId]
-        );
+        $session = $this->users->findSession($sessionId, $userId);
 
         if ($session === false) {
             throw new RuntimeException('Session not found.');
         }
 
-        Database::execute('DELETE FROM user_sessions WHERE id = :id', ['id' => $sessionId]);
+        $this->users->deleteSessionById($sessionId);
         $this->audit->record($actorId, 'delete', 'users', 'user_sessions', $sessionId, $session, [], $request);
     }
 
@@ -399,22 +279,19 @@ class UserService
         $previous = $this->rolePermissions($roleId);
         $cleanIds = array_values(array_unique(array_map('intval', $permissionIds)));
 
-        Database::beginTransaction();
+        $this->roles->db->beginTransaction();
 
         try {
-            Database::execute('DELETE FROM role_permissions WHERE role_id = :role_id', ['role_id' => $roleId]);
+            $this->roles->deleteRolePermissions($roleId);
 
             foreach ($cleanIds as $permissionId) {
-                Database::execute(
-                    'INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :permission_id)',
-                    ['role_id' => $roleId, 'permission_id' => $permissionId]
-                );
+                $this->roles->addRolePermission($roleId, $permissionId);
             }
 
-            Database::execute('DELETE FROM user_sessions WHERE user_id IN (SELECT id FROM users WHERE role_id = :role_id)', ['role_id' => $roleId]);
-            Database::commit();
+            $this->roles->invalidateSessionsForRole($roleId);
+            $this->roles->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->roles->db->rollBack();
             throw $exception;
         }
 
@@ -426,5 +303,4 @@ class UserService
             'permissions' => $updated,
         ];
     }
-
 }

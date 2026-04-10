@@ -113,7 +113,11 @@ final class AdoptionPortalServiceIntegrationTest extends DatabaseIntegrationTest
         self::assertSame((int) $animal['id'], (int) $application['animal_id']);
         self::assertNotEmpty($application['valid_id_path']);
 
-        $storedDocument = $this->absolutePathFor((string) $application['valid_id_path']);
+        $files = json_decode((string) ($application['valid_id_path'] ?? '[]'), true);
+        self::assertIsArray($files);
+        self::assertNotEmpty($files);
+
+        $storedDocument = $this->absolutePathFor($files[0]);
         self::assertFileExists($storedDocument);
 
         $adopterNotification = Database::fetch(
@@ -170,8 +174,9 @@ final class AdoptionPortalServiceIntegrationTest extends DatabaseIntegrationTest
             new Animal(),
             new User(),
             $this->readService(),
-            new AuditService(),
-            new NotificationService()
+            new AuditService(new \App\Models\AuditLog(), new \App\Core\Logger()),
+            new NotificationService(new \App\Models\Notification(), new \App\Models\User()),
+            new \App\Models\Role()
         );
     }
 
@@ -183,7 +188,8 @@ final class AdoptionPortalServiceIntegrationTest extends DatabaseIntegrationTest
             new AdoptionSeminar(),
             new AdoptionCompletion(),
             new AdoptionStatusPolicy(),
-            new AdoptionBillingSummary()
+            new AdoptionBillingSummary(),
+            new User()
         );
     }
 }

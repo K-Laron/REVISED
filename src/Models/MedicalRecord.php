@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
 use App\Support\Pagination\PaginatedWindow;
 
-class MedicalRecord
+class MedicalRecord extends BaseModel
 {
+    protected static string $table = 'medical_records';
+
     public function paginate(array $filters, int $page, int $perPage): array
     {
         [$whereSql, $bindings] = $this->buildFilters($filters);
         $offset = ($page - 1) * $perPage;
 
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT mr.*, a.animal_id AS animal_code, a.name AS animal_name,
                     CONCAT_WS(' ', v.first_name, v.last_name) AS veterinarian_name
              FROM medical_records mr
@@ -30,7 +31,7 @@ class MedicalRecord
             $rows,
             $page,
             $perPage,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM medical_records mr
                  INNER JOIN animals a ON a.id = mr.animal_id
@@ -41,44 +42,9 @@ class MedicalRecord
         );
     }
 
-    public function create(array $data): int
+    public function find(int|string $id, bool $includeDeleted = false): array|false
     {
-        Database::execute(
-            'INSERT INTO medical_records (
-                animal_id, procedure_type, record_date, general_notes, veterinarian_id, created_by, updated_by
-             ) VALUES (
-                :animal_id, :procedure_type, :record_date, :general_notes, :veterinarian_id, :created_by, :updated_by
-             )',
-            $data
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
-    public function update(int $id, array $data): void
-    {
-        $bindings = [
-            'id' => $id,
-            'record_date' => $data['record_date'],
-            'general_notes' => $data['general_notes'],
-            'veterinarian_id' => $data['veterinarian_id'],
-            'updated_by' => $data['updated_by'],
-        ];
-
-        Database::execute(
-            'UPDATE medical_records
-             SET record_date = :record_date,
-                 general_notes = :general_notes,
-                 veterinarian_id = :veterinarian_id,
-                 updated_by = :updated_by
-             WHERE id = :id',
-            $bindings
-        );
-    }
-
-    public function find(int $id): array|false
-    {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT mr.*, a.animal_id AS animal_code, a.name AS animal_name, a.status AS animal_status,
                     CONCAT_WS(" ", v.first_name, v.last_name) AS veterinarian_name,
                     CONCAT_WS(" ", c.first_name, c.last_name) AS created_by_name,
@@ -89,15 +55,15 @@ class MedicalRecord
              LEFT JOIN users c ON c.id = mr.created_by
              LEFT JOIN users u ON u.id = mr.updated_by
              WHERE mr.id = :id
-               AND mr.is_deleted = 0
+               AND (mr.is_deleted = 0 OR :include_deleted = 1)
              LIMIT 1',
-            ['id' => $id]
+            ['id' => $id, 'include_deleted' => $includeDeleted ? 1 : 0]
         );
     }
 
     public function listByAnimal(int $animalId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT mr.*, a.animal_id AS animal_code, a.name AS animal_name,
                     CONCAT_WS(" ", v.first_name, v.last_name) AS veterinarian_name
              FROM medical_records mr
@@ -110,24 +76,9 @@ class MedicalRecord
         );
     }
 
-    public function setDeleted(int $id, bool $deleted): void
-    {
-        Database::execute(
-            'UPDATE medical_records
-             SET is_deleted = :is_deleted,
-                 deleted_at = :deleted_at
-             WHERE id = :id',
-            [
-                'id' => $id,
-                'is_deleted' => $deleted ? 1 : 0,
-                'deleted_at' => $deleted ? date('Y-m-d H:i:s') : null,
-            ]
-        );
-    }
-
     public function dueVaccinations(): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT mr.id, mr.record_date, vr.next_due_date, vr.vaccine_name, vr.dose_number,
                     a.id AS animal_id, a.animal_id AS animal_code, a.name AS animal_name,
                     DATEDIFF(vr.next_due_date, CURDATE()) AS days_until_due
@@ -143,7 +94,7 @@ class MedicalRecord
 
     public function dueDewormings(): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT mr.id, mr.record_date, dr.next_due_date, dr.dewormer_name,
                     a.id AS animal_id, a.animal_id AS animal_code, a.name AS animal_name,
                     DATEDIFF(dr.next_due_date, CURDATE()) AS days_until_due
@@ -159,7 +110,7 @@ class MedicalRecord
 
     public function dueSummary(): array
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             "SELECT
                 (
                     SELECT COUNT(*)

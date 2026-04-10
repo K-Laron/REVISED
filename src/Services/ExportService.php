@@ -8,11 +8,9 @@ use RuntimeException;
 
 class ExportService
 {
-    private PdfService $pdfs;
-
-    public function __construct(?PdfService $pdfs = null)
-    {
-        $this->pdfs = $pdfs ?? new PdfService();
+    public function __construct(
+        private readonly PdfService $pdfs
+    ) {
     }
 
     public function reportCsv(array $report): string

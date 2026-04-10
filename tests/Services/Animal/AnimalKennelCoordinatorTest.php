@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Services\Animal;
 
 use App\Models\Animal;
+use App\Models\Kennel;
 use App\Services\Animal\AnimalKennelCoordinator;
 use PHPUnit\Framework\TestCase;
 
@@ -28,8 +29,10 @@ final class AnimalKennelCoordinatorTest extends TestCase
         };
 
         $checkedKennels = [];
+        $kennels = $this->createMock(Kennel::class);
         $coordinator = new AnimalKennelCoordinator(
             $animals,
+            $kennels,
             static function (int $kennelId) use (&$checkedKennels): void {
                 $checkedKennels[] = $kennelId;
             }
@@ -59,7 +62,8 @@ final class AnimalKennelCoordinatorTest extends TestCase
             }
         };
 
-        $coordinator = new AnimalKennelCoordinator($animals, static fn (int $kennelId): null => null);
+        $kennels = $this->createMock(Kennel::class);
+        $coordinator = new AnimalKennelCoordinator($animals, $kennels, static fn (int $kennelId): null => null);
         $coordinator->syncAssignment(18, 3, 3, 12);
 
         self::assertSame(0, $animals->releaseCalls);

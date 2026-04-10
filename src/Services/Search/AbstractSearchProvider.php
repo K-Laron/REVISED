@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services\Search;
 
+use App\Core\Database;
+
 abstract class AbstractSearchProvider implements SearchProviderInterface
 {
+    public function __construct(
+        protected readonly Database $db
+    ) {
+    }
+
     public function secondaryFilters(): array
     {
         return [];

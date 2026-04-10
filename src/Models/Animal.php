@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
 use App\Support\Pagination\PaginatedWindow;
 
-class Animal
+class Animal extends BaseModel
 {
+    protected static string $table = 'animals';
+
     public function reconcileCompletedAdoptions(?int $animalId = null): void
     {
         $sql = "UPDATE animals a
@@ -30,109 +31,7 @@ class Animal
             $bindings['animal_id'] = $animalId;
         }
 
-        Database::execute($sql, $bindings);
-    }
-
-    public function paginate(array $filters, int $page, int $perPage): array
-    {
-        [$whereSql, $bindings] = $this->buildFilters($filters);
-        $offset = ($page - 1) * $perPage;
-
-        $rows = Database::fetchAll(
-            "SELECT a.*, b.name AS breed_name, p.file_path AS primary_photo_path
-             FROM animals a
-             LEFT JOIN breeds b ON b.id = a.breed_id
-             LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
-             {$whereSql}
-             ORDER BY a.created_at DESC
-             LIMIT " . ($perPage + 1) . " OFFSET {$offset}",
-            $bindings
-        );
-
-        return PaginatedWindow::resolve(
-            $rows,
-            $page,
-            $perPage,
-            static fn (): int => (int) ((Database::fetch(
-                "SELECT COUNT(*) AS aggregate
-                 FROM animals a
-                 {$whereSql}",
-                $bindings
-            )['aggregate'] ?? 0))
-        );
-    }
-
-    public function create(array $data): int
-    {
-        $bindings = $data;
-        unset($bindings['kennel_id']);
-
-        Database::execute(
-            'INSERT INTO animals (
-                animal_id, name, species, breed_id, breed_other, gender, age_years, age_months, color_markings, size,
-                weight_kg, distinguishing_features, special_needs_notes, microchip_number, spay_neuter_status,
-                intake_type, intake_date, location_found, barangay_of_origin, impoundment_order_number,
-                authority_name, authority_position, authority_contact,
-                brought_by_name, brought_by_contact, brought_by_address, impounding_officer_name,
-                surrender_reason, condition_at_intake, vaccination_status_at_intake, temperament,
-                status, status_reason, status_changed_at, created_by, updated_by
-             ) VALUES (
-                :animal_id, :name, :species, :breed_id, :breed_other, :gender, :age_years, :age_months, :color_markings, :size,
-                :weight_kg, :distinguishing_features, :special_needs_notes, :microchip_number, :spay_neuter_status,
-                :intake_type, :intake_date, :location_found, :barangay_of_origin, :impoundment_order_number,
-                :authority_name, :authority_position, :authority_contact,
-                :brought_by_name, :brought_by_contact, :brought_by_address, :impounding_officer_name,
-                :surrender_reason, :condition_at_intake, :vaccination_status_at_intake, :temperament,
-                :status, :status_reason, :status_changed_at, :created_by, :updated_by
-             )',
-            $bindings
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
-    public function update(int $id, array $data): void
-    {
-        $bindings = $data;
-        unset($bindings['kennel_id'], $bindings['animal_id'], $bindings['status'], $bindings['status_reason'], $bindings['status_changed_at'], $bindings['created_by']);
-        $bindings['id'] = $id;
-
-        Database::execute(
-            'UPDATE animals SET
-                name = :name,
-                species = :species,
-                breed_id = :breed_id,
-                breed_other = :breed_other,
-                gender = :gender,
-                age_years = :age_years,
-                age_months = :age_months,
-                color_markings = :color_markings,
-                size = :size,
-                weight_kg = :weight_kg,
-                distinguishing_features = :distinguishing_features,
-                special_needs_notes = :special_needs_notes,
-                microchip_number = :microchip_number,
-                spay_neuter_status = :spay_neuter_status,
-                intake_type = :intake_type,
-                intake_date = :intake_date,
-                location_found = :location_found,
-                barangay_of_origin = :barangay_of_origin,
-                impoundment_order_number = :impoundment_order_number,
-                authority_name = :authority_name,
-                authority_position = :authority_position,
-                authority_contact = :authority_contact,
-                brought_by_name = :brought_by_name,
-                brought_by_contact = :brought_by_contact,
-                brought_by_address = :brought_by_address,
-                impounding_officer_name = :impounding_officer_name,
-                surrender_reason = :surrender_reason,
-                condition_at_intake = :condition_at_intake,
-                vaccination_status_at_intake = :vaccination_status_at_intake,
-                temperament = :temperament,
-                updated_by = :updated_by
-             WHERE id = :id',
-            $bindings
-        );
+        $this->db->execute($sql, $bindings);
     }
 
     public function find(int|string $id, bool $includeDeleted = false): array|false
@@ -152,29 +51,51 @@ class Animal
 
         $sql .= ' ORDER BY q.generated_at DESC LIMIT 1';
 
-        return Database::fetch($sql, $bindings);
+        return $this->db->fetch($sql, $bindings);
     }
 
-    public function setDeleted(int $id, bool $deleted, ?int $userId): void
+    public function paginate(array $filters, int $page, int $perPage): array
     {
-        Database::execute(
-            'UPDATE animals
-             SET is_deleted = :is_deleted,
-                 deleted_at = :deleted_at,
-                 deleted_by = :deleted_by
-             WHERE id = :id',
-            [
-                'id' => $id,
-                'is_deleted' => $deleted ? 1 : 0,
-                'deleted_at' => $deleted ? date('Y-m-d H:i:s') : null,
-                'deleted_by' => $deleted ? $userId : null,
-            ]
+        [$whereSql, $bindings] = $this->buildFilters($filters);
+        $offset = ($page - 1) * $perPage;
+
+        $rows = $this->db->fetchAll(
+            "SELECT a.*, b.name AS breed_name, p.file_path AS primary_photo_path
+             FROM animals a
+             LEFT JOIN breeds b ON b.id = a.breed_id
+             LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
+             {$whereSql}
+             ORDER BY a.created_at DESC
+             LIMIT " . ($perPage + 1) . " OFFSET {$offset}",
+            $bindings
+        );
+
+        return PaginatedWindow::resolve(
+            $rows,
+            $page,
+            $perPage,
+            fn (): int => (int) (($this->db->fetch(
+                "SELECT COUNT(*) AS aggregate
+                 FROM animals a
+                 {$whereSql}",
+                $bindings
+            )['aggregate'] ?? 0))
+        );
+    }
+
+    public function searchOptions(): array
+    {
+        return $this->db->fetchAll(
+            'SELECT id, animal_id, name, species, status
+             FROM animals
+             WHERE is_deleted = 0
+             ORDER BY created_at DESC, id DESC'
         );
     }
 
     public function updateStatus(int $id, string $status, ?string $reason, ?string $outcomeDate, int $userId): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE animals
              SET status = :status,
                  status_reason = :status_reason,
@@ -195,7 +116,7 @@ class Animal
 
     public function currentKennel(int $animalId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT k.*
              FROM kennel_assignments ka
              INNER JOIN kennels k ON k.id = ka.kennel_id
@@ -208,7 +129,7 @@ class Animal
 
     public function assignKennel(int $animalId, ?int $kennelId, ?int $userId): void
     {
-        Database::execute(
+        $this->db->execute(
             'UPDATE kennel_assignments
              SET released_at = NOW(), released_by = :released_by, transfer_reason = :transfer_reason
              WHERE animal_id = :animal_id AND released_at IS NULL',
@@ -223,7 +144,7 @@ class Animal
             return;
         }
 
-        Database::execute(
+        $this->db->execute(
             'INSERT INTO kennel_assignments (kennel_id, animal_id, assigned_by)
              VALUES (:kennel_id, :animal_id, :assigned_by)',
             [
@@ -233,7 +154,7 @@ class Animal
             ]
         );
 
-        Database::execute("UPDATE kennels SET status = 'Occupied', updated_by = :updated_by WHERE id = :id", [
+        $this->db->execute("UPDATE kennels SET status = 'Occupied', updated_by = :updated_by WHERE id = :id", [
             'id' => $kennelId,
             'updated_by' => $userId,
         ]);
@@ -246,12 +167,12 @@ class Animal
             return;
         }
 
-        Database::execute(
+        $this->db->execute(
             'UPDATE kennel_assignments SET released_at = NOW(), released_by = :released_by WHERE animal_id = :animal_id AND released_at IS NULL',
             ['animal_id' => $animalId, 'released_by' => $userId]
         );
 
-        Database::execute("UPDATE kennels SET status = 'Available', updated_by = :updated_by WHERE id = :id", [
+        $this->db->execute("UPDATE kennels SET status = 'Available', updated_by = :updated_by WHERE id = :id", [
             'id' => $current['id'],
             'updated_by' => $userId,
         ]);
@@ -259,7 +180,7 @@ class Animal
 
     public function kennelHistory(int $animalId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT ka.*, k.kennel_code, k.zone, k.size_category
              FROM kennel_assignments ka
              INNER JOIN kennels k ON k.id = ka.kennel_id
@@ -271,13 +192,39 @@ class Animal
 
     public function medicalRecords(int $animalId): array
     {
-        return Database::fetchAll(
+        return $this->db->fetchAll(
             'SELECT id, procedure_type, record_date, general_notes
              FROM medical_records
              WHERE animal_id = :animal_id AND is_deleted = 0
              ORDER BY record_date DESC',
             ['animal_id' => $animalId]
         );
+    }
+
+    public function getCensusDetails(): array
+    {
+        return $this->db->fetchAll(
+            'SELECT status,
+                    species,
+                    COUNT(*) AS total_animals
+             FROM animals
+             WHERE is_deleted = 0
+             GROUP BY status, species
+             ORDER BY status ASC, species ASC'
+        );
+    }
+
+    public function getCensusSummary(): array
+    {
+        return $this->db->fetch(
+            'SELECT COUNT(*) AS total_animals,
+                    SUM(status = "Available") AS available,
+                    SUM(status = "Adopted") AS adopted,
+                    SUM(status = "Under Treatment") AS under_treatment,
+                    SUM(status = "Quarantine") AS quarantine
+             FROM animals
+             WHERE is_deleted = 0'
+        ) ?: [];
     }
 
     private function buildFilters(array $filters): array
@@ -308,5 +255,81 @@ class Animal
         }
 
         return ['WHERE ' . implode(' AND ', $clauses), $bindings];
+    }
+
+    public function listAssignable(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT a.id, a.animal_id, a.name, a.species, a.size, a.status, k.kennel_code AS current_kennel_code
+             FROM animals a
+             LEFT JOIN kennel_assignments ka ON ka.animal_id = a.id AND ka.released_at IS NULL
+             LEFT JOIN kennels k ON k.id = ka.kennel_id
+             WHERE a.is_deleted = 0
+               AND a.status NOT IN ('Adopted', 'Deceased', 'Transferred')
+             ORDER BY a.created_at DESC"
+        );
+    }
+
+    public function listFeatured(int $limit = 6): array
+    {
+        return $this->db->fetchAll(
+            "SELECT a.id, a.animal_id, a.name, a.species, a.gender, a.size, a.age_years, a.age_months,
+                    a.temperament, b.name AS breed_name, p.file_path AS primary_photo_path
+             FROM animals a
+             LEFT JOIN breeds b ON b.id = a.breed_id
+             LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
+             WHERE a.is_deleted = 0
+               AND a.status = 'Available'
+             ORDER BY a.created_at DESC, a.id DESC
+             LIMIT :limit",
+            ['limit' => $limit]
+        );
+    }
+
+    public function listAvailableForPortal(array $filters, int $page, int $perPage): array
+    {
+        $clauses = ["a.is_deleted = 0", "a.status = 'Available'"];
+        $bindings = [];
+        $offset = ($page - 1) * $perPage;
+
+        if (($filters['search'] ?? '') !== '') {
+            $clauses[] = '(a.name LIKE :search OR a.animal_id LIKE :search OR b.name LIKE :search)';
+            $bindings['search'] = '%' . trim((string) $filters['search']) . '%';
+        }
+
+        foreach (['species', 'gender', 'size'] as $field) {
+            if (($filters[$field] ?? '') !== '') {
+                $clauses[] = "a.{$field} = :{$field}";
+                $bindings[$field] = $filters[$field];
+            }
+        }
+
+        $whereSql = 'WHERE ' . implode(' AND ', $clauses);
+
+        $items = $this->db->fetchAll(
+            "SELECT a.id, a.animal_id, a.name, a.species, a.gender, a.size, a.age_years, a.age_months,
+                    a.color_markings, a.temperament, a.condition_at_intake, a.distinguishing_features,
+                    b.name AS breed_name, p.file_path AS primary_photo_path
+             FROM animals a
+             LEFT JOIN breeds b ON b.id = a.breed_id
+             LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
+             {$whereSql}
+             ORDER BY a.created_at DESC, a.id DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+            $bindings
+        );
+
+        $count = $this->db->fetch(
+            "SELECT COUNT(*) AS aggregate
+             FROM animals a
+             LEFT JOIN breeds b ON b.id = a.breed_id
+             {$whereSql}",
+            $bindings
+        );
+
+        return [
+            'items' => $items,
+            'total' => (int) ($count['aggregate'] ?? 0),
+        ];
     }
 }

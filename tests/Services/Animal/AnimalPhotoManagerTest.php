@@ -52,7 +52,7 @@ final class AnimalPhotoManagerTest extends TestCase
         $source = tempnam(sys_get_temp_dir(), 'animal-photo-');
         file_put_contents($source, 'fake-image');
 
-        $manager = new AnimalPhotoManager($repository, $this->publicRoot, null);
+        $manager = new AnimalPhotoManager($repository, null, $this->publicRoot);
         $manager->upload(42, [
             'name' => 'example.png',
             'type' => 'image/png',
@@ -84,7 +84,7 @@ final class AnimalPhotoManagerTest extends TestCase
             {
             }
 
-            public function find(int $animalId, int $photoId): array|false
+            public function findByAnimal(int $animalId, int $photoId): array|false
             {
                 return [
                     'id' => $photoId,
@@ -93,13 +93,14 @@ final class AnimalPhotoManagerTest extends TestCase
                 ];
             }
 
-            public function delete(int $photoId): void
+            public function delete(string|int $id, bool $force = false): bool
             {
-                $this->deletedId = $photoId;
+                $this->deletedId = (int)$id;
+                return true;
             }
         };
 
-        $manager = new AnimalPhotoManager($repository, $this->publicRoot, null);
+        $manager = new AnimalPhotoManager($repository, null, $this->publicRoot);
         $manager->delete(42, 7);
 
         self::assertSame(7, $repository->deletedId);
@@ -133,7 +134,7 @@ final class AnimalPhotoManagerTest extends TestCase
         $source = tempnam(sys_get_temp_dir(), 'animal-photo-');
         file_put_contents($source, 'fake-image');
 
-        $manager = new AnimalPhotoManager($repository, $this->publicRoot, null);
+        $manager = new AnimalPhotoManager($repository, null, $this->publicRoot);
         $manager->upload(42, [
             'name' => 'example.png',
             'type' => 'image/png',

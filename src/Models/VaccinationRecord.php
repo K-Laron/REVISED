@@ -4,29 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class VaccinationRecord
+class VaccinationRecord extends BaseModel
 {
+    protected static string $table = 'vaccination_records';
+    protected static bool $useSoftDeletes = false; // Linked to medical_records soft delete
+
     public function findByMedicalRecord(int $medicalRecordId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT * FROM vaccination_records WHERE medical_record_id = :medical_record_id LIMIT 1',
             ['medical_record_id' => $medicalRecordId]
-        );
-    }
-
-    public function create(array $data): void
-    {
-        Database::execute(
-            'INSERT INTO vaccination_records (
-                medical_record_id, vaccine_name, vaccine_brand, batch_lot_number, dosage_ml, route,
-                injection_site, dose_number, next_due_date, adverse_reactions
-             ) VALUES (
-                :medical_record_id, :vaccine_name, :vaccine_brand, :batch_lot_number, :dosage_ml, :route,
-                :injection_site, :dose_number, :next_due_date, :adverse_reactions
-             )',
-            $data
         );
     }
 
@@ -34,7 +21,7 @@ class VaccinationRecord
     {
         $data['medical_record_id'] = $medicalRecordId;
 
-        Database::execute(
+        $this->db->execute(
             'UPDATE vaccination_records
              SET vaccine_name = :vaccine_name,
                  vaccine_brand = :vaccine_brand,

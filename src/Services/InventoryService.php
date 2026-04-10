@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
 use App\Core\Request;
 use App\Models\InventoryCategory;
 use App\Models\InventoryItem;
@@ -13,22 +12,13 @@ use RuntimeException;
 
 class InventoryService
 {
-    private InventoryItem $items;
-    private InventoryCategory $categories;
-    private StockTransaction $transactions;
-    private AuditService $audit;
-
     public function __construct(
-        ?InventoryItem $items = null,
-        ?InventoryCategory $categories = null,
-        ?StockTransaction $transactions = null,
-        ?AuditService $audit = null
-    )
-    {
-        $this->items = $items ?? new InventoryItem();
-        $this->categories = $categories ?? new InventoryCategory();
-        $this->transactions = $transactions ?? new StockTransaction();
-        $this->audit = $audit ?? new AuditService();
+        private readonly InventoryItem $items,
+        private readonly InventoryCategory $categories,
+        private readonly StockTransaction $transactions,
+        private readonly AuditService $audit,
+        private readonly NotificationService $notifications
+    ) {
     }
 
     public function list(array $filters, int $page, int $perPage): array
@@ -104,7 +94,7 @@ class InventoryService
         }
 
         $id = $this->categories->create($name, $description);
-        $category = Database::fetch('SELECT * FROM inventory_categories WHERE id = :id LIMIT 1', ['id' => $id]) ?: [];
+        $category = $this->categories->find($id) ?: [];
         $this->audit->record($userId, 'create', 'inventory', 'inventory_categories', $id, [], $category, $request);
 
         return $category;
@@ -134,7 +124,7 @@ class InventoryService
         $quantityAfter = (int) $data['quantity'];
         $difference = $quantityAfter - $quantityBefore;
 
-        Database::beginTransaction();
+        $this->items->db->beginTransaction();
 
         try {
             $this->items->updateQuantity($itemId, $quantityAfter, $userId);
@@ -153,9 +143,9 @@ class InventoryService
                 'notes' => $data['notes'] !== '' ? $data['notes'] : null,
                 'transacted_by' => $userId,
             ]);
-            Database::commit();
+            $this->items->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->items->db->rollBack();
             throw $exception;
         }
 
@@ -164,7 +154,7 @@ class InventoryService
 
         $reorderLevel = (int) $item['reorder_level'];
         if ($quantityBefore > $reorderLevel && $quantityAfter <= $reorderLevel) {
-            (new \App\Services\NotificationService())->notifyRole('shelter_staff', [
+            $this->notifications->notifyRole('shelter_staff', [
                 'type' => 'warning',
                 'title' => 'Low Stock Alert',
                 'message' => 'Item ' . $item['name'] . ' has dropped to or below its reorder level.',
@@ -177,67 +167,17 @@ class InventoryService
 
     public function alerts(): array
     {
-        $lowStock = Database::fetchAll(
-            'SELECT ii.*, ic.name AS category_name
-             FROM inventory_items ii
-             INNER JOIN inventory_categories ic ON ic.id = ii.category_id
-             WHERE ii.is_deleted = 0
-               AND ii.quantity_on_hand <= ii.reorder_level
-             ORDER BY ii.quantity_on_hand ASC, ii.name ASC'
-        );
-
-        $expiring = Database::fetchAll(
-            'SELECT ii.*, ic.name AS category_name
-             FROM inventory_items ii
-             INNER JOIN inventory_categories ic ON ic.id = ii.category_id
-             WHERE ii.is_deleted = 0
-               AND ii.expiry_date IS NOT NULL
-               AND ii.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-             ORDER BY ii.expiry_date ASC, ii.name ASC'
-        );
-
-        return [
-            'low_stock' => $lowStock,
-            'expiring' => $expiring,
-        ];
+        return $this->items->getAlerts();
     }
 
     public function alertCounts(): array
     {
-        $row = Database::fetch(
-            "SELECT
-                COALESCE(SUM(CASE WHEN quantity_on_hand <= reorder_level THEN 1 ELSE 0 END), 0) AS low_stock_count,
-                COALESCE(SUM(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS expiring_count
-             FROM inventory_items
-             WHERE is_deleted = 0"
-        );
-
-        return [
-            'low_stock_count' => (int) ($row['low_stock_count'] ?? 0),
-            'expiring_count' => (int) ($row['expiring_count'] ?? 0),
-        ];
+        return $this->items->getAlertSummary();
     }
 
     public function stats(): array
     {
-        $row = Database::fetch(
-            "SELECT
-                COUNT(*) AS total_items,
-                COALESCE(SUM(quantity_on_hand), 0) AS total_units,
-                COALESCE(SUM(CASE WHEN quantity_on_hand <= reorder_level THEN 1 ELSE 0 END), 0) AS low_stock_count,
-                COALESCE(SUM(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END), 0) AS expiring_count,
-                COALESCE(SUM(quantity_on_hand * COALESCE(cost_per_unit, 0)), 0) AS estimated_value
-             FROM inventory_items
-             WHERE is_deleted = 0"
-        );
-
-        return [
-            'total_items' => (int) ($row['total_items'] ?? 0),
-            'total_units' => (int) ($row['total_units'] ?? 0),
-            'low_stock_count' => (int) ($row['low_stock_count'] ?? 0),
-            'expiring_count' => (int) ($row['expiring_count'] ?? 0),
-            'estimated_value' => (float) ($row['estimated_value'] ?? 0),
-        ];
+        return $this->items->getStats();
     }
 
     private function applyStockChange(int $itemId, array $data, int $userId, Request $request, string $type): array
@@ -253,7 +193,7 @@ class InventoryService
             throw new RuntimeException('Stock cannot go below zero.');
         }
 
-        Database::beginTransaction();
+        $this->items->db->beginTransaction();
 
         try {
             $this->items->updateQuantity($itemId, $quantityAfter, $userId);
@@ -272,9 +212,9 @@ class InventoryService
                 'notes' => $data['notes'] !== '' ? $data['notes'] : null,
                 'transacted_by' => $userId,
             ]);
-            Database::commit();
+            $this->items->db->commit();
         } catch (\Throwable $exception) {
-            Database::rollBack();
+            $this->items->db->rollBack();
             throw $exception;
         }
 
@@ -283,7 +223,7 @@ class InventoryService
 
         $reorderLevel = (int) $item['reorder_level'];
         if ($quantityBefore > $reorderLevel && $quantityAfter <= $reorderLevel) {
-            (new \App\Services\NotificationService())->notifyRole('shelter_staff', [
+            $this->notifications->notifyRole('shelter_staff', [
                 'type' => 'warning',
                 'title' => 'Low Stock Alert',
                 'message' => 'Item ' . $item['name'] . ' has dropped to or below its reorder level.',

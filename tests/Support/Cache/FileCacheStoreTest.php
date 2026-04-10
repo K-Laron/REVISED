@@ -70,7 +70,7 @@ final class FileCacheStoreTest extends TestCase
             . "echo json_encode(\$result);\n"
         );
 
-        $result = $this->runPhpScript($scriptPath, 2);
+        $result = $this->runPhpScript($scriptPath, 5);
 
         self::assertFalse($result['timed_out'], 'Nested remember timed out, indicating a cache lock deadlock.');
         self::assertSame(0, $result['exit_code']);

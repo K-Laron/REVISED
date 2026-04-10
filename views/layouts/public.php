@@ -185,6 +185,19 @@
         <main class="public-main" id="public-main">
             <?= $content ?>
         </main>
+        <button 
+            type="button" 
+            class="icon-button back-to-top" 
+            id="back-to-top" 
+            aria-label="Back to top"
+            data-tooltip="Scroll to top"
+            data-tooltip-position="left"
+            hidden
+        >
+            <svg class="icon-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 15L12 9L6 15"></path>
+            </svg>
+        </button>
         <footer class="footer">
             <span>&copy; 2026 <?= htmlspecialchars((string) ($appSettings['organization_name'] ?? 'Catarman Dog Pound'), ENT_QUOTES, 'UTF-8') ?></span>
             <span>v1.0.0</span>

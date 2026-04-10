@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
 use App\Core\Request;
+use App\Models\User;
 use App\Support\InputNormalizer;
 use App\Support\SystemSettings;
 use Throwable;
@@ -14,22 +14,22 @@ class SystemSettingsService
 {
     private const RECOMMENDED_SESSION_LIFETIME_MINUTES = 60;
 
-    private AuditService $audit;
-
-    public function __construct(?AuditService $audit = null)
-    {
-        $this->audit = $audit ?? new AuditService();
+    public function __construct(
+        private readonly AuditService $audit,
+        private readonly User $users,
+        private readonly SystemSettings $settings
+    ) {
     }
 
     public function settings(): array
     {
-        return SystemSettings::all();
+        return $this->settings->all();
     }
 
     public function update(array $data, int $userId, ?Request $request = null): array
     {
         $current = $this->settings();
-        $updated = SystemSettings::save([
+        $updated = $this->settings->save([
             'app_name' => trim((string) ($data['app_name'] ?? $current['app_name'])),
             'organization_name' => trim((string) ($data['organization_name'] ?? $current['organization_name'])),
             'public_portal_enabled' => InputNormalizer::bool($data['public_portal_enabled'] ?? $current['public_portal_enabled']),
@@ -49,7 +49,7 @@ class SystemSettingsService
     public function setMaintenance(bool $enabled, ?string $message, int $userId, ?Request $request = null): array
     {
         $current = $this->settings();
-        $updated = SystemSettings::save([
+        $updated = $this->settings->save([
             ...$current,
             'maintenance_mode_enabled' => $enabled,
             'maintenance_message' => trim((string) ($message ?: $current['maintenance_message'])),
@@ -97,7 +97,7 @@ class SystemSettingsService
     private function databaseCheck(): array
     {
         try {
-            Database::fetch('SELECT 1 AS ok');
+            $this->users->db->fetch('SELECT 1 AS ok');
         } catch (Throwable $exception) {
             return [
                 'label' => 'Database connection',
@@ -194,7 +194,7 @@ class SystemSettingsService
 
     private function settingsStorageCheck(): array
     {
-        $driver = SystemSettings::storageDriver();
+        $driver = $this->settings->storageDriver();
 
         return [
             'label' => 'Settings storage',
@@ -229,7 +229,7 @@ class SystemSettingsService
 
     private function mailCheck(): array
     {
-        $mode = SystemSettings::get('mail_delivery_mode', 'log_only');
+        $mode = $this->settings->get('mail_delivery_mode', 'log_only');
         if ($mode === 'log_only') {
             return [
                 'label' => 'Mail delivery',
@@ -261,9 +261,7 @@ class SystemSettingsService
     private function defaultAdminCredentialCheck(): array
     {
         try {
-            $user = Database::fetch(
-                "SELECT email, password_hash FROM users WHERE email = 'admin@catarmanshelter.gov.ph' AND is_deleted = 0 LIMIT 1"
-            );
+            $isDefaultActive = $this->users->isDefaultAdminActive();
         } catch (Throwable $exception) {
             return [
                 'label' => 'Default admin credential',
@@ -272,20 +270,10 @@ class SystemSettingsService
             ];
         }
 
-        if ($user === false) {
-            return [
-                'label' => 'Default admin credential',
-                'status' => 'pass',
-                'message' => 'Default admin account was not found.',
-            ];
-        }
-
-        $usesDefaultPassword = password_verify('ChangeMe@2025', (string) ($user['password_hash'] ?? ''));
-
         return [
             'label' => 'Default admin credential',
-            'status' => $usesDefaultPassword ? 'warn' : 'pass',
-            'message' => $usesDefaultPassword
+            'status' => $isDefaultActive ? 'warn' : 'pass',
+            'message' => $isDefaultActive
                 ? 'The seeded admin credential is still active. Rotate it before release.'
                 : 'Default admin credential has been rotated.',
         ];

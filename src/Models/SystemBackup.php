@@ -4,62 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class SystemBackup
+class SystemBackup extends BaseModel
 {
-    public function create(array $data): int
-    {
-        Database::execute(
-            'INSERT INTO system_backups (
-                backup_type,
-                file_path,
-                file_size_bytes,
-                checksum_sha256,
-                status,
-                tables_included,
-                error_message,
-                started_at,
-                completed_at,
-                created_by,
-                restored_by,
-                restored_at
-            ) VALUES (
-                :backup_type,
-                :file_path,
-                :file_size_bytes,
-                :checksum_sha256,
-                :status,
-                :tables_included,
-                :error_message,
-                :started_at,
-                :completed_at,
-                :created_by,
-                :restored_by,
-                :restored_at
-            )',
-            [
-                'backup_type' => $data['backup_type'],
-                'file_path' => $data['file_path'],
-                'file_size_bytes' => $data['file_size_bytes'] ?? 0,
-                'checksum_sha256' => $data['checksum_sha256'] ?? '',
-                'status' => $data['status'],
-                'tables_included' => $data['tables_included'],
-                'error_message' => $data['error_message'] ?? null,
-                'started_at' => $data['started_at'],
-                'completed_at' => $data['completed_at'] ?? null,
-                'created_by' => $data['created_by'] ?? null,
-                'restored_by' => $data['restored_by'] ?? null,
-                'restored_at' => $data['restored_at'] ?? null,
-            ]
-        );
+    protected static string $table = 'system_backups';
+    protected static bool $useSoftDeletes = false; // Backup records are immutable
 
-        return (int) Database::lastInsertId();
-    }
-
-    public function find(int $backupId): array|false
+    public function find(int|string $id, bool $includeDeleted = false): array|false
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             'SELECT sb.*,
                     CONCAT(cb.first_name, " ", cb.last_name) AS created_by_name,
                     CONCAT(rb.first_name, " ", rb.last_name) AS restored_by_name
@@ -68,17 +20,17 @@ class SystemBackup
              LEFT JOIN users rb ON rb.id = sb.restored_by
              WHERE sb.id = :id
              LIMIT 1',
-            ['id' => $backupId]
+            ['id' => $id]
         );
 
         return $row === false ? false : $this->normalize($row);
     }
 
-    public function paginate(int $page, int $perPage): array
+    public function paginateBackups(int $page, int $perPage): array
     {
         $offset = ($page - 1) * $perPage;
-        $total = (int) (Database::fetch('SELECT COUNT(*) AS aggregate FROM system_backups')['aggregate'] ?? 0);
-        $items = Database::fetchAll(
+        $total = (int) ($this->db->fetch('SELECT COUNT(*) AS aggregate FROM system_backups')['aggregate'] ?? 0);
+        $items = $this->db->fetchAll(
             'SELECT sb.*,
                     CONCAT(cb.first_name, " ", cb.last_name) AS created_by_name,
                     CONCAT(rb.first_name, " ", rb.last_name) AS restored_by_name
@@ -97,53 +49,35 @@ class SystemBackup
 
     public function markCompleted(int $backupId, int $fileSizeBytes, string $checksum): void
     {
-        Database::execute(
-            'UPDATE system_backups
-             SET file_size_bytes = :file_size_bytes,
-                 checksum_sha256 = :checksum_sha256,
-                 status = :status,
-                 completed_at = NOW(),
-                 error_message = NULL
-             WHERE id = :id',
-            [
-                'id' => $backupId,
-                'file_size_bytes' => $fileSizeBytes,
-                'checksum_sha256' => $checksum,
-                'status' => 'completed',
-            ]
-        );
+        $this->update($backupId, [
+            'file_size_bytes' => $fileSizeBytes,
+            'checksum_sha256' => $checksum,
+            'status' => 'completed',
+            'completed_at' => date('Y-m-d H:i:s'),
+            'error_message' => null
+        ]);
     }
 
     public function markFailed(int $backupId, string $message): void
     {
-        Database::execute(
-            'UPDATE system_backups
-             SET status = :status,
-                 error_message = :error_message,
-                 completed_at = NOW()
-             WHERE id = :id',
-            [
-                'id' => $backupId,
-                'status' => 'failed',
-                'error_message' => mb_substr($message, 0, 1000),
-            ]
-        );
+        $this->update($backupId, [
+            'status' => 'failed',
+            'error_message' => mb_substr($message, 0, 1000),
+            'completed_at' => date('Y-m-d H:i:s')
+        ]);
     }
 
     public function markRestored(int $backupId, int $userId): void
     {
-        Database::execute(
-            'UPDATE system_backups
-             SET restored_at = NOW(),
-                 restored_by = :restored_by
-             WHERE id = :id',
-            ['id' => $backupId, 'restored_by' => $userId]
-        );
+        $this->update($backupId, [
+            'restored_at' => date('Y-m-d H:i:s'),
+            'restored_by' => $userId
+        ]);
     }
 
     private function normalize(array $row): array
     {
-        $row['tables_included'] = $row['tables_included']
+        $row['tables_included'] = ($row['tables_included'] ?? null)
             ? (json_decode((string) $row['tables_included'], true) ?: [])
             : [];
 

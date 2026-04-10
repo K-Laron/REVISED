@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class AdoptionCompletion
+class AdoptionCompletion extends BaseModel
 {
+    protected static string $table = 'adoption_completions';
+    protected static bool $useSoftDeletes = false; // Linked to application status/deletion
+
     public function findByApplication(int $applicationId): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             'SELECT ac.*,
                     CONCAT(u.first_name, " ", u.last_name) AS processed_by_name
              FROM adoption_completions ac
@@ -21,34 +22,22 @@ class AdoptionCompletion
         );
     }
 
-    public function create(array $data): int
-    {
-        Database::execute(
-            'INSERT INTO adoption_completions (
-                application_id, animal_id, adopter_id, completion_date, payment_confirmed, contract_signed,
-                contract_signature_path, medical_records_provided, spay_neuter_agreement,
-                certificate_path, notes, processed_by
-             ) VALUES (
-                :application_id, :animal_id, :adopter_id, :completion_date, :payment_confirmed, :contract_signed,
-                :contract_signature_path, :medical_records_provided, :spay_neuter_agreement,
-                :certificate_path, :notes, :processed_by
-             )',
-            $data
-        );
-
-        return (int) Database::lastInsertId();
-    }
-
     public function updateCertificatePath(int $id, string $certificatePath): void
     {
-        Database::execute(
-            'UPDATE adoption_completions
-             SET certificate_path = :certificate_path
-             WHERE id = :id',
-            [
-                'id' => $id,
-                'certificate_path' => $certificatePath,
-            ]
+        $this->update($id, [
+            'certificate_path' => $certificatePath,
+        ]);
+    }
+
+    public function findByAnimal(int $animalId): array|false
+    {
+        return $this->db->fetch(
+            'SELECT ac.*, CONCAT(u.first_name, " ", u.last_name) AS processed_by_name
+             FROM adoption_completions ac
+             LEFT JOIN users u ON u.id = ac.processed_by
+             WHERE ac.animal_id = :animal_id
+             LIMIT 1',
+            ['animal_id' => $animalId]
         );
     }
 }

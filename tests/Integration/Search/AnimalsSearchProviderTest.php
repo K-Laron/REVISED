@@ -28,7 +28,7 @@ final class AnimalsSearchProviderTest extends DatabaseIntegrationTestCase
         PerformanceProbe::forceEnabled(true);
         PerformanceProbe::startRequest('CLI', '/tests/search/animals');
 
-        $section = (new AnimalsSearchProvider())->search('Performance Search', 5, []);
+        $section = $this->container->get(AnimalsSearchProvider::class)->search('Performance Search', 5, []);
         $summary = PerformanceProbe::finishRequest();
 
         self::assertSame(1, $section['count']);

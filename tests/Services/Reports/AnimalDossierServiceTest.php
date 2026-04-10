@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Services\Reports;
 
+use App\Models\AdoptionApplication;
+use App\Models\AdoptionCompletion;
+use App\Models\AuditLog;
+use App\Models\Invoice;
+use App\Models\Payment;
 use App\Services\AnimalService;
 use App\Services\Reports\AnimalDossierService;
 use PHPUnit\Framework\TestCase;
@@ -22,31 +27,44 @@ final class AnimalDossierServiceTest extends TestCase
                 'name' => 'Buddy',
             ]);
 
-        $singleRows = [
-            'application' => ['id' => 30, 'application_number' => 'APP-30'],
-            'completion' => ['id' => 31, 'processed_by_name' => 'Kenneth Laron'],
-        ];
+        $adoptions = $this->createMock(AdoptionApplication::class);
+        $adoptions->method('findLatestByAnimal')->with(18)->willReturn([
+            'id' => 30,
+            'application_number' => 'APP-30',
+        ]);
 
-        $listRows = [
-            'invoices' => [['id' => 41, 'invoice_number' => 'INV-41']],
-            'payments' => [['id' => 51, 'payment_number' => 'PAY-51']],
-            'audit' => [[
+        $completions = $this->createMock(AdoptionCompletion::class);
+        $completions->method('findByAnimal')->with(18)->willReturn([
+            'id' => 31,
+            'processed_by_name' => 'Kenneth Laron',
+        ]);
+
+        $invoices = $this->createMock(Invoice::class);
+        $invoices->method('listByAnimal')->with(18)->willReturn([
+            ['id' => 41, 'invoice_number' => 'INV-41'],
+        ]);
+
+        $payments = $this->createMock(Payment::class);
+        $payments->method('listByAnimalAcrossInvoices')->with(18)->willReturn([
+            ['id' => 51, 'payment_number' => 'PAY-51'],
+        ]);
+
+        $audit = $this->createMock(AuditLog::class);
+        $audit->method('listForAnimalDossier')->with(18)->willReturn([
+            [
                 'id' => 61,
                 'old_values' => '{"status":"Available"}',
                 'new_values' => '{"status":"Adopted"}',
-            ]],
-        ];
+            ],
+        ]);
 
         $service = new AnimalDossierService(
             $animals,
-            function (string $key, int $animalId) use (&$singleRows): array|null {
-                self::assertSame(18, $animalId);
-                return $singleRows[$key] ?? null;
-            },
-            function (string $key, int $animalId) use (&$listRows): array {
-                self::assertSame(18, $animalId);
-                return $listRows[$key] ?? [];
-            }
+            $adoptions,
+            $completions,
+            $invoices,
+            $payments,
+            $audit
         );
 
         $dossier = $service->assemble(18);

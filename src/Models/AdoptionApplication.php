@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class AdoptionApplication
+class AdoptionApplication extends BaseModel
 {
+    protected static string $table = 'adoption_applications';
+
     public function paginate(array $filters, int $page, int $perPage): array
     {
         [$whereSql, $bindings] = $this->buildFilters($filters);
         $offset = ($page - 1) * $perPage;
 
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT aa.*,
                     CONCAT(u.first_name, ' ', u.last_name) AS adopter_name,
                     u.email AS adopter_email,
@@ -30,7 +30,7 @@ class AdoptionApplication
             $bindings
         );
 
-        $count = Database::fetch(
+        $count = $this->db->fetch(
             "SELECT COUNT(*) AS aggregate
              FROM adoption_applications aa
              INNER JOIN users u ON u.id = aa.adopter_id
@@ -45,9 +45,9 @@ class AdoptionApplication
         ];
     }
 
-    public function find(int $id): array|false
+    public function find(int|string $id, bool $includeDeleted = false): array|false
     {
-        return Database::fetch(
+        return $this->db->fetch(
             "SELECT aa.*,
                     CONCAT(u.first_name, ' ', u.last_name) AS adopter_name,
                     u.email AS adopter_email,
@@ -65,70 +65,47 @@ class AdoptionApplication
              INNER JOIN users u ON u.id = aa.adopter_id
              LEFT JOIN animals a ON a.id = aa.animal_id
              WHERE aa.id = :id
-               AND aa.is_deleted = 0
+               AND (aa.is_deleted = 0 OR :include_deleted = 1)
              LIMIT 1",
-            ['id' => $id]
+            ['id' => $id, 'include_deleted' => $includeDeleted ? 1 : 0]
         );
-    }
-
-    public function create(array $data): int
-    {
-        Database::execute(
-            'INSERT INTO adoption_applications (
-                application_number, adopter_id, animal_id, status, preferred_species, preferred_breed,
-                preferred_age_min, preferred_age_max, preferred_size, preferred_gender, housing_type,
-                housing_ownership, has_yard, yard_size, num_adults, num_children, children_ages,
-                existing_pets_description, previous_pet_experience, vet_reference_name, vet_reference_clinic,
-                vet_reference_contact, valid_id_path, digital_signature_path, agrees_to_policies,
-                agrees_to_home_visit, agrees_to_return_policy, created_by, updated_by
-             ) VALUES (
-                :application_number, :adopter_id, :animal_id, :status, :preferred_species, :preferred_breed,
-                :preferred_age_min, :preferred_age_max, :preferred_size, :preferred_gender, :housing_type,
-                :housing_ownership, :has_yard, :yard_size, :num_adults, :num_children, :children_ages,
-                :existing_pets_description, :previous_pet_experience, :vet_reference_name, :vet_reference_clinic,
-                :vet_reference_contact, :valid_id_path, :digital_signature_path, :agrees_to_policies,
-                :agrees_to_home_visit, :agrees_to_return_policy, :created_by, :updated_by
-             )',
-            $data
-        );
-
-        return (int) Database::lastInsertId();
     }
 
     public function updateStatus(int $id, string $status, ?string $rejectionReason, ?string $withdrawnReason, ?int $updatedBy): void
     {
-        Database::execute(
-            'UPDATE adoption_applications
-             SET status = :status,
-                 rejection_reason = :rejection_reason,
-                 withdrawn_reason = :withdrawn_reason,
-                 updated_by = :updated_by
-             WHERE id = :id',
-            [
-                'id' => $id,
-                'status' => $status,
-                'rejection_reason' => $rejectionReason,
-                'withdrawn_reason' => $withdrawnReason,
-                'updated_by' => $updatedBy,
-            ]
-        );
+        $this->update($id, [
+            'status' => $status,
+            'rejection_reason' => $rejectionReason,
+            'withdrawn_reason' => $withdrawnReason,
+            'updated_by' => $updatedBy,
+        ]);
     }
 
-    public function buildPipelineStats(): array
+    public function pipelineMetrics(): array
     {
-        $rows = Database::fetchAll(
-            "SELECT status, COUNT(*) AS aggregate
-             FROM adoption_applications
-             WHERE is_deleted = 0
-             GROUP BY status"
+        return $this->db->fetchAll(
+            "SELECT metric_group, metric_key, metric_value
+             FROM (
+                 SELECT 'status' AS metric_group, status AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_applications
+                 WHERE is_deleted = 0
+                 GROUP BY status
+
+                 UNION ALL
+
+                 SELECT 'summary' AS metric_group, 'upcoming_interviews' AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_interviews
+                 WHERE status = 'scheduled'
+                   AND scheduled_date >= NOW()
+
+                 UNION ALL
+
+                 SELECT 'summary' AS metric_group, 'upcoming_seminars' AS metric_key, COUNT(*) AS metric_value
+                 FROM adoption_seminars
+                 WHERE status IN ('scheduled', 'in_progress')
+                   AND scheduled_date >= NOW()
+             ) AS pipeline_metrics"
         );
-
-        $stats = [];
-        foreach ($rows as $row) {
-            $stats[(string) $row['status']] = (int) $row['aggregate'];
-        }
-
-        return $stats;
     }
 
     private function buildFilters(array $filters): array
@@ -161,5 +138,36 @@ class AdoptionApplication
         }
 
         return ['WHERE ' . implode(' AND ', $clauses), $bindings];
+    }
+
+    public function findLatestByAnimal(int $animalId): array|false
+    {
+        return $this->db->fetch(
+            "SELECT aa.*,
+                    CONCAT(u.first_name, ' ', u.last_name) AS adopter_name,
+                    u.email AS adopter_email
+             FROM adoption_applications aa
+             INNER JOIN users u ON u.id = aa.adopter_id
+             WHERE aa.animal_id = :animal_id
+               AND aa.is_deleted = 0
+             ORDER BY aa.created_at DESC
+             LIMIT 1",
+            ['animal_id' => $animalId]
+        );
+    }
+
+    public function listForAdopter(int $userId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT aa.id, aa.application_number, aa.status, aa.created_at, aa.updated_at,
+                    aa.rejection_reason, aa.withdrawn_reason,
+                    a.animal_id AS animal_code, a.name AS animal_name, a.species AS animal_species
+             FROM adoption_applications aa
+             LEFT JOIN animals a ON a.id = aa.animal_id
+             WHERE aa.adopter_id = :adopter_id
+               AND aa.is_deleted = 0
+             ORDER BY aa.created_at DESC, aa.id DESC",
+            ['adopter_id' => $userId]
+        );
     }
 }

@@ -16,11 +16,9 @@ class SearchController
     use InteractsWithApi;
     use RendersViews;
 
-    private SearchService $search;
-
-    public function __construct()
-    {
-        $this->search = new SearchService();
+    public function __construct(
+        private readonly SearchService $search
+    ) {
     }
 
     public function index(Request $request): Response

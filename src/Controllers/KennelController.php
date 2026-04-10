@@ -18,11 +18,9 @@ class KennelController
     use InteractsWithApi;
     use RendersViews;
 
-    private KennelService $kennels;
-
-    public function __construct()
-    {
-        $this->kennels = new KennelService();
+    public function __construct(
+        private readonly KennelService $kennels
+    ) {
     }
 
     public function index(Request $request): Response

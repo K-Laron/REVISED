@@ -20,11 +20,9 @@ class UserController
     use InteractsWithApi;
     use RendersViews;
 
-    private UserService $users;
-
-    public function __construct()
-    {
-        $this->users = new UserService();
+    public function __construct(
+        private readonly UserService $users
+    ) {
     }
 
     public function index(Request $request): Response

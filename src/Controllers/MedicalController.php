@@ -19,13 +19,10 @@ class MedicalController
     use InteractsWithApi;
     use RendersViews;
 
-    private MedicalService $medical;
-    private MedicalInputValidator $validator;
-
-    public function __construct()
-    {
-        $this->medical = new MedicalService();
-        $this->validator = new MedicalInputValidator();
+    public function __construct(
+        private readonly MedicalService $medical,
+        private readonly MedicalInputValidator $validator
+    ) {
     }
 
     public function index(Request $request): Response

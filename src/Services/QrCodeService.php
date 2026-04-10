@@ -12,13 +12,10 @@ use RuntimeException;
 
 class QrCodeService
 {
-    private AnimalQrCode $qrCodes;
-    private Animal $animals;
-
-    public function __construct(?AnimalQrCode $qrCodes = null, ?Animal $animals = null)
-    {
-        $this->qrCodes = $qrCodes ?? new AnimalQrCode();
-        $this->animals = $animals ?? new Animal();
+    public function __construct(
+        private readonly AnimalQrCode $qrCodes,
+        private readonly Animal $animals
+    ) {
     }
 
     public function generateForAnimal(int $animalId, string $animalCode, ?int $generatedBy = null): array

@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Database;
-
-class ReportTemplate
+class ReportTemplate extends BaseModel
 {
+    protected static string $table = 'report_templates';
+    protected static bool $useSoftDeletes = false; // System templates don't typically use soft deletes here
+
     public function listForUser(int $userId): array
     {
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             'SELECT rt.*, CONCAT(u.first_name, " ", u.last_name) AS created_by_name
              FROM report_templates rt
              LEFT JOIN users u ON u.id = rt.created_by
@@ -21,8 +22,8 @@ class ReportTemplate
         );
 
         foreach ($rows as &$row) {
-            $row['configuration'] = json_decode((string) $row['configuration'], true) ?: [];
-            $row['is_system'] = (int) $row['is_system'] === 1;
+            $row['configuration'] = json_decode((string) ($row['configuration'] ?? '{}'), true) ?: [];
+            $row['is_system'] = (int) ($row['is_system'] ?? 0) === 1;
         }
 
         return $rows;
@@ -30,7 +31,7 @@ class ReportTemplate
 
     public function findAccessible(int $id, int $userId): array|false
     {
-        $row = Database::fetch(
+        $row = $this->db->fetch(
             'SELECT *
              FROM report_templates
              WHERE id = :id
@@ -40,26 +41,21 @@ class ReportTemplate
         );
 
         if ($row !== false) {
-            $row['configuration'] = json_decode((string) $row['configuration'], true) ?: [];
-            $row['is_system'] = (int) $row['is_system'] === 1;
+            $row['configuration'] = json_decode((string) ($row['configuration'] ?? '{}'), true) ?: [];
+            $row['is_system'] = (int) ($row['is_system'] ?? 0) === 1;
         }
 
         return $row;
     }
 
-    public function create(string $name, string $reportType, array $configuration, int $createdBy): int
+    public function createTemplate(string $name, string $reportType, array $configuration, int $createdBy): int
     {
-        Database::execute(
-            'INSERT INTO report_templates (name, report_type, configuration, is_system, created_by)
-             VALUES (:name, :report_type, :configuration, 0, :created_by)',
-            [
-                'name' => $name,
-                'report_type' => $reportType,
-                'configuration' => json_encode($configuration, JSON_UNESCAPED_SLASHES),
-                'created_by' => $createdBy,
-            ]
-        );
-
-        return (int) Database::lastInsertId();
+        return $this->create([
+            'name' => $name,
+            'report_type' => $reportType,
+            'configuration' => json_encode($configuration, JSON_UNESCAPED_SLASHES),
+            'is_system' => 0,
+            'created_by' => $createdBy,
+        ]);
     }
 }

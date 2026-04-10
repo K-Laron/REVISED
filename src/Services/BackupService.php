@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Database;
 use App\Core\ExceptionHandler;
 use App\Core\Request;
 use App\Models\SystemBackup;
@@ -16,31 +15,30 @@ use Throwable;
 
 class BackupService
 {
-    private SystemBackup $backups;
-    private AuditService $audit;
-
-    public function __construct(?SystemBackup $backups = null, ?AuditService $audit = null)
-    {
-        $this->backups = $backups ?? new SystemBackup();
-        $this->audit = $audit ?? new AuditService();
+    public function __construct(
+        private readonly SystemBackup $backups,
+        private readonly AuditService $audit,
+        private readonly SystemSettings $settings,
+        private readonly MySqlBackupRestorer $restorer
+    ) {
     }
 
     public function health(): array
     {
-        $config = require dirname(__DIR__, 2) . '/config/database.php';
+        $config = $this->backups->db->getConfig();
         $uptimeSeconds = max(0, time() - ExceptionHandler::bootTimestamp());
         $database = [
             'status' => 'up',
-            'database' => $config['database'],
+            'database' => $config['database'] ?? 'unknown',
         ];
         $status = 'ok';
 
         try {
-            Database::fetch('SELECT 1 AS ok');
+            $this->backups->db->fetch('SELECT 1 AS ok');
         } catch (Throwable $exception) {
             $database = [
                 'status' => 'down',
-                'database' => $config['database'],
+                'database' => $config['database'] ?? 'unknown',
                 'error' => $exception->getMessage(),
             ];
             $status = 'degraded';
@@ -53,7 +51,7 @@ class BackupService
             'uptime_human' => $this->formatDuration($uptimeSeconds),
             'maintenance_mode' => ExceptionHandler::inMaintenanceMode(),
             'maintenance_source' => is_file(dirname(__DIR__, 2) . '/storage/maintenance.flag') ? 'legacy_flag' : 'settings',
-            'maintenance_message' => (string) SystemSettings::get(
+            'maintenance_message' => (string) $this->settings->get(
                 'maintenance_message',
                 'The system is currently under maintenance.'
             ),
@@ -141,8 +139,8 @@ class BackupService
             throw new RuntimeException('Backup file is missing.');
         }
 
-        $config = require dirname(__DIR__, 2) . '/config/database.php';
-        (new MySqlBackupRestorer())->restore($backup, $absolutePath, $config);
+        $config = $this->backups->db->getConfig();
+        $this->restorer->restore($backup, $absolutePath, $config);
 
         try {
             $this->backups->markRestored($backupId, $userId);
@@ -158,7 +156,7 @@ class BackupService
 
     private function tableNames(): array
     {
-        $rows = Database::fetchAll('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
+        $rows = $this->backups->db->fetchAll('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
         $tables = [];
 
         foreach ($rows as $row) {
@@ -188,7 +186,7 @@ class BackupService
 
             foreach ($tables as $table) {
                 $escapedTable = $this->escapeIdentifier($table);
-                $createRow = Database::fetch('SHOW CREATE TABLE ' . $escapedTable);
+                $createRow = $this->backups->db->fetch('SHOW CREATE TABLE ' . $escapedTable);
                 if ($createRow === false) {
                     throw new RuntimeException('Failed to inspect table [' . $table . '].');
                 }
@@ -217,7 +215,7 @@ class BackupService
 
     private function writeTableData(mixed $stream, string $table): void
     {
-        $statement = Database::query('SELECT * FROM ' . $this->escapeIdentifier($table));
+        $statement = $this->backups->db->query('SELECT * FROM ' . $this->escapeIdentifier($table));
         $batch = [];
         $columns = [];
 
@@ -253,7 +251,7 @@ class BackupService
 
     private function serializeRow(array $row): string
     {
-        $connection = Database::connect();
+        $connection = $this->backups->db->connect();
         $values = array_map(static function (mixed $value) use ($connection): string {
             if ($value === null) {
                 return 'NULL';

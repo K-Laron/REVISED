@@ -53,7 +53,7 @@ final class MedicalSearchProvider extends AbstractSearchProvider
     {
         $bindings = $this->likeBindings($term, 3);
         $filterClause = $this->standardFilterClause((string) ($filters['medical_type'] ?? ''), $filters, 'mr.procedure_type', 'mr.record_date', 'medical');
-        $rows = Database::fetchAll(
+        $rows = $this->db->fetchAll(
             "SELECT mr.id, mr.procedure_type, mr.record_date, a.id AS animal_id, a.animal_id AS animal_code, a.name AS animal_name
              FROM medical_records mr
              INNER JOIN animals a ON a.id = mr.animal_id
@@ -67,7 +67,7 @@ final class MedicalSearchProvider extends AbstractSearchProvider
         $preview = $this->previewResult(
             $rows,
             $limit,
-            static fn (): int => (int) ((Database::fetch(
+            fn (): int => (int) (($this->db->fetch(
                 "SELECT COUNT(*) AS aggregate
                  FROM medical_records mr
                  INNER JOIN animals a ON a.id = mr.animal_id

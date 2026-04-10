@@ -10,6 +10,7 @@ use App\Helpers\IdGenerator;
 use App\Models\Animal;
 use App\Models\AnimalPhoto;
 use App\Models\Breed;
+use App\Models\Kennel;
 use App\Services\Animal\AnimalKennelCoordinator;
 use App\Services\Animal\AnimalPayloadFactory;
 use App\Services\Animal\AnimalPhotoManager;
@@ -19,34 +20,17 @@ use RuntimeException;
 
 class AnimalService
 {
-    private Animal $animals;
-    private Breed $breeds;
-    private AnimalPhoto $photos;
-    private QrCodeService $qrCodes;
-    private AuditService $audit;
-    private AnimalPayloadFactory $payloads;
-    private AnimalPhotoManager $photoManager;
-    private AnimalKennelCoordinator $kennels;
-
     public function __construct(
-        ?Animal $animals = null,
-        ?Breed $breeds = null,
-        ?AnimalPhoto $photos = null,
-        ?QrCodeService $qrCodes = null,
-        ?AuditService $audit = null,
-        ?AnimalPayloadFactory $payloads = null,
-        ?AnimalPhotoManager $photoManager = null,
-        ?AnimalKennelCoordinator $kennels = null
-    )
-    {
-        $this->animals = $animals ?? new Animal();
-        $this->breeds = $breeds ?? new Breed();
-        $this->photos = $photos ?? new AnimalPhoto();
-        $this->qrCodes = $qrCodes ?? new QrCodeService();
-        $this->audit = $audit ?? new AuditService();
-        $this->payloads = $payloads ?? new AnimalPayloadFactory();
-        $this->photoManager = $photoManager ?? new AnimalPhotoManager($this->photos);
-        $this->kennels = $kennels ?? new AnimalKennelCoordinator($this->animals);
+        private readonly Animal $animals,
+        private readonly Breed $breeds,
+        private readonly AnimalPhoto $photos,
+        private readonly QrCodeService $qrCodes,
+        private readonly AuditService $audit,
+        private readonly AnimalPayloadFactory $payloads,
+        private readonly AnimalPhotoManager $photoManager,
+        private readonly AnimalKennelCoordinator $animalKennels,
+        private readonly Kennel $kennels
+    ) {
     }
 
     public function list(array $filters, int $page, int $perPage): array
@@ -69,19 +53,7 @@ class AnimalService
 
     public function availableKennels(?int $includeKennelId = null): array
     {
-        $sql = "SELECT id, kennel_code, zone, size_category, allowed_species, status
-                FROM kennels
-                WHERE is_deleted = 0 AND (status = 'Available'";
-        $bindings = [];
-
-        if ($includeKennelId !== null) {
-            $sql .= ' OR id = :id';
-            $bindings['id'] = $includeKennelId;
-        }
-
-        $sql .= ') ORDER BY zone, kennel_code';
-
-        return Database::fetchAll($sql, $bindings);
+        return $this->kennels->listAvailableForSelection($includeKennelId);
     }
 
     public function create(array $data, array $files, int $userId, Request $request): array
@@ -93,10 +65,10 @@ class AnimalService
             $payload['animal_id'] = IdGenerator::next('animal_id');
 
             $animalId = $this->animals->create($payload);
-            $this->kennels->syncAssignment($animalId, null, $payload['kennel_id'] ?? null, $userId);
+            $this->animalKennels->syncAssignment($animalId, null, $payload['kennel_id'] ?? null, $userId);
             $this->photoManager->upload($animalId, $files['photos'] ?? null, $userId);
             $qr = $this->qrCodes->generateForAnimal($animalId, $payload['animal_id'], $userId);
-            Database::commit();
+            $this->animals->db->commit();
 
             $animal = $this->get((string) $animalId);
             $this->audit->record($userId, 'create', 'animals', 'animals', $animalId, [], $animal, $request);
@@ -119,7 +91,7 @@ class AnimalService
             $currentKennelId = $currentKennel['id'] ?? null;
 
             $this->animals->update($animalId, $payload);
-            $this->kennels->syncAssignment($animalId, $currentKennelId, $payload['kennel_id'] ?? null, $userId);
+            $this->animalKennels->syncAssignment($animalId, $currentKennelId, $payload['kennel_id'] ?? null, $userId);
 
             Database::commit();
 
@@ -242,7 +214,7 @@ class AnimalService
 
     public function deletePhoto(int $animalId, int $photoId, int $userId, Request $request): void
     {
-        $photo = $this->photos->find($animalId, $photoId);
+        $photo = $this->photos->findByAnimal($animalId, $photoId);
         Database::beginTransaction();
 
         try {

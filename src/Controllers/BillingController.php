@@ -19,11 +19,9 @@ class BillingController
     use InteractsWithApi;
     use RendersViews;
 
-    private BillingService $billing;
-
-    public function __construct()
-    {
-        $this->billing = new BillingService();
+    public function __construct(
+        private readonly BillingService $billing
+    ) {
     }
 
     public function index(Request $request): Response

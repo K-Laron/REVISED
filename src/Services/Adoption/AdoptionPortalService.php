@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Adoption;
 
-use App\Core\Database;
 use App\Core\Request;
 use App\Helpers\IdGenerator;
 use App\Helpers\Sanitizer;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\NotificationService;
@@ -25,23 +25,14 @@ class AdoptionPortalService
         private readonly User $users,
         private readonly AdoptionReadService $reads,
         private readonly AuditService $audit,
-        private readonly NotificationService $notifications
+        private readonly NotificationService $notifications,
+        private readonly Role $roles
     ) {
     }
 
     public function featuredAnimals(int $limit = 6): array
     {
-        $animals = Database::fetchAll(
-            "SELECT a.id, a.animal_id, a.name, a.species, a.gender, a.size, a.age_years, a.age_months,
-                    a.temperament, b.name AS breed_name, p.file_path AS primary_photo_path
-             FROM animals a
-             LEFT JOIN breeds b ON b.id = a.breed_id
-             LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
-             WHERE a.is_deleted = 0
-               AND a.status = 'Available'
-             ORDER BY a.created_at DESC, a.id DESC
-             LIMIT {$limit}"
-        );
+        $animals = $this->animals->listFeatured($limit);
 
         foreach ($animals as &$animal) {
             $animal['primary_photo_path'] = MediaPath::normalizePublicImagePath($animal['primary_photo_path'] ?? null);
@@ -53,64 +44,24 @@ class AdoptionPortalService
 
     public function availableAnimals(array $filters, int $page, int $perPage): array
     {
-        $clauses = ["a.is_deleted = 0", "a.status = 'Available'"];
-        $bindings = [];
-        $offset = ($page - 1) * $perPage;
+        $result = $this->animals->listAvailableForPortal($filters, $page, $perPage);
 
-        if (($filters['search'] ?? '') !== '') {
-            $clauses[] = '(a.name LIKE :search OR a.animal_id LIKE :search OR b.name LIKE :search)';
-            $bindings['search'] = '%' . trim((string) $filters['search']) . '%';
-        }
-
-        foreach (['species', 'gender', 'size'] as $field) {
-            if (($filters[$field] ?? '') !== '') {
-                $clauses[] = "a.{$field} = :{$field}";
-                $bindings[$field] = $filters[$field];
-            }
-        }
-
-        $whereSql = 'WHERE ' . implode(' AND ', $clauses);
-
-        $items = Database::fetchAll(
-            "SELECT a.id, a.animal_id, a.name, a.species, a.gender, a.size, a.age_years, a.age_months,
-                    a.color_markings, a.temperament, a.condition_at_intake, a.distinguishing_features,
-                    b.name AS breed_name, p.file_path AS primary_photo_path
-             FROM animals a
-             LEFT JOIN breeds b ON b.id = a.breed_id
-             LEFT JOIN animal_photos p ON p.animal_id = a.id AND p.is_primary = 1
-             {$whereSql}
-             ORDER BY a.created_at DESC, a.id DESC
-             LIMIT {$perPage} OFFSET {$offset}",
-            $bindings
-        );
-
-        $count = Database::fetch(
-            "SELECT COUNT(*) AS aggregate
-             FROM animals a
-             LEFT JOIN breeds b ON b.id = a.breed_id
-             {$whereSql}",
-            $bindings
-        );
-
-        foreach ($items as &$item) {
+        foreach ($result['items'] as &$item) {
             $item['primary_photo_path'] = MediaPath::normalizePublicImagePath($item['primary_photo_path'] ?? null);
         }
         unset($item);
 
-        return [
-            'items' => $items,
-            'total' => (int) ($count['aggregate'] ?? 0),
-        ];
+        return $result;
     }
 
     public function publicAnimalDetail(int|string $id): array
     {
         $animal = $this->animals->find($id);
-        if ($animal === false || (string) $animal['status'] !== 'Available') {
+        if ($animal === false || (string) ($animal['status'] ?? '') !== 'Available') {
             throw new RuntimeException('Animal not found.');
         }
 
-        $animal['photos'] = MediaPath::filterValidImageRows(Database::fetchAll(
+        $animal['photos'] = MediaPath::filterValidImageRows($this->animals->db->fetchAll(
             'SELECT id, file_path, file_name, is_primary
              FROM animal_photos
              WHERE animal_id = :animal_id
@@ -123,7 +74,7 @@ class AdoptionPortalService
 
     public function registerAdopter(array $data, Request $request): array
     {
-        $role = Database::fetch("SELECT id FROM roles WHERE name = 'adopter' LIMIT 1");
+        $role = $this->roles->findByName('adopter');
         if ($role === false) {
             throw new RuntimeException('Adopter role is not configured.');
         }
@@ -169,7 +120,7 @@ class AdoptionPortalService
     public function submitPortalApplication(int $userId, array $data, array $file, Request $request): array
     {
         $user = $this->users->findById($userId);
-        if ($user === false || (string) $user['role_name'] !== 'adopter') {
+        if ($user === false || (string) ($user['role_name'] ?? '') !== 'adopter') {
             throw new RuntimeException('Only adopter accounts can submit adoption applications.');
         }
 
@@ -181,7 +132,25 @@ class AdoptionPortalService
             }
         }
 
-        $validIdPath = $this->storePortalDocument($file, 'valid-id');
+        $storedFiles = [];
+        $files = isset($file[0]) && is_array($file[0]) ? $file : [$file];
+        foreach ($files as $idx => $f) {
+            try {
+                $storedFiles[] = $this->storePortalDocument($f, 'valid-id-' . ($idx + 1));
+            } catch (RuntimeException $e) {
+                // If at least one file worked or it was optional, we could continue, 
+                // but since it's required, we fail if no files were saved.
+                if (count($storedFiles) === 0) {
+                    throw $e;
+                }
+            }
+        }
+
+        if (count($storedFiles) === 0) {
+            throw new RuntimeException('A valid ID document is required.');
+        }
+
+        $validIdPath = json_encode($storedFiles);
         $payload = [
             'application_number' => IdGenerator::next('application_number'),
             'adopter_id' => $userId,
@@ -237,23 +206,13 @@ class AdoptionPortalService
 
     public function myApplications(int $userId): array
     {
-        return Database::fetchAll(
-            "SELECT aa.id, aa.application_number, aa.status, aa.created_at, aa.updated_at,
-                    aa.rejection_reason, aa.withdrawn_reason,
-                    a.animal_id AS animal_code, a.name AS animal_name, a.species AS animal_species
-             FROM adoption_applications aa
-             LEFT JOIN animals a ON a.id = aa.animal_id
-             WHERE aa.adopter_id = :adopter_id
-               AND aa.is_deleted = 0
-             ORDER BY aa.created_at DESC, aa.id DESC",
-            ['adopter_id' => $userId]
-        );
+        return $this->applications->listForAdopter($userId);
     }
 
-    private function storePortalDocument(array $file, string $prefix): string
+    private function storePortalDocument(array $file, string $fileNamePrefix): string
     {
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            throw new RuntimeException('A valid ID document is required.');
+        if (!isset($file['error']) || (int) $file['error'] !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('A valid ID document is required and was not selected or uploaded correctly.');
         }
 
         $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
@@ -263,9 +222,14 @@ class AdoptionPortalService
             throw new RuntimeException('Failed to prepare portal document storage.');
         }
 
-        $fileName = $prefix . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
+        $fileName = $fileNamePrefix . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
         $absolutePath = $directory . '/' . $fileName;
         $source = (string) ($file['tmp_name'] ?? '');
+        
+        if ($source === '') {
+            throw new RuntimeException('Missing temporary file for upload.');
+        }
+
         $moved = is_uploaded_file($source)
             ? move_uploaded_file($source, $absolutePath)
             : copy($source, $absolutePath);

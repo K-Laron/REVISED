@@ -18,11 +18,9 @@ class AuthController
     use InteractsWithApi;
     use RendersViews;
 
-    private AuthService $auth;
-
-    public function __construct()
-    {
-        $this->auth = new AuthService();
+    public function __construct(
+        private readonly AuthService $auth
+    ) {
     }
 
     public function showLogin(Request $request): Response

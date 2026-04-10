@@ -4,82 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Request;
-use App\Models\AdoptionApplication;
-use App\Models\AdoptionCompletion;
-use App\Models\AdoptionInterview;
-use App\Models\AdoptionSeminar;
-use App\Models\Animal;
-use App\Models\User;
-use App\Services\Adoption\AdoptionBillingSummary;
 use App\Services\Adoption\AdoptionPortalService;
 use App\Services\Adoption\AdoptionReadService;
-use App\Services\Adoption\AdoptionStatusPolicy;
 use App\Services\Adoption\AdoptionWorkflowService;
+use App\Core\Request;
 
 class AdoptionService
 {
-    private AdoptionReadService $reads;
-    private AdoptionPortalService $portal;
-    private AdoptionWorkflowService $workflow;
-
     public function __construct(
-        ?AdoptionReadService $reads = null,
-        ?AdoptionPortalService $portal = null,
-        ?AdoptionWorkflowService $workflow = null
-    )
-    {
-        if ($reads !== null && $portal !== null && $workflow !== null) {
-            $this->reads = $reads;
-            $this->portal = $portal;
-            $this->workflow = $workflow;
-            return;
-        }
-
-        $applications = new AdoptionApplication();
-        $interviews = new AdoptionInterview();
-        $seminars = new AdoptionSeminar();
-        $completions = new AdoptionCompletion();
-        $animals = new Animal();
-        $users = new User();
-        $pdfs = new PdfService();
-        $audit = new AuditService();
-        $notifications = new NotificationService();
-
-        $statusPolicy = new AdoptionStatusPolicy();
-        $billingSummary = new AdoptionBillingSummary();
-
-        $this->reads = $reads ?? new AdoptionReadService(
-            $applications,
-            $interviews,
-            $seminars,
-            $completions,
-            $statusPolicy,
-            $billingSummary
-        );
-
-        $this->portal = $portal ?? new AdoptionPortalService(
-            $applications,
-            $animals,
-            $users,
-            $this->reads,
-            $audit,
-            $notifications
-        );
-
-        $this->workflow = $workflow ?? new AdoptionWorkflowService(
-            $applications,
-            $interviews,
-            $seminars,
-            $completions,
-            $animals,
-            $this->reads,
-            $statusPolicy,
-            $billingSummary,
-            $pdfs,
-            $audit,
-            $notifications
-        );
+        private readonly AdoptionReadService $reads,
+        private readonly AdoptionPortalService $portal,
+        private readonly AdoptionWorkflowService $workflow
+    ) {
     }
 
     public function list(array $filters, int $page, int $perPage): array

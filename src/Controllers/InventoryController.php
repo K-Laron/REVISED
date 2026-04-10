@@ -20,13 +20,10 @@ class InventoryController
     use InteractsWithApi;
     use RendersViews;
 
-    private InventoryService $inventory;
-    private InventoryInputValidator $validator;
-
-    public function __construct()
-    {
-        $this->inventory = new InventoryService();
-        $this->validator = new InventoryInputValidator();
+    public function __construct(
+        private readonly InventoryService $inventory,
+        private readonly InventoryInputValidator $validator
+    ) {
     }
 
     public function index(Request $request): Response

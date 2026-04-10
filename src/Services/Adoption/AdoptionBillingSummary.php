@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Services\Adoption;
 
-use App\Core\Database;
+use App\Models\Invoice;
 
 class AdoptionBillingSummary
 {
+    private Invoice $invoices;
+
+    public function __construct(?Invoice $invoices = null)
+    {
+        $this->invoices = $invoices ?? new Invoice();
+    }
+
     public function linkedInvoices(int $applicationId): array
     {
-        return Database::fetchAll(
-            'SELECT i.*
-             FROM invoices i
-             WHERE i.application_id = :application_id
-               AND i.is_deleted = 0
-             ORDER BY i.created_at DESC, i.id DESC',
-            ['application_id' => $applicationId]
-        );
+        return $this->invoices->listByApplication($applicationId);
     }
 
     public function summarizeForApplication(int $applicationId): array

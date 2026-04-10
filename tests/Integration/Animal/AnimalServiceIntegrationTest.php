@@ -6,6 +6,7 @@ namespace Tests\Integration\Animal;
 
 require_once __DIR__ . '/../DatabaseIntegrationTestCase.php';
 
+use App\Core\App;
 use App\Core\Database;
 use App\Services\AnimalService;
 use Tests\Integration\DatabaseIntegrationTestCase;
@@ -30,7 +31,7 @@ final class AnimalServiceIntegrationTest extends DatabaseIntegrationTestCase
         self::assertIsArray($before);
         self::assertSame('Available', $before['status']);
 
-        $resolved = (new AnimalService())->get((string) $animal['id']);
+        $resolved = App::make(AnimalService::class)->get((string) $animal['id']);
 
         self::assertSame('Adopted', $resolved['status']);
 
@@ -49,7 +50,7 @@ final class AnimalServiceIntegrationTest extends DatabaseIntegrationTestCase
 
     public function testDeletePhotoReassignsPrimaryAndSortOrder(): void
     {
-        $service = new AnimalService();
+        $service = App::make(AnimalService::class);
         $user = $this->createUser('super_admin');
         $animal = $this->createAnimal();
         $photos = [
@@ -80,7 +81,7 @@ final class AnimalServiceIntegrationTest extends DatabaseIntegrationTestCase
 
     public function testReorderPhotosPersistsOrderAndPrimaryPhoto(): void
     {
-        $service = new AnimalService();
+        $service = App::make(AnimalService::class);
         $user = $this->createUser('super_admin');
         $animal = $this->createAnimal();
         $photos = [

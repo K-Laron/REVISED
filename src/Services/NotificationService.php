@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Notification;
+use App\Models\User;
 use RuntimeException;
 
 class NotificationService
 {
-    private Notification $notifications;
-
-    public function __construct()
-    {
-        $this->notifications = new Notification();
+    public function __construct(
+        private readonly Notification $notifications,
+        private readonly User $users
+    ) {
     }
 
     public function list(int $userId, int $page, int $perPage): array
@@ -61,8 +61,7 @@ class NotificationService
 
     public function notifyRole(string $roleName, array $data): void
     {
-        $userModel = new \App\Models\User();
-        $users = $userModel->getUsersByRole($roleName);
+        $users = $this->users->getUsersByRole($roleName);
 
         foreach ($users as $user) {
             $this->create(array_merge($data, ['user_id' => (int) $user['id']]));
