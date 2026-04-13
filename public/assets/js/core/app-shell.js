@@ -124,6 +124,36 @@
     });
   }
 
+  function bindBackToTop() {
+    const button = document.getElementById('back-to-top');
+    if (!button) {
+      return;
+    }
+
+    let isVisible = false;
+    const threshold = 300;
+
+    const toggleVisibility = () => {
+      const shouldBeVisible = window.scrollY > threshold;
+      if (shouldBeVisible !== isVisible) {
+        isVisible = shouldBeVisible;
+        button.classList.toggle('is-visible', isVisible);
+        button.hidden = !isVisible;
+      }
+    };
+
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
+
+    button.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    toggleVisibility();
+  }
+
   function bindGlobalSearchShortcut() {
     if (document.body.dataset.globalSearchShortcutBound === 'true') {
       return;
@@ -207,6 +237,7 @@
     bindSidebarScrollPersistence();
     bindSidebarToggle();
     bindPublicNavToggle();
+    bindBackToTop();
     bindGlobalSearchShortcut();
     bindPasswordToggles();
     window.CatarmanBreadcrumbs?.sync?.();

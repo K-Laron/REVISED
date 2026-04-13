@@ -9,7 +9,7 @@
   - `126` production API routes across `15` route-module files
   - `1` extra debug-only API route: `POST /api/validate-test`
 - Current schema baseline:
-  - `39` tables in [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database_schema.sql)
+  - `39` tables in [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database/database_schema.sql)
   - `6` tracked SQL migrations in [database/migrations](/C:/Users/TESS%20LARON/Desktop/REVISED/database/migrations)
 
 ## Civic Ledger UI System
@@ -110,8 +110,8 @@ npm install
 4. Load the base schema and seed data.
 
 ```bash
-mysql -u root -p < database_schema.sql
-mysql -u root -p < seeders.sql
+mysql -u root -p < database/database_schema.sql
+mysql -u root -p < database/seeders.sql
 ```
 
 5. Apply tracked SQL migrations in [database/migrations](/C:/Users/TESS%20LARON/Desktop/REVISED/database/migrations).
@@ -119,10 +119,10 @@ mysql -u root -p < seeders.sql
 6. Start the local PHP server.
 
 ```powershell
-.\start-app.vbs
+powershell -ExecutionPolicy Bypass -File scripts/start-app.ps1
 ```
 
-The launcher wraps [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1), starts `php -S 127.0.0.1:8000 -t public`, and opens `http://127.0.0.1:8000/adopt`.
+[scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1) starts `php -S 127.0.0.1:8000 -t public` and opens `http://127.0.0.1:8000/adopt`.
 
 ### Generate Additional Local Animal Data
 
@@ -146,8 +146,6 @@ php scripts/seed_activity.php 250
 
 ## Quick Start Scripts
 
-- [start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/start-app.vbs)
-- [stop-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/stop-app.vbs)
 - [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1)
 - [scripts/stop-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.ps1)
 
@@ -198,11 +196,11 @@ This command runs route coverage, critical HTTP smoke tests, the full PHPUnit su
 - [API_ROUTES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/API_ROUTES.md)
 - [IMPLEMENTATION_GUIDE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/IMPLEMENTATION_GUIDE.md)
 - [VALIDATION_RULES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/VALIDATION_RULES.md)
-- [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PAGE_LAYOUTS.md)
+- [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/PAGE_LAYOUTS.md)
 - [PRD_Catarman_Dog_Pound.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PRD_Catarman_Dog_Pound.md)
 - [system_summary.md](/C:/Users/TESS%20LARON/Desktop/REVISED/system_summary.md)
 - [llm_context.md](/C:/Users/TESS%20LARON/Desktop/REVISED/llm_context.md)
-- [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ROOT_LAYOUT.md)
+- [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/ROOT_LAYOUT.md)
 
 ## Notes on Historical Files
 

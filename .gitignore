@@ -74,3 +74,32 @@ docs/superpowers/plans/2026-04-04-public-app-and-public-journeys-implementation.
 docs/superpowers/plans/2026-04-04-search-events-notifications-integrations-implementation.md
 docs/superpowers/plans/2026-04-04-staff-mobile-implementation.md
 docs/superpowers/specs/2026-04-05-mobile-first-welfare-platform-prd.md
+
+# Local editor and planning state
+.vscode/
+.planning/
+
+# Manuscript local outputs and review artifacts
+docs/manuscript/tmp_backups/
+docs/manuscript/archive/
+docs/manuscript/assets/
+docs/manuscript/current/review-files/
+docs/manuscript/current/supporting-docs/
+docs/manuscript/current/deliverables/
+docs/manuscript/current/deliverables/*.extract*.md
+docs/manuscript/current/deliverables/*.recheck.md
+docs/manuscript/current/deliverables/~$*.docx
+
+# Keep only selected canonical manuscript metadata trackable if ever added later
+!docs/manuscript/current/
+docs/manuscript/current/deliverables/~$*.docx
+
+# Local analysis, generated outputs, and copied source trees
+docs/testing/artifacts/
+docs/technical/graphify-out/
+docs/technical/archive/
+src/graphify-out/
+storage/mempalace/
+storage/logs/playwright/
+storage/logs/selenium/
+tests/results*.txt

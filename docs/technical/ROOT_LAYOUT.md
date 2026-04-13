@@ -15,17 +15,18 @@
   - [API_ROUTES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/API_ROUTES.md)
   - [IMPLEMENTATION_GUIDE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/IMPLEMENTATION_GUIDE.md)
   - [VALIDATION_RULES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/VALIDATION_RULES.md)
-  - [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PAGE_LAYOUTS.md)
   - [PRD_Catarman_Dog_Pound.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PRD_Catarman_Dog_Pound.md)
   - [system_summary.md](/C:/Users/TESS%20LARON/Desktop/REVISED/system_summary.md)
   - [llm_context.md](/C:/Users/TESS%20LARON/Desktop/REVISED/llm_context.md)
-  - [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ROOT_LAYOUT.md)
+- Technical layout docs:
+  - [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/PAGE_LAYOUTS.md)
+  - [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/ROOT_LAYOUT.md)
 - Schema and seed files:
-  - [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database_schema.sql)
-  - [seeders.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/seeders.sql)
+  - [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database/database_schema.sql)
+  - [seeders.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database/seeders.sql)
 - Convenience launchers:
-  - [start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/start-app.vbs)
-  - [stop-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/stop-app.vbs)
+  - [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1)
+  - [scripts/stop-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.ps1)
 
 ## What Should Not Stay At The Root
 
