@@ -22,7 +22,7 @@ class ExceptionHandler
         });
 
         set_exception_handler(static function (Throwable $exception) use ($appConfig): void {
-            Logger::error($exception->getMessage(), [
+            App::make(Logger::class)->error($exception->getMessage(), [
                 'exception' => get_class($exception),
                 'file' => $exception->getFile(),
                 'line' => $exception->getLine(),

@@ -21,6 +21,18 @@ final class PortalLandingViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('data-carousel-track', $html);
     }
 
+    public function testPortalLandingStylesDeclareStableMobileBottomNavIconSizing(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $layoutStyles = (string) file_get_contents($root . '/public/assets/css/layout.css');
+
+        self::assertStringContainsString('.mobile-bottom-nav {', $layoutStyles);
+        self::assertStringContainsString('display: none;', $layoutStyles);
+        self::assertStringContainsString('.mobile-bottom-nav-icon svg {', $layoutStyles);
+        self::assertStringContainsString('width: 24px;', $layoutStyles);
+        self::assertStringContainsString('height: 24px;', $layoutStyles);
+    }
+
     public function testPortalLandingStylesDeclareDarkThemeSurfaceOverrides(): void
     {
         $root = dirname(__DIR__, 2);

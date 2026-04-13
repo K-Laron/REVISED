@@ -60,4 +60,50 @@ final class ApiAdoptionHttpTest extends HttpIntegrationTestCase
         );
         self::assertLessThanOrEqual(2, (int) ($response['headers']['X-App-Query-Count'] ?? PHP_INT_MAX));
     }
+
+    public function testSeminarsListIncludesAnimalIdentifierForAttendees(): void
+    {
+        $user = $this->createUser('super_admin');
+        $this->authenticateUser($user);
+        $adopter = $this->createUser('adopter');
+        $animal = $this->createAnimal([
+            'animal_id' => 'HTTP-SEMINAR-001',
+        ]);
+        $application = $this->createApplication([
+            'adopter_id' => $adopter['id'],
+            'animal_id' => $animal['id'],
+            'status' => 'interview_completed',
+        ]);
+        $seminar = $this->createSeminar([
+            'created_by' => (int) $user['id'],
+            'facilitator_id' => (int) $user['id'],
+        ]);
+
+        Database::execute(
+            'INSERT INTO seminar_attendees (
+                seminar_id, application_id, attendance_status
+             ) VALUES (
+                :seminar_id, :application_id, :attendance_status
+             )',
+            [
+                'seminar_id' => $seminar['id'],
+                'application_id' => $application['id'],
+                'attendance_status' => 'registered',
+            ]
+        );
+
+        $response = $this->dispatchJson('GET', '/api/adoptions/seminars');
+
+        self::assertSame(200, $response['status']);
+        self::assertTrue($response['json']['success']);
+
+        $seminars = is_array($response['json']['data'] ?? null) ? $response['json']['data'] : [];
+        $matchingSeminar = array_values(array_filter(
+            $seminars,
+            static fn (array $item): bool => (int) ($item['id'] ?? 0) === (int) $seminar['id']
+        ));
+
+        self::assertCount(1, $matchingSeminar);
+        self::assertSame('HTTP-SEMINAR-001', $matchingSeminar[0]['attendees'][0]['animal_code'] ?? null);
+    }
 }

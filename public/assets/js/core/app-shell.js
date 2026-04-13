@@ -100,11 +100,11 @@
 
   function bindPublicNavToggle() {
     const shell = document.querySelector('.public-shell');
-    const toggle = document.querySelector('[data-public-nav-toggle]');
+    const toggles = document.querySelectorAll('[data-public-nav-toggle]');
     const closeButton = document.querySelector('[data-public-nav-close]');
     const backdrop = document.querySelector('[data-public-nav-backdrop]');
 
-    if (!shell || !toggle || shell.dataset.publicNavBound === 'true') {
+    if (!shell || toggles.length === 0 || shell.dataset.publicNavBound === 'true') {
       return;
     }
 
@@ -113,10 +113,13 @@
     const setOpen = (open) => {
       shell.classList.toggle('public-nav-open', open);
       document.body.classList.toggle('is-public-nav-open', open);
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggles.forEach(t => t.setAttribute('aria-expanded', open ? 'true' : 'false'));
     };
 
-    toggle.addEventListener('click', () => setOpen(!shell.classList.contains('public-nav-open')));
+    toggles.forEach(toggle => {
+      toggle.addEventListener('click', () => setOpen(!shell.classList.contains('public-nav-open')));
+    });
+
     closeButton?.addEventListener('click', () => setOpen(false));
     backdrop?.addEventListener('click', () => setOpen(false));
     shell.querySelectorAll('.public-nav a').forEach((link) => {

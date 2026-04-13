@@ -7,7 +7,7 @@ use App\Core\ExceptionHandler;
 use App\Core\Session;
 use App\Support\SystemSettings;
 
-$systemSettings = SystemSettings::bootstrap();
+$systemSettings = SystemSettings::instance()->bootstrap();
 $appConfig = [
     'name' => $systemSettings['app_name'] ?? ($_ENV['APP_NAME'] ?? 'Catarman Animal Shelter'),
     'env' => $_ENV['APP_ENV'] ?? 'production',
@@ -40,6 +40,10 @@ $container->singleton(App\Core\Session::class, function() {
     return new App\Core\Session();
 });
 $container->singleton(Intervention\Image\ImageManager::class, function() {
+    if (!extension_loaded('gd')) {
+        return null;
+    }
+
     return new Intervention\Image\ImageManager(new Intervention\Image\Drivers\Gd\Driver());
 });
 $container->singleton(App\Services\Search\SearchModuleCatalog::class, function(App\Core\Container $c) {

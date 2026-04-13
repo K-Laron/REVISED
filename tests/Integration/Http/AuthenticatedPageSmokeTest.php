@@ -42,4 +42,17 @@ final class AuthenticatedPageSmokeTest extends HttpIntegrationTestCase
         self::assertStringContainsString('id="animal-form"', $response['content']);
         self::assertStringContainsString('data-mode="edit"', $response['content']);
     }
+
+    public function testAnimalIndexPageLoadsForAuthorizedUser(): void
+    {
+        $user = $this->createUser('super_admin');
+        $this->createAnimal();
+        $this->authenticateUser($user);
+
+        $response = $this->dispatchJson('GET', '/animals', [], [], ['HTTP_ACCEPT' => 'text/html']);
+
+        self::assertSame(200, $response['status']);
+        self::assertStringContainsString('<h1>Animals</h1>', $response['content']);
+        self::assertStringContainsString('id="animal-list-page"', $response['content']);
+    }
 }

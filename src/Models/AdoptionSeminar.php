@@ -56,7 +56,7 @@ class AdoptionSeminar extends BaseModel
                     aa.application_number,
                     aa.status AS application_status,
                     CONCAT(u.first_name, " ", u.last_name) AS adopter_name,
-                    a.animal_code AS animal_code,
+                    a.animal_id AS animal_code,
                     a.name AS animal_name
              FROM seminar_attendees sa
              INNER JOIN adoption_applications aa ON aa.id = sa.application_id

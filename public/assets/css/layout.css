@@ -671,6 +671,26 @@
   display: none;
 }
 
+.mobile-bottom-nav {
+  display: none;
+}
+
+.mobile-bottom-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+.mobile-bottom-nav-icon svg {
+  width: 24px;
+  height: 24px;
+  max-width: none;
+  flex: none;
+}
+
 .mobile-menu-toggle {
   display: none;
 }

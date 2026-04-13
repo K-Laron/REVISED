@@ -30,15 +30,37 @@
 <section class="dashboard-kpi-grid" id="stats-grid" aria-live="polite"></section>
 
 <section class="dashboard-command-grid">
-    <article class="card dashboard-chart-panel dashboard-chart-panel-featured">
+    <article class="card dashboard-chart-panel dashboard-chart-panel-featured dashboard-intake-panel">
         <div class="dashboard-section-heading">
             <div>
                 <span class="field-label">Twelve-month intake</span>
                 <h3>Intake Trend</h3>
             </div>
-            <p class="text-muted">Monitor monthly arrivals to spot surges before capacity tightens.</p>
+            <p class="text-muted">Review the latest monthly intake posture before kennel pressure tightens.</p>
         </div>
-        <canvas id="intake-chart"></canvas>
+        <div class="dashboard-intake-stage" data-intake-summary-shell>
+            <div class="dashboard-intake-metrics" id="intake-summary-metrics" aria-live="polite">
+                <article class="dashboard-intake-metric dashboard-intake-metric-primary">
+                    <span class="field-label">Latest intake</span>
+                    <strong class="mono">--</strong>
+                    <span class="text-muted">Waiting for intake data</span>
+                </article>
+                <article class="dashboard-intake-metric">
+                    <span class="field-label">Vs previous month</span>
+                    <strong>--</strong>
+                    <span class="text-muted">Delta will appear here</span>
+                </article>
+                <article class="dashboard-intake-metric">
+                    <span class="field-label">12-month peak</span>
+                    <strong>--</strong>
+                    <span class="text-muted">Peak month will appear here</span>
+                </article>
+            </div>
+            <p class="dashboard-intake-insight text-muted" id="intake-summary-insight" aria-live="polite">
+                Intake summary will appear once the chart data loads.
+            </p>
+            <canvas id="intake-chart"></canvas>
+        </div>
     </article>
 
     <aside class="card dashboard-action-deck">
@@ -138,22 +160,6 @@
     </article>
 </section>
 
-<section class="dashboard-command-grid">
-    <article class="card dashboard-activity-feed">
-        <div class="dashboard-section-heading">
-            <div>
-                <span class="field-label">Audit trail</span>
-                <h3>Recent Activity</h3>
-            </div>
-            <p class="text-muted">Latest cross-module records captured by the shelter ledger.</p>
-        </div>
-        <div class="dashboard-activity-module" data-activity-shell>
-            <div class="activity-list" id="activity-list" aria-live="polite"></div>
-            <div class="dashboard-activity-digest" id="activity-digest" data-activity-digest aria-live="polite"></div>
-        </div>
-    </article>
-</section>
-
 <section class="dashboard-command-grid dashboard-command-grid-supporting">
     <article class="card dashboard-chart-panel">
         <div class="dashboard-section-heading">
@@ -175,6 +181,22 @@
             <p class="text-muted">Procedure volume by type for the current reporting period.</p>
         </div>
         <canvas id="medical-chart"></canvas>
+    </article>
+</section>
+
+<section class="dashboard-command-grid">
+    <article class="card dashboard-activity-feed">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="field-label">Audit trail</span>
+                <h3>Recent Activity</h3>
+            </div>
+            <p class="text-muted">Latest cross-module records captured by the shelter ledger.</p>
+        </div>
+        <div class="dashboard-activity-module" data-activity-shell>
+            <div class="activity-list" id="activity-list" aria-live="polite"></div>
+            <div class="dashboard-activity-digest" id="activity-digest" data-activity-digest aria-live="polite"></div>
+        </div>
     </article>
 </section>
 

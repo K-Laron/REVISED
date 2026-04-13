@@ -40,6 +40,19 @@ final class DashboardViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('data-occupancy-summary', $html);
     }
 
+    public function testDashboardRendersIntakeExecutiveSummaryShell(): void
+    {
+        $html = $this->renderApp('dashboard.index', [
+            'title' => 'Dashboard',
+            'csrfToken' => 'test-token',
+        ]);
+
+        self::assertStringContainsString('data-intake-summary-shell', $html);
+        self::assertStringContainsString('id="intake-summary-metrics"', $html);
+        self::assertStringContainsString('id="intake-summary-insight"', $html);
+        self::assertStringContainsString('dashboard-intake-stage', $html);
+    }
+
     public function testDashboardScriptDeclaresOccupancyChartEnhancements(): void
     {
         $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/dashboard.js');
@@ -47,6 +60,16 @@ final class DashboardViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('occupancy-breakdown', $script);
         self::assertStringContainsString('occupancyCenterLabel', $script);
         self::assertStringContainsString('cutout', $script);
+    }
+
+    public function testDashboardScriptDeclaresExecutiveIntakeSummaryHelpers(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/dashboard.js');
+
+        self::assertStringContainsString('deriveIntakeSummaryModel', $script);
+        self::assertStringContainsString('renderIntakeSummary', $script);
+        self::assertStringContainsString('data-intake-summary-shell', $script);
+        self::assertStringContainsString('intake-summary-insight', $script);
     }
 
     public function testDashboardRendersActivityDigestShell(): void
@@ -96,5 +119,20 @@ final class DashboardViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('dashboard-action-queue', $html);
         self::assertStringContainsString('Low stock needs review', $html);
         self::assertStringContainsString('/inventory', $html);
+    }
+
+    public function testDashboardPlacesSupportingChartsBeforeRecentActivity(): void
+    {
+        $html = $this->renderApp('dashboard.index', [
+            'title' => 'Dashboard',
+            'csrfToken' => 'test-token',
+        ]);
+
+        $supportingChartsPosition = strpos($html, 'Adoption Pipeline');
+        $recentActivityPosition = strpos($html, 'Recent Activity');
+
+        self::assertIsInt($supportingChartsPosition);
+        self::assertIsInt($recentActivityPosition);
+        self::assertLessThan($recentActivityPosition, $supportingChartsPosition);
     }
 }

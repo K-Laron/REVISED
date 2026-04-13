@@ -398,12 +398,13 @@
   background: var(--color-bg-secondary);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .animal-detail-grid,
   .detail-grid,
   .animal-form-grid,
   .animal-filter-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
   }
 
   .animal-form-span-2,

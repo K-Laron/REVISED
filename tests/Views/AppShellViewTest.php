@@ -83,6 +83,17 @@ final class AppShellViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('[data-theme="light"] .dashboard-action-deck', $stylesheet);
     }
 
+    public function testDashboardStylesDeclareIntakeExecutiveCardTreatments(): void
+    {
+        $stylesheet = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/css/dashboard.css');
+
+        self::assertStringContainsString('.dashboard-intake-stage', $stylesheet);
+        self::assertStringContainsString('.dashboard-intake-metrics', $stylesheet);
+        self::assertStringContainsString('.dashboard-intake-delta.is-up', $stylesheet);
+        self::assertStringContainsString('[data-theme="dark"] .dashboard-intake-stage', $stylesheet);
+        self::assertStringContainsString('@media (max-width: 767px)', $stylesheet);
+    }
+
     public function testAuthenticatedLayoutIncludesSidebarScrollPersistenceHook(): void
     {
         $html = $this->renderApp('dashboard.index');
@@ -97,6 +108,13 @@ final class AppShellViewTest extends ViewSmokeTestCase
         self::assertStringContainsString('catarman:sidebar-scroll-top', $script);
         self::assertStringContainsString('sessionStorage', $script);
         self::assertStringContainsString('data-sidebar-scroll-region', $script);
+    }
+
+    public function testSharedShellScriptDeclaresSidebarCloseHandlerOnlyOnce(): void
+    {
+        $script = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/js/core/app-shell.js');
+
+        self::assertSame(1, substr_count($script, "const closeSidebar = () => shell.classList.remove('sidebar-open');"));
     }
 
     public function testNotificationDropdownScriptHidesReadItemsAfterRefresh(): void

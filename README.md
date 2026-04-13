@@ -148,6 +148,12 @@ php scripts/seed_activity.php 250
 
 - [scripts/start-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.ps1)
 - [scripts/stop-app.ps1](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.ps1)
+- [scripts/start-app.cmd](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.cmd)
+- [scripts/stop-app.cmd](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.cmd)
+- [scripts/start-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/start-app.vbs)
+- [scripts/stop-app.vbs](/C:/Users/TESS%20LARON/Desktop/REVISED/scripts/stop-app.vbs)
+
+`*.cmd` wrappers launch the PowerShell scripts directly. `*.vbs` wrappers launch the same scripts hidden so the PowerShell window stays out of the way when you double-click them from Windows.
 
 ## Verification
 

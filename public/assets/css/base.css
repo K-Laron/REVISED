@@ -15,6 +15,7 @@
 html,
 body {
   min-height: 100%;
+  scroll-behavior: smooth;
 }
 
 html {
@@ -175,6 +176,7 @@ a:hover {
 .metric-label,
 .eyebrow,
 .table-meta,
+.table-cell-id,
 time,
 .breadcrumb {
   font-family: var(--font-family-mono);

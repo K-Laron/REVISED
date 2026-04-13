@@ -813,7 +813,7 @@
   margin-top: 0.2rem;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1024px) {
   .portal-landing-hero,
   .portal-page-hero,
   .portal-auth-grid,
@@ -821,24 +821,30 @@
   .portal-detail,
   .portal-dashboard-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-6);
   }
 
   .portal-landing-intro h1,
   .portal-page-copy h1,
   .portal-auth-sidebar h1 {
     max-width: none;
+    font-size: clamp(2.4rem, 8vw, 3.8rem);
   }
 
   .portal-landing-bento,
   .portal-landing-journey-grid,
   .portal-landing-prep-grid,
-  .portal-landing-trust {
-    grid-template-columns: 1fr 1fr;
+  .portal-landing-trust,
+  .portal-stat-grid,
+  .portal-application-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
   }
 
   .portal-landing-cta {
     grid-template-columns: 1fr;
     align-items: start;
+    gap: var(--space-6);
   }
 }
 
@@ -857,8 +863,13 @@
   .portal-filter-grid,
   .portal-detail-grid,
   .portal-stat-grid,
-  .portal-application-stats {
+  .portal-application-stats,
+  .portal-landing-bento,
+  .portal-landing-journey-grid,
+  .portal-landing-prep-grid,
+  .portal-landing-trust {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
   }
 
   .portal-featured-actions,

@@ -211,6 +211,115 @@ document.addEventListener('DOMContentLoaded', async () => {
     `).join('');
   }
 
+  function formatPercentChange(value) {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+
+    const rounded = Math.round(value);
+    return `${rounded > 0 ? '+' : ''}${rounded}%`;
+  }
+
+  function deriveIntakeSummaryModel(payload) {
+    const labels = Array.isArray(payload?.labels) ? payload.labels : [];
+    const values = Array.isArray(payload?.datasets?.[0]?.data)
+      ? payload.datasets[0].data.map((value) => Number(value ?? 0))
+      : [];
+
+    if (labels.length === 0 || values.length === 0 || labels.length !== values.length) {
+      return {
+        isValid: false,
+        insight: 'Intake data is not available for this reporting window yet.'
+      };
+    }
+
+    const latestIndex = values.length - 1;
+    const latestValue = values[latestIndex] ?? 0;
+    const previousValue = latestIndex > 0 ? values[latestIndex - 1] ?? null : null;
+    const peakValue = Math.max(...values);
+    const peakIndex = values.indexOf(peakValue);
+    const change = previousValue === null ? null : latestValue - previousValue;
+    const percentChange = previousValue !== null && previousValue > 0
+      ? (change / previousValue) * 100
+      : null;
+    const direction = change === null || change === 0 ? 'flat' : (change > 0 ? 'up' : 'down');
+
+    let insight = 'Intake held steady month over month.';
+    if (latestValue === 0 && peakValue === 0) {
+      insight = 'Intake data is available, but no recent variation stands out.';
+    } else if (direction === 'up') {
+      insight = latestValue >= peakValue
+        ? 'Intake accelerated this month and matched the annual high.'
+        : 'Intake accelerated this month, approaching the annual high.';
+    } else if (direction === 'down') {
+      insight = 'Intake softened this month, easing below last month\'s pace.';
+    }
+
+    return {
+      isValid: true,
+      latestLabel: String(labels[latestIndex] ?? 'Latest'),
+      latestValue,
+      previousValue,
+      change,
+      percentChange,
+      direction,
+      peakLabel: String(labels[peakIndex] ?? 'Peak'),
+      peakValue,
+      insight
+    };
+  }
+
+  function renderIntakeSummary(payload) {
+    const shell = document.querySelector('[data-intake-summary-shell]');
+    const metrics = document.getElementById('intake-summary-metrics');
+    const insight = document.getElementById('intake-summary-insight');
+
+    if (!shell || !metrics || !insight) {
+      return;
+    }
+
+    const model = deriveIntakeSummaryModel(payload);
+
+    if (!model.isValid) {
+      metrics.innerHTML = `
+        <article class="dashboard-intake-metric dashboard-intake-metric-primary">
+          <span class="field-label">Latest intake</span>
+          <strong class="mono">--</strong>
+          <span class="text-muted">No validated monthly series</span>
+        </article>
+      `;
+      insight.textContent = model.insight;
+      return;
+    }
+
+    const deltaLabel = model.change === null
+      ? 'No comparison'
+      : `${model.change > 0 ? '+' : ''}${model.change} ${formatPercentChange(model.percentChange) ?? ''}`.trim();
+    const deltaToneClass = model.direction === 'up'
+      ? 'is-up'
+      : (model.direction === 'down' ? 'is-down' : 'is-flat');
+
+    metrics.innerHTML = `
+      <article class="dashboard-intake-metric dashboard-intake-metric-primary">
+        <span class="field-label">Latest intake</span>
+        <strong class="mono">${escapeHtml(String(model.latestValue))}</strong>
+        <span class="text-muted">${escapeHtml(model.latestLabel)}</span>
+      </article>
+      <article class="dashboard-intake-metric">
+        <span class="field-label">Vs previous month</span>
+        <strong><span class="dashboard-intake-delta ${deltaToneClass}">${escapeHtml(deltaLabel)}</span></strong>
+        <span class="text-muted">${model.previousValue === null ? 'Need at least two months to compare' : 'Month-over-month movement'}</span>
+      </article>
+      <article class="dashboard-intake-metric">
+        <span class="field-label">12-month peak</span>
+        <strong>${escapeHtml(String(model.peakValue))}</strong>
+        <span class="text-muted">${escapeHtml(model.peakLabel)}</span>
+      </article>
+    `;
+
+    insight.textContent = model.insight;
+  }
+
   function setOccupancyBreakdownActive(index) {
     document.querySelectorAll('[data-occupancy-breakdown-item]').forEach((element) => {
       element.classList.toggle('is-active', String(index) === element.getAttribute('data-occupancy-breakdown-item'));
@@ -416,6 +525,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function mountChart(id, type, payload, colors) {
     const canvas = document.getElementById(id);
+    if (!canvas || !payload || !Array.isArray(payload.labels) || !Array.isArray(payload.datasets)) {
+      return;
+    }
+
     const ctx = canvas.getContext('2d');
 
     charts[id]?.destroy();
@@ -423,23 +536,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       type,
       data: {
         labels: payload.labels,
-        datasets: payload.datasets.map((dataset, index) => ({
-          ...dataset,
-          borderColor: colors[index % colors.length],
-          backgroundColor: type === 'line'
-            ? colors[index % colors.length] + '33'
-            : colors,
-          tension: 0.35,
-          fill: type === 'line'
-        }))
+        datasets: payload.datasets.map((dataset, index) => {
+          const accent = colors[index % colors.length];
+          const isIntakeChart = id === 'intake-chart' && type === 'line';
+
+          return {
+            ...dataset,
+            borderColor: accent,
+            backgroundColor: type === 'line'
+              ? alphaColor(accent, isIntakeChart ? 0.16 : 0.2)
+              : colors,
+            tension: isIntakeChart ? 0.42 : 0.35,
+            fill: type === 'line',
+            borderWidth: isIntakeChart ? 3 : 2,
+            pointRadius: isIntakeChart ? 0 : 3,
+            pointHoverRadius: isIntakeChart ? 5 : 4,
+            pointBackgroundColor: accent
+          };
+        })
       },
       options: {
         maintainAspectRatio: false,
         plugins: {
           legend: {
+            display: id !== 'intake-chart',
             labels: {
               color: palette().text
             }
+          },
+          tooltip: {
+            backgroundColor: palette().surface,
+            borderColor: palette().border,
+            borderWidth: 1,
+            titleColor: palette().textStrong,
+            bodyColor: palette().text,
+            padding: 12,
+            displayColors: false
           }
         },
         scales: type === 'doughnut'
@@ -447,12 +579,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           : {
               x: {
                 ticks: { color: palette().text },
-                grid: { color: palette().border }
+                grid: { color: alphaColor(palette().border, id === 'intake-chart' ? 0.45 : 1) }
               },
               y: {
                 beginAtZero: true,
                 ticks: { color: palette().text },
-                grid: { color: palette().border }
+                grid: { color: alphaColor(palette().border, id === 'intake-chart' ? 0.45 : 1) }
               }
             }
       }
@@ -463,6 +595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     dashboardPayload = payload;
     renderStats(payload.stats);
     renderActivity(payload.activity);
+    renderIntakeSummary(payload.charts.intake);
 
     const colors = [palette().primary, palette().success, palette().warning, palette().info, palette().danger];
     mountChart('intake-chart', 'line', payload.charts.intake, colors);

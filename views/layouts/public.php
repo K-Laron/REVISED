@@ -203,6 +203,7 @@
             <span>v1.0.0</span>
         </footer>
     </div>
+
     <script src="/assets/js/theme.js" data-core-asset="js"></script>
     <script src="/assets/js/toast.js" data-core-asset="js"></script>
     <script src="/assets/js/core/app-api.js" data-core-asset="js"></script>

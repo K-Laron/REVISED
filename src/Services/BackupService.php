@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\App;
+use App\Core\Database;
 use App\Core\ExceptionHandler;
 use App\Core\Request;
 use App\Models\SystemBackup;
@@ -25,7 +27,8 @@ class BackupService
 
     public function health(): array
     {
-        $config = $this->backups->db->getConfig();
+        $databaseConnection = $this->database();
+        $config = $databaseConnection->getConfig();
         $uptimeSeconds = max(0, time() - ExceptionHandler::bootTimestamp());
         $database = [
             'status' => 'up',
@@ -34,7 +37,7 @@ class BackupService
         $status = 'ok';
 
         try {
-            $this->backups->db->fetch('SELECT 1 AS ok');
+            $databaseConnection->instanceFetch('SELECT 1 AS ok');
         } catch (Throwable $exception) {
             $database = [
                 'status' => 'down',
@@ -61,7 +64,7 @@ class BackupService
 
     public function listBackups(int $page, int $perPage): array
     {
-        return $this->backups->paginate($page, $perPage);
+        return $this->backups->paginateBackups($page, $perPage);
     }
 
     public function createBackup(string $backupType, ?int $userId, ?Request $request = null): array
@@ -139,7 +142,7 @@ class BackupService
             throw new RuntimeException('Backup file is missing.');
         }
 
-        $config = $this->backups->db->getConfig();
+        $config = $this->database()->getConfig();
         $this->restorer->restore($backup, $absolutePath, $config);
 
         try {
@@ -156,7 +159,7 @@ class BackupService
 
     private function tableNames(): array
     {
-        $rows = $this->backups->db->fetchAll('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
+        $rows = $this->database()->instanceFetchAll('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"');
         $tables = [];
 
         foreach ($rows as $row) {
@@ -186,7 +189,7 @@ class BackupService
 
             foreach ($tables as $table) {
                 $escapedTable = $this->escapeIdentifier($table);
-                $createRow = $this->backups->db->fetch('SHOW CREATE TABLE ' . $escapedTable);
+                $createRow = $this->database()->instanceFetch('SHOW CREATE TABLE ' . $escapedTable);
                 if ($createRow === false) {
                     throw new RuntimeException('Failed to inspect table [' . $table . '].');
                 }
@@ -215,7 +218,7 @@ class BackupService
 
     private function writeTableData(mixed $stream, string $table): void
     {
-        $statement = $this->backups->db->query('SELECT * FROM ' . $this->escapeIdentifier($table));
+        $statement = $this->database()->instanceQuery('SELECT * FROM ' . $this->escapeIdentifier($table));
         $batch = [];
         $columns = [];
 
@@ -251,7 +254,7 @@ class BackupService
 
     private function serializeRow(array $row): string
     {
-        $connection = $this->backups->db->connect();
+        $connection = $this->database()->instanceConnect();
         $values = array_map(static function (mixed $value) use ($connection): string {
             if ($value === null) {
                 return 'NULL';
@@ -270,6 +273,11 @@ class BackupService
     private function escapeIdentifier(string $identifier): string
     {
         return '`' . str_replace('`', '``', $identifier) . '`';
+    }
+
+    private function database(): Database
+    {
+        return App::make(Database::class);
     }
 
     private function writeLine(mixed $stream, string $line): void
