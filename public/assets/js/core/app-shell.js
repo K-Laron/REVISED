@@ -251,6 +251,9 @@
 
   window.CatarmanShell = {
     bindGlobalEscapeHandler,
-    syncSharedShellFeatures
+    syncSharedShellFeatures,
+    initializeTooltips: function() {
+        window.CatarmanTooltips?.init?.();
+    }
   };
 })();

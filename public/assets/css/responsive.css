@@ -20,6 +20,84 @@
     overflow: hidden;
   }
 
+  /* Portal Grid Stacking */
+  .portal-landing-hero,
+  .portal-page-hero,
+  .portal-profile-grid,
+  .portal-auth-grid,
+  .portal-detail,
+  .portal-landing-cta,
+  .portal-dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-6);
+  }
+
+  .portal-landing-trust,
+  .portal-landing-bento,
+  .portal-landing-journey-grid,
+  .portal-landing-prep-grid,
+  .portal-stat-grid,
+  .portal-application-stats,
+  .portal-detail-grid,
+  .portal-form-grid-two {
+    grid-template-columns: 1fr !important;
+  }
+
+  .portal-filter-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-3);
+  }
+
+  .portal-filter-search {
+    grid-column: 1 / -1;
+  }
+
+  .portal-filter-actions {
+    justify-content: stretch;
+  }
+
+  .portal-filter-actions .btn-primary,
+  .portal-filter-actions .btn-secondary {
+    flex: 1;
+  }
+
+  .portal-landing-hero::before {
+    inset: 1rem 0 var(--space-6) 0;
+  }
+
+  .portal-landing-intro {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .portal-landing-intro h1 {
+    font-size: clamp(2.2rem, 8vw, 3.2rem);
+  }
+
+  .portal-page-copy {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .portal-page-copy h1 {
+    font-size: clamp(2rem, 8vw, 2.8rem);
+  }
+
+  /* Carousel Ergonomics */
+  .portal-featured-track .portal-featured-slide.is-preview {
+    transform: translate3d(calc(-50% + 10rem), 0.8rem, 0) scale(0.8);
+    opacity: 0.3;
+  }
+
+  .portal-featured-track .portal-featured-slide.is-previous {
+    transform: translate3d(calc(-50% - 10rem), 0.8rem, 0) scale(0.8);
+    opacity: 0.3;
+  }
+
+  .portal-featured-stage {
+    min-height: 480px;
+  }
+
+
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -82,6 +160,9 @@
   .public-topbar {
     width: 100%;
     padding: var(--space-4) var(--space-3);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
   }
 
   .public-brand {
@@ -93,6 +174,7 @@
   }
 
   .public-topbar-actions {
+    position: fixed;
     inset: 0 0 0 auto;
     width: min(24rem, calc(100vw - 1.5rem));
     height: 100svh;
@@ -147,39 +229,74 @@
   }
 
   .public-nav {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: var(--space-2);
-    border-radius: var(--radius-xl);
-    background: color-mix(in srgb, var(--color-bg-primary) 84%, transparent);
+    gap: var(--space-1);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
   }
 
   .public-nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
     justify-content: flex-start;
-    min-height: 48px;
+    min-height: 52px;
     padding-inline: var(--space-4);
     border-radius: var(--radius-lg);
-    transition: background-color var(--transition-base), color var(--transition-base), transform var(--transition-base);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    transition: background-color var(--transition-base), color var(--transition-base);
   }
 
-  .public-nav-link.is-active {
-    background: color-mix(in srgb, var(--color-accent-primary) 8%, transparent);
+  .public-nav-link:hover,
+  .public-nav-link:active {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+
+  .public-topbar-actions .public-nav-link.is-active {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
     color: var(--color-accent-primary);
     font-weight: 600;
   }
 
   .public-nav-link.is-active::before {
     content: "";
-    width: 4px;
-    height: 16px;
     position: absolute;
     left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 18px;
     background: var(--color-accent-primary);
     border-radius: 0 var(--radius-full) var(--radius-full) 0;
   }
 
   .public-nav-link-accent {
-    justify-content: center;
+    margin-top: var(--space-2);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    background: transparent !important;
+    border: none;
+    box-shadow: none;
+    padding-left: var(--space-4);
+  }
+  
+  .public-nav-link-accent.is-active {
+    color: var(--color-accent-primary);
+  }
+
+  /* Mobile Nav Footer - Theme Toggle */
+  .public-topbar-actions .theme-toggle {
+    margin-top: var(--space-4);
+    align-self: flex-start;
   }
 
   .public-nav-backdrop {

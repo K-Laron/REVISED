@@ -451,7 +451,7 @@ CREATE TABLE IF NOT EXISTS `adoption_applications` (
   `vet_reference_name` VARCHAR(200) NULL,
   `vet_reference_clinic` VARCHAR(200) NULL,
   `vet_reference_contact` VARCHAR(20) NULL,
-  `valid_id_path` VARCHAR(500) NULL COMMENT 'Uploaded ID document',
+  `valid_id_path` VARCHAR(2000) NULL COMMENT 'Uploaded ID document(s) as JSON',
   `digital_signature_path` VARCHAR(500) NULL,
   `agrees_to_policies` TINYINT(1) NOT NULL DEFAULT 0,
   `agrees_to_home_visit` TINYINT(1) NOT NULL DEFAULT 0,

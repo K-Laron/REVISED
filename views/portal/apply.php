@@ -43,7 +43,10 @@ foreach ($availableAnimals as $animal) {
                 <div>
                     <span class="portal-landing-eyebrow">Step-by-step application</span>
                     <h2 id="stepper-title">Submit a new application</h2>
-                    <p class="text-muted" id="stepper-description">Provide household, preference, and verification details.</p>
+                    <div class="cluster" style="gap: var(--space-3); align-items: baseline;">
+                        <p class="text-muted" id="stepper-description" style="margin: 0;">Provide household, preference, and verification details.</p>
+                        <button class="btn-text" type="button" onclick="window.CatarmanPortal.clearApplyDraft()" style="padding: 0; font-size: var(--font-size-xs); color: var(--color-accent-primary); border: none; background: none; cursor: pointer; text-decoration: underline;">Start over</button>
+                    </div>
                 </div>
                 <div class="portal-stepper-progress">
                     <span class="portal-stepper-label"><span data-stepper-current>1</span> of 4 steps</span>
@@ -188,6 +191,7 @@ foreach ($availableAnimals as $animal) {
                             <span class="field-label field-label-required">Valid ID(s)</span>
                             <input class="input" type="file" name="valid_id_path[]" accept=".jpg,.jpeg,.png,.pdf" required multiple>
                             <span class="field-hint">You may upload multiple photos (e.g. front and back). Max 10MB per file.</span>
+                            <div id="id-upload-preview" hidden></div>
                         </label>
                     </div>
                     <div class="stack portal-checkbox-group">

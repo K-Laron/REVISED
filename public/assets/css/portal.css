@@ -1097,3 +1097,78 @@
     transition: none;
   }
 }
+
+.animate-fade-in {
+  animation: portal-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes portal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Mobile Stepper & Form Action Ergonomics ── */
+@media (max-width: 640px) {
+  .portal-section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .portal-section-header h2 {
+    font-size: clamp(1.3rem, 5vw, 1.6rem);
+  }
+
+  .portal-stepper-progress {
+    order: -1;
+  }
+
+  .portal-stepper-bar {
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-secondary);
+    overflow: hidden;
+  }
+
+  .portal-stepper-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-accent-primary);
+    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .portal-stepper-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .page-title h1 {
+    font-size: clamp(1.4rem, 5.5vw, 1.8rem);
+    line-height: 1.15;
+  }
+
+  .page-title .text-muted {
+    font-size: var(--font-size-sm);
+  }
+
+  .portal-form-actions {
+    flex-direction: column;
+    gap: var(--space-3) !important;
+  }
+
+  .portal-form-actions > * {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .portal-form-actions > div[style*="flex: 1"] {
+    display: none;
+  }
+}

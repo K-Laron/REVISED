@@ -1,4 +1,5 @@
 # Catarman Dog Pound & Animal Shelter Management System
+# Catarman Dog Pound & Animal Shelter Management System
 
 ## Current Runtime Snapshot
 
@@ -6,8 +7,9 @@
 - [public/index.php](/C:/Users/TESS%20LARON/Desktop/REVISED/public/index.php) boots Dotenv, [config/app.php](/C:/Users/TESS%20LARON/Desktop/REVISED/config/app.php), maintenance checks, [routes/web.php](/C:/Users/TESS%20LARON/Desktop/REVISED/routes/web.php), and the modular API loader in [routes/api.php](/C:/Users/TESS%20LARON/Desktop/REVISED/routes/api.php).
 - Current route surface:
   - `34` web routes
-  - `126` production API routes across `15` route-module files
+  - `128` production API routes across `15` route-module files
   - `1` extra debug-only API route: `POST /api/validate-test`
+
 - Current schema baseline:
   - `39` tables in [database_schema.sql](/C:/Users/TESS%20LARON/Desktop/REVISED/database/database_schema.sql)
   - `6` tracked SQL migrations in [database/migrations](/C:/Users/TESS%20LARON/Desktop/REVISED/database/migrations)
@@ -196,17 +198,27 @@ This command runs route coverage, critical HTTP smoke tests, the full PHPUnit su
 - Verify writable `storage/` directories
 - Apply all SQL migrations
 
-## Docs Map
+## Docs Map (Technical)
 
-- [ARCHITECTURE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/ARCHITECTURE.md)
-- [API_ROUTES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/API_ROUTES.md)
-- [IMPLEMENTATION_GUIDE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/IMPLEMENTATION_GUIDE.md)
-- [VALIDATION_RULES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/VALIDATION_RULES.md)
+- [ARCHITECTURE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/ARCHITECTURE.md)
+- [API_ROUTES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/API_ROUTES.md)
+- [IMPLEMENTATION_GUIDE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/IMPLEMENTATION_GUIDE.md)
+- [VALIDATION_RULES.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/VALIDATION_RULES.md)
 - [PAGE_LAYOUTS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/PAGE_LAYOUTS.md)
-- [PRD_Catarman_Dog_Pound.md](/C:/Users/TESS%20LARON/Desktop/REVISED/PRD_Catarman_Dog_Pound.md)
-- [system_summary.md](/C:/Users/TESS%20LARON/Desktop/REVISED/system_summary.md)
-- [llm_context.md](/C:/Users/TESS%20LARON/Desktop/REVISED/llm_context.md)
+- [PRD_Catarman_Dog_Pound.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/PRD_Catarman_Dog_Pound.md)
+- [system_summary.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/system_summary.md)
+- [llm_context.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/llm_context.md)
 - [ROOT_LAYOUT.md](/C:/Users/TESS%20LARON/Desktop/REVISED/docs/technical/ROOT_LAYOUT.md)
+
+## Codebase Intelligence (Agent Layer)
+
+- [STACK.md](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/STACK.md)
+- [ARCHITECTURE.md (Simplified)](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/ARCHITECTURE.md)
+- [STRUCTURE.md](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/STRUCTURE.md)
+- [CONVENTIONS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/CONVENTIONS.md)
+- [INTEGRATIONS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/INTEGRATIONS.md)
+- [TESTING.md](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/TESTING.md)
+- [CONCERNS.md](/C:/Users/TESS%20LARON/Desktop/REVISED/.planning/codebase/CONCERNS.md)
 
 ## Notes on Historical Files
 

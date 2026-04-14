@@ -78,10 +78,10 @@
     <link rel="stylesheet" href="/assets/css/components.css">
     <link rel="stylesheet" href="/assets/css/toast.css">
     <link rel="stylesheet" href="/assets/css/background-canvas.css">
-    <link rel="stylesheet" href="/assets/css/layout.css">
-    <link rel="stylesheet" href="/assets/css/responsive.css">
+    <link rel="stylesheet" href="/assets/css/layout.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/assets/css/responsive.css?v=<?= time() ?>">
     <?php foreach (($extraCss ?? []) as $stylesheet): ?>
-        <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>">
+        <link rel="stylesheet" href="<?= htmlspecialchars($stylesheet, ENT_QUOTES, 'UTF-8') ?>?v=<?= time() ?>">
     <?php endforeach; ?>
     <link rel="stylesheet" href="/assets/css/loading-skeletons.css">
     <link rel="stylesheet" href="/assets/css/empty-states.css">
@@ -180,11 +180,12 @@
                     </svg>
                 </button>
             </div>
+            <div class="public-nav-backdrop" data-public-nav-backdrop></div>
         </header>
-        <div class="public-nav-backdrop" data-public-nav-backdrop></div>
         <main class="public-main" id="public-main">
             <?= $content ?>
         </main>
+        <?php include dirname(__DIR__) . '/partials/mobile-bottom-nav.php'; ?>
         <button 
             type="button" 
             class="icon-button back-to-top" 
